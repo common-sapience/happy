@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useFriendRequests, useSocketStatus, useRealtimeStatus, useSettingMutable } from '@/sync/storage';
+import { useSocketStatus, useSettingMutable } from '@/sync/storage';
 import { NativeSettingsMenu, type NativeSettingsMenuGroup } from './NativeSettingsMenu';
 import { useVisibleSessionListViewData } from '@/hooks/useVisibleSessionListViewData';
 import { useIsTablet } from '@/utils/responsive';
@@ -16,19 +16,16 @@ import { useRouter } from 'expo-router';
 import { EmptySessionsTablet } from './EmptySessionsTablet';
 import { SessionsList } from './SessionsList';
 import { TabBar, TabType } from './TabBar';
-import { InboxView } from './InboxView';
 import { HomeDock, MOBILE_HOME_DOCK_CONTENT_INSET } from './HomeDock';
 import { SettingsViewWrapper } from './SettingsViewWrapper';
 import { SessionsListWrapper } from './SessionsListWrapper';
 import { Header } from './navigation/Header';
 import { HeaderLogo } from './HeaderLogo';
-import { VoiceAssistantStatusBar } from './VoiceAssistantStatusBar';
 import { StatusDot } from './StatusDot';
 import { Ionicons } from '@expo/vector-icons';
 import { Typography } from '@/constants/Typography';
 import { t } from '@/text';
 import { isUsingCustomServer } from '@/sync/serverConfig';
-import { trackFriendsSearch } from '@/track';
 import { MOBILE_GLASS_HEADER_HEIGHT } from './navigation/headerMetrics';
 import { useNewSessionDraft } from '@/hooks/useNewSessionDraft';
 import { useStartSessionFromDraft } from '@/hooks/useStartSessionFromDraft';
@@ -161,7 +158,6 @@ const styles = StyleSheet.create((theme) => ({
 // Tab header configuration
 const TAB_TITLES = {
     sessions: 'tabs.sessions',
-    inbox: 'tabs.inbox',
     settings: 'tabs.settings',
 } as const;
 
@@ -304,21 +300,6 @@ const HeaderRight = React.memo(({ activeTab }: { activeTab: ActiveTabType }) => 
         );
     }
 
-    if (activeTab === 'inbox') {
-        return (
-            <Pressable
-                onPress={() => {
-                    trackFriendsSearch();
-                    router.push('/friends/search');
-                }}
-                hitSlop={15}
-                style={styles.headerButton}
-            >
-                <Ionicons name="person-add-outline" size={24} color={theme.colors.header.tint} />
-            </Pressable>
-        );
-    }
-
     if (activeTab === 'settings') {
         if (!isCustomServer) {
             return Platform.OS === 'web' ? <View style={styles.headerButton} /> : null;
@@ -342,8 +323,6 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
     const sessionListViewData = useVisibleSessionListViewData();
     const isTablet = useIsTablet();
     const router = useRouter();
-    const friendRequests = useFriendRequests();
-    const realtimeStatus = useRealtimeStatus();
     const safeArea = useSafeAreaInsets();
     const {
         isStarting: isStartingHomeSession,
@@ -360,8 +339,7 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
     const topChromeInset = Platform.OS === 'web'
         ? 0
         : safeArea.top
-            + MOBILE_GLASS_HEADER_HEIGHT
-            + (realtimeStatus !== 'disconnected' ? 32 : 0);
+            + MOBILE_GLASS_HEADER_HEIGHT;
     const topContentInset = topChromeInset + (Platform.OS === 'web' ? 0 : 12);
     const bottomContentInset = Platform.OS === 'web'
         ? 0
@@ -390,8 +368,6 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
 
     const renderWebTabContent = () => {
         switch (activeTab) {
-            case 'inbox':
-                return <InboxView />;
             case 'settings':
                 return <SettingsViewWrapper topContentInset={topContentInset} bottomContentInset={bottomContentInset} />;
             case 'sessions':
@@ -457,9 +433,6 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
                 mobileTitleSurface="plain"
                 mobileTitleAlignment="center"
             />
-            {realtimeStatus !== 'disconnected' && (
-                <VoiceAssistantStatusBar variant="full" />
-            )}
         </View>
     );
 
@@ -482,7 +455,6 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
                 <TabBar
                     activeTab={activeTab}
                     onTabPress={handleTabPress}
-                    inboxBadgeCount={friendRequests.length}
                 />
             ) : (
                 <View pointerEvents="box-none" style={styles.phoneBottomDockOverlay}>
