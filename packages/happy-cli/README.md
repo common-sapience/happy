@@ -1,8 +1,8 @@
 # Happy
 
-Code on the go — control AI coding agents from your phone, browser, or terminal.
+Control an AI agent on your computer from your phone, browser, or terminal.
 
-Free. Open source. Code anywhere.
+Free. Open source.
 
 ## Installation
 
@@ -14,45 +14,34 @@ npm install -g happy
 
 ## Usage
 
-### Claude Code (default)
-
 ```bash
 happy
-# or
-happy claude
 ```
 
 This will:
-1. Start a Claude Code session
+1. Start an agent session backed by the engine (`opencode` over ACP)
 2. Display a QR code to connect from your mobile device or browser
 3. Allow real-time session control — all communication is end-to-end encrypted
 4. Start new sessions directly from your phone or web while your computer is online
 
-### More agents
+### Agent profiles
 
-```
-happy codex
-happy agy        # Antigravity CLI (Gemini's successor)
-happy gemini     # deprecated — use `happy agy`
-happy openclaw
+An agent's tools, skills, prompt and model are defined by an engine agent
+profile. Pick one per session:
 
-# or any ACP-compatible CLI
-happy acp opencode
-happy acp -- custom-agent --flag
+```bash
+happy --agent-profile research
 ```
 
-> **Note on agy permissions:** the agy backend runs `agy --print`, which is
-> one-shot and has no interactive approval surface — tool calls proceed
-> automatically without ever prompting you. The permission mode you pick in
-> Happy only chooses which flag is passed to agy: the default modes use
-> `--sandbox`, and the bypass/yolo-style modes (including `acceptEdits`) use
-> `--dangerously-skip-permissions`. Neither adds a per-tool approval gate
-> inside Happy, so selecting "default" for an agy session does **not** give
-> you an approval prompt the way it does for Claude Code.
+### Pointing at a specific engine build
+
+```bash
+happy acp -- /opt/engine/opencode acp
+```
 
 ## Daemon
 
-The daemon is a background service that stays running on your machine. It lets you spawn and manage coding sessions remotely — from your phone or the web app — without needing an open terminal.
+The daemon is a background service that stays running on your machine. It lets you spawn and manage sessions remotely — from your phone or the web app — without needing an open terminal.
 
 ```bash
 happy daemon start
@@ -65,7 +54,7 @@ The daemon starts automatically when you run `happy`, so you usually don't need 
 
 ### Keeping the daemon running across reboots
 
-If you want the daemon to come back automatically after a reboot — without opening a `happy` session first — start it from your shell profile so it inherits your normal user session context (PATH, keychain access, OAuth credentials):
+If you want the daemon to come back automatically after a reboot — without opening a `happy` session first — start it from your shell profile so it inherits your normal user session context (PATH, keychain access, credentials):
 
 ```bash
 # ~/.zshrc or ~/.bashrc
@@ -83,7 +72,7 @@ fi
 
 The first interactive shell after a reboot triggers the start; subsequent shells short-circuit because the daemon is already running.
 
-> **macOS users:** prefer this shell-init approach over a `launchd` LaunchAgent. A LaunchAgent runs in an agent domain that is **detached from your GUI/Aqua login session**, which means the bundled `claude-agent-sdk` cannot reach the macOS keychain and silently fails authentication ("Failed to authenticate. API Error: 401 terminated", `duration_api_ms: 0`). If you must use launchd, your wrapper has to read the OAuth access token from `~/.claude/.credentials.json` and export it as `CLAUDE_CODE_OAUTH_TOKEN` before exec'ing the daemon — and you'll need to handle token rotation yourself.
+> **macOS users:** prefer this shell-init approach over a `launchd` LaunchAgent. A LaunchAgent runs in an agent domain detached from your GUI/Aqua login session, so the daemon cannot reach the macOS keychain.
 
 ## Authentication
 
@@ -94,26 +83,41 @@ happy auth logout
 
 Happy uses cryptographic key pairs for authentication — your private key stays on your machine. All session data is end-to-end encrypted before leaving your device.
 
-To connect third-party agent APIs:
+## Permission confirmation
 
-```bash
-happy connect gemini
-happy connect claude
-happy connect codex
-happy connect status
+Off by default: the engine runs on an allow baseline and a multi-step task needs
+zero confirmations. Turn it on per host by setting
+`permissionConfirmationEnabled` to `true` in `$HAPPY_HOME_DIR/settings.json`, and
+every confirm-worthy tool call then waits for an answer from a paired control
+end.
+
+## Engine credentials
+
+`$HAPPY_HOME_DIR/engine-credentials.json` (mode 0600) is the only place the
+engine's secrets live on this machine:
+
+```json
+{
+  "platformApiKey": "...",
+  "connectors": {
+    "gmail": { "command": "gmail-mcp", "args": ["--stdio"], "env": { "GMAIL_TOKEN": "..." } }
+  }
+}
 ```
+
+The platform key reaches the engine process as `MODEL_API_KEY`; each connector
+becomes an MCP server carrying its own secret. Nothing is written out as a
+plaintext engine config.
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `happy` | Start Claude Code session (default) |
-| `happy codex` | Start Codex mode |
-| `happy agy` | Start agy (Antigravity CLI) session |
-| `happy gemini` | Start Gemini CLI session (**deprecated** — use `happy agy`) |
-| `happy openclaw` | Start OpenClaw session |
-| `happy acp` | Start any ACP-compatible agent |
-| `happy resume <id>` | Resume a previous session |
+| `happy` | Start an agent session |
+| `happy acp` | Same, with explicit ACP options |
+| `happy auth` | Manage authentication |
+| `happy server` | Manage the self-hosted relay |
+| `happy daemon` | Manage the background service |
 | `happy notify` | Send push notification to your devices |
 | `happy doctor` | Diagnostics & troubleshooting |
 
@@ -131,32 +135,19 @@ happy connect status
 | `HAPPY_DISABLE_CAFFEINATE` | Disable macOS sleep prevention |
 | `HAPPY_EXPERIMENTAL` | Enable experimental features |
 
-### Sandbox (experimental)
-
-Happy can run agents inside an OS-level sandbox to restrict file system and network access.
-
-```bash
-happy sandbox configure
-happy sandbox status
-happy sandbox disable
-```
-
 ### Building from source
 
 ```bash
-git clone https://github.com/slopus/happy
-cd happy-cli
-yarn install
-yarn workspace happy cli --help
+git clone https://github.com/common-sapience/happy
+cd happy/packages/happy-cli
+pnpm install
+pnpm build
 ```
 
 ## Requirements
 
 - Node.js >= 20.0.0
-- For Claude: `claude` CLI installed & logged in
-- For Codex: `codex` CLI installed & logged in
-- For agy: install the Antigravity CLI (`agy`) and log in
-- For Gemini (**deprecated** — use agy): `npm install -g @google/gemini-cli` + `happy connect gemini`
+- The engine (`opencode`) available on PATH, or started through `happy acp -- <path> acp`
 
 ## License
 
