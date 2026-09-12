@@ -1,7 +1,7 @@
 {
   "name": "happy",
   "version": "1.2.3",
-  "description": "Mobile and Web client for Claude Code and Codex",
+  "description": "Daemon that runs the agent engine on this computer and connects it to the relay",
   "author": "Kirill Dubovitskiy",
   "license": "MIT",
   "type": "module",
@@ -39,14 +39,14 @@
         "default": "./dist/lib.mjs"
       }
     },
-    "./codex/happyMcpStdioBridge": {
+    "./happyMcpStdioBridge": {
       "require": {
-        "types": "./dist/codex/happyMcpStdioBridge.d.cts",
-        "default": "./dist/codex/happyMcpStdioBridge.cjs"
+        "types": "./dist/happyMcpStdioBridge.d.cts",
+        "default": "./dist/happyMcpStdioBridge.cjs"
       },
       "import": {
-        "types": "./dist/codex/happyMcpStdioBridge.d.mts",
-        "default": "./dist/codex/happyMcpStdioBridge.mjs"
+        "types": "./dist/happyMcpStdioBridge.d.mts",
+        "default": "./dist/happyMcpStdioBridge.mjs"
       }
     }
   },
@@ -65,15 +65,13 @@
     "bundle:webapp": "node scripts/bundle-webapp.cjs",
     "build": "shx rm -rf dist && tsc --noEmit && pkgroll",
     "test": "pnpm run build && vitest run --project unit",
-    "test:integration": "pnpm run build && vitest run --project integration-empty --project integration-plan-mode --project integration-authenticated",
+    "test:integration": "pnpm run build && vitest run --project integration-authenticated",
     "cli:install": "node scripts/install-local.cjs",
     "prepublishOnly": "pnpm test",
     "postinstall": "node scripts/unpack-tools.cjs"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.14.1",
-    "@anthropic-ai/claude-agent-sdk": "^0.3.259",
-    "@anthropic-ai/sandbox-runtime": "^0.0.37",
     "@modelcontextprotocol/sdk": "1.29.0",
     "@noble/ed25519": "^3.0.0",
     "@noble/hashes": "^2.0.1",
@@ -86,7 +84,6 @@
     "@types/qrcode-terminal": "^0.12.2",
     "@types/react": "^19.2.7",
     "@types/tmp": "^0.2.6",
-    "ai": "^5.0.107",
     "axios": "^1.13.2",
     "chalk": "^5.6.2",
     "cross-spawn": "^7.0.6",
@@ -96,7 +93,6 @@
     "http-proxy": "^1.18.1",
     "http-proxy-middleware": "^3.0.5",
     "ink": "^6.5.1",
-    "inquirer": "^13.2.2",
     "open": "^10.2.0",
     "ps-list": "^8.1.1",
     "qrcode-terminal": "^0.12.0",
@@ -105,15 +101,12 @@
     "tar": "^7.5.2",
     "tmp": "^0.2.5",
     "tweetnacl": "^1.0.3",
-    "ws": "^8.19.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
     "@eslint/compat": "^1",
     "@slopus/happy-wire": "workspace:*",
-    "@types/inquirer": "^9.0.9",
     "@types/node": ">=20",
-    "@types/ws": "^8.18.1",
     "cross-env": "^10.1.0",
     "dotenv": "^16.6.1",
     "eslint": "^9",

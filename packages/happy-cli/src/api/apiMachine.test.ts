@@ -34,10 +34,14 @@ vi.mock('@/modules/common/registerCommonHandlers', () => ({
 
 vi.mock('@/api/rpc/RpcHandlerManager', () => ({
     RpcHandlerManager: class {
+        handlers = new Map<string, (params: unknown) => unknown>();
         onSocketConnect = vi.fn();
         onSocketDisconnect = vi.fn();
         handleRequest = vi.fn(async () => '');
-        registerHandler = vi.fn();
+        registerHandler = vi.fn((method: string, handler: (params: unknown) => unknown) => {
+            this.handlers.set(method, handler);
+            registeredHandlers.set(method, handler);
+        });
         unregisterHandler = vi.fn();
         hasHandler = vi.fn(() => false);
     }
@@ -45,25 +49,16 @@ vi.mock('@/api/rpc/RpcHandlerManager', () => ({
 
 vi.mock('@/utils/detectCLI', () => ({
     detectCLIAvailability: vi.fn(() => ({
-        claude: false,
-        codex: false,
-        gemini: false,
-        openclaw: false
-    }))
-}));
-
-vi.mock('@/resume/localHappyAgentAuth', () => ({
-    detectResumeSupport: vi.fn(() => ({
-        rpcAvailable: false,
-        requiresSameMachine: false,
-        requiresHappyAgentAuth: false,
-        happyAgentAuthenticated: false
+        opencode: false,
+        detectedAt: 0
     }))
 }));
 
 vi.mock('@/utils/lidState', () => ({
     shouldReconnect: mockShouldReconnect
 }));
+
+const registeredHandlers = new Map<string, (params: unknown) => unknown>();
 
 type SocketHandler = (...args: any[]) => void;
 type SocketHandlers = Record<string, SocketHandler[]>;
@@ -195,12 +190,67 @@ describe('ApiMachineClient socket reconnection', () => {
         expect(publishedMetadata).toEqual(expect.objectContaining({
             displayName: 'My Mac',
             happyCliVersion: 'test',
-            cliAvailability: expect.objectContaining({
-                claude: false,
-                codex: false,
-            }),
+            cliAvailability: { opencode: false, detectedAt: 0 },
         }));
 
         client.shutdown();
+    });
+
+    it('HOST-10: reports only the engine as an available agent', () => {
+        vi.useFakeTimers();
+        mockSocket.emitWithAck.mockImplementation(() => new Promise(() => {}));
+        const machine = makeMachine();
+        const client = new ApiMachineClient('fake-token', machine);
+        let publishedMetadata: Machine['metadata'] | null = null;
+        vi.spyOn(client, 'updateMachineMetadata').mockImplementation(async (handler) => {
+            publishedMetadata = handler(machine.metadata);
+        });
+        client.connect();
+
+        emitSocketEvent('connect');
+
+        expect(Object.keys(publishedMetadata!.cliAvailability!).sort()).toEqual(['detectedAt', 'opencode']);
+
+        client.shutdown();
+    });
+});
+
+describe('HOST-10 / HOST-12 machine spawn RPC', () => {
+    const spawnSession = vi.fn(async () => ({ type: 'success' as const, sessionId: 'session-1' }));
+
+    const registerHandlers = () => {
+        registeredHandlers.clear();
+        spawnSession.mockClear();
+        const client = new ApiMachineClient('fake-token', makeMachine());
+        client.setRPCHandlers({
+            spawnSession,
+            stopSession: vi.fn(() => true),
+            requestShutdown: vi.fn()
+        });
+        return registeredHandlers.get('spawn-happy-session')!;
+    };
+
+    it('HOST-10: registers no other-agent RPC', () => {
+        registerHandlers();
+
+        expect([...registeredHandlers.keys()].sort()).toEqual(['spawn-happy-session', 'stop-daemon', 'stop-session']);
+    });
+
+    it('HOST-12: forwards the requested agent profile to the daemon', async () => {
+        const spawn = registerHandlers();
+
+        await spawn({ directory: '/work', agent: 'opencode', agentProfile: 'research' });
+
+        expect(spawnSession).toHaveBeenCalledWith(expect.objectContaining({
+            directory: '/work',
+            agent: 'opencode',
+            agentProfile: 'research'
+        }));
+    });
+
+    it('requires a directory', async () => {
+        const spawn = registerHandlers();
+
+        await expect(spawn({ agent: 'opencode' })).rejects.toThrow('Directory is required');
     });
 });

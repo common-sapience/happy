@@ -1,44 +1,50 @@
 import { execSync } from 'child_process';
-import { existsSync } from 'fs';
 import os from 'os';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { findAgyBin } from '@/agy/constants';
 import { detectCLIAvailability } from './detectCLI';
 
 vi.mock('child_process', () => ({ execSync: vi.fn() }));
-vi.mock('fs', () => ({ existsSync: vi.fn() }));
 vi.mock('os', () => ({
   default: {
     homedir: vi.fn(() => '/home/person'),
     platform: vi.fn(() => 'darwin'),
   },
 }));
-vi.mock('@/agy/constants', () => ({ findAgyBin: vi.fn() }));
 
 const mockedExecSync = vi.mocked(execSync);
-const mockedExistsSync = vi.mocked(existsSync);
-const mockedFindAgyBin = vi.mocked(findAgyBin);
 const mockedPlatform = vi.mocked(os.platform);
 
-describe('CLI availability detection', () => {
+describe('HOST-10 machine capability report', () => {
   beforeEach(() => {
     mockedExecSync.mockReset();
     mockedExecSync.mockImplementation(() => {
       throw new Error('not installed');
     });
-    mockedExistsSync.mockReset();
-    mockedExistsSync.mockReturnValue(false);
-    mockedFindAgyBin.mockReset();
-    mockedFindAgyBin.mockReturnValue(undefined);
     mockedPlatform.mockReturnValue('darwin');
   });
 
-  it('reports Antigravity only when its executable resolver finds an installation', () => {
-    expect(detectCLIAvailability().agy).toBe(false);
+  it('reports only the engine', () => {
+    expect(Object.keys(detectCLIAvailability()).sort()).toEqual(['detectedAt', 'opencode']);
+  });
 
-    mockedFindAgyBin.mockReturnValue('/home/person/.local/bin/agy');
+  it('reports the engine as unavailable when the command does not resolve', () => {
+    expect(detectCLIAvailability().opencode).toBe(false);
+    expect(mockedExecSync).toHaveBeenCalledTimes(1);
+    expect(String(mockedExecSync.mock.calls[0][0])).toContain('opencode');
+  });
 
-    expect(detectCLIAvailability().agy).toBe(true);
+  it('reports the engine as available when the command resolves', () => {
+    mockedExecSync.mockImplementation(() => Buffer.from(''));
+
+    expect(detectCLIAvailability().opencode).toBe(true);
+  });
+
+  it('probes with PowerShell on Windows', () => {
+    mockedPlatform.mockReturnValue('win32');
+    mockedExecSync.mockImplementation(() => Buffer.from(''));
+
+    expect(detectCLIAvailability().opencode).toBe(true);
+    expect(String(mockedExecSync.mock.calls[0][0])).toContain('Get-Command opencode');
   });
 });

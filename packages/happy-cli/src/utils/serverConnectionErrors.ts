@@ -2,10 +2,10 @@
  * Offline reconnection utility for graceful server disconnection handling.
  *
  * Provides a backend-agnostic reconnection mechanism with exponential backoff
- * that works for both Claude and Codex (and future backends).
+ * that works for any agent backend.
  *
  * ## Requirements Satisfied
- * - REQ-1: Claude/Codex keeps working when server unreachable
+ * - REQ-1: the agent keeps working when server unreachable
  * - REQ-3: Exponential backoff reconnection attempts
  * - REQ-4: Hot reconnection without PTY exit
  * - REQ-7: Notify user when server becomes available
@@ -113,7 +113,7 @@ export interface OfflineReconnectionHandle<TSession> {
 
 /**
  * Starts background reconnection with exponential backoff.
- * Backend-agnostic: works for Claude, Codex, or any future backend.
+ * Backend-agnostic: works for any agent backend.
  *
  * ## Retry Behavior
  * - **Retries are UNLIMITED** - will keep trying for hours/days/weeks
@@ -290,10 +290,12 @@ export type OfflineFailure = {
  * suppresses duplicates until recovery. Call recover() when back online to
  * re-enable warnings for future disconnections.
  */
+const DEFAULT_BACKEND_NAME = 'The agent';
+
 class OfflineState {
     private state: 'online' | 'offline' = 'online';
     private failures = new Map<string, OfflineFailure>(); // Dedupe by operation
-    private backend = 'Claude';
+    private backend = DEFAULT_BACKEND_NAME;
 
     /** Report failure - accumulates context, prints once on first offline transition */
     fail(failure: OfflineFailure): void {
@@ -320,7 +322,7 @@ class OfflineState {
     reset(): void {
         this.state = 'online';
         this.failures.clear();
-        this.backend = 'Claude';
+        this.backend = DEFAULT_BACKEND_NAME;
     }
 
     private print(): void {
@@ -351,7 +353,7 @@ export const connectionState = new OfflineState();
 /**
  * @deprecated Use connectionState.fail() for deduplication and context tracking
  */
-export function printOfflineWarning(backendName: string = 'Claude'): void {
+export function printOfflineWarning(backendName: string = DEFAULT_BACKEND_NAME): void {
     connectionState.setBackend(backendName);
     connectionState.fail({ operation: 'Server connection' });
 }

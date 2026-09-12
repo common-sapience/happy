@@ -31,6 +31,7 @@ const mocks = vi.hoisted(() => {
     prompts: [] as Array<{ sessionId: string; prompt: string }>,
     setConfigOptionCalls: [] as Array<{ configId: string; value: string }>,
     setModeCalls: [] as string[],
+    setModeResult: true,
     setModelCalls: [] as string[],
     startSessionMessages: [] as any[],
     sendPromptError: null as Error | null,
@@ -48,6 +49,8 @@ const mocks = vi.hoisted(() => {
     mockSetupOfflineReconnection: vi.fn(),
     mockNotifyDaemonSessionStarted: vi.fn(async () => ({ error: null })),
     mockStartHappyServer: vi.fn(),
+    mockReadPermissionConfirmationEnabled: vi.fn(async () => false),
+    mockReadEngineCredentials: vi.fn(async () => ({})),
     mockProjectPath: vi.fn(() => '/tmp/happy'),
     mockSetBackend: vi.fn(),
     mockKillRegister: vi.fn((_rpc: unknown, handler: () => Promise<void>) => {
@@ -102,6 +105,22 @@ vi.mock('@/modules/common/registerKillSessionHandler', () => ({
 vi.mock('@/modules/common/startHappyServer', () => ({
   startHappyServer: mocks.mockStartHappyServer,
 }));
+
+vi.mock('@/modules/permission/permissionSwitch', async () => {
+  const actual = await vi.importActual<typeof import('@/modules/permission/permissionSwitch')>('@/modules/permission/permissionSwitch');
+  return {
+    ...actual,
+    readPermissionConfirmationEnabled: mocks.mockReadPermissionConfirmationEnabled,
+  };
+});
+
+vi.mock('@/modules/credentials/engineCredentials', async () => {
+  const actual = await vi.importActual<typeof import('@/modules/credentials/engineCredentials')>('@/modules/credentials/engineCredentials');
+  return {
+    ...actual,
+    readEngineCredentials: mocks.mockReadEngineCredentials,
+  };
+});
 
 vi.mock('@/projectPath', () => ({
   projectPath: mocks.mockProjectPath,
@@ -164,7 +183,7 @@ vi.mock('./AcpBackend', () => ({
 
     async setSessionMode(modeId: string) {
       mocks.backendState.setModeCalls.push(modeId);
-      return true;
+      return mocks.backendState.setModeResult;
     }
 
     async setSessionModel(modelId: string) {
@@ -185,6 +204,41 @@ vi.mock('./AcpBackend', () => ({
   },
 }));
 
+function resetRunAcpMocks(): void {
+  vi.clearAllMocks();
+  mocks.sessionHandlers.clear();
+  mocks.setUserMessageHandler(null);
+  mocks.setKillHandler(null);
+  mocks.backendState.listeners = [];
+  mocks.backendState.prompts = [];
+  mocks.backendState.setConfigOptionCalls = [];
+  mocks.backendState.setModeCalls = [];
+  mocks.backendState.setModeResult = true;
+  mocks.backendState.setModelCalls = [];
+  mocks.backendState.startSessionMessages = [];
+  mocks.backendState.sendPromptError = null;
+  mocks.backendState.startSessionCalls = 0;
+  mocks.backendState.cancelCalls = [];
+  mocks.backendState.disposeCalls = 0;
+  mocks.backendState.constructorArgs = null;
+
+  mocks.mockApiCreate.mockResolvedValue({
+    getOrCreateMachine: mocks.mockGetOrCreateMachine,
+    getOrCreateSession: mocks.mockGetOrCreateSession,
+  });
+  mocks.mockSetupOfflineReconnection.mockImplementation(() => ({
+    session: mocks.mockSession,
+    reconnectionHandle: { cancel: vi.fn() },
+    isOffline: false,
+  }));
+  mocks.mockStartHappyServer.mockResolvedValue({
+    url: 'http://127.0.0.1:9876',
+    stop: vi.fn(),
+  });
+  mocks.mockReadPermissionConfirmationEnabled.mockResolvedValue(false);
+  mocks.mockReadEngineCredentials.mockResolvedValue({});
+}
+
 import { runAcp } from './runAcp';
 
 describe('runAcp', () => {
@@ -194,37 +248,7 @@ describe('runAcp', () => {
     .map((args) => args.map((arg) => String(arg)).join(' '))
     .map(stripLogPrefix);
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.sessionHandlers.clear();
-    mocks.setUserMessageHandler(null);
-    mocks.setKillHandler(null);
-    mocks.backendState.listeners = [];
-    mocks.backendState.prompts = [];
-    mocks.backendState.setConfigOptionCalls = [];
-    mocks.backendState.setModeCalls = [];
-    mocks.backendState.setModelCalls = [];
-    mocks.backendState.startSessionMessages = [];
-    mocks.backendState.sendPromptError = null;
-    mocks.backendState.startSessionCalls = 0;
-    mocks.backendState.cancelCalls = [];
-    mocks.backendState.disposeCalls = 0;
-    mocks.backendState.constructorArgs = null;
-
-    mocks.mockApiCreate.mockResolvedValue({
-      getOrCreateMachine: mocks.mockGetOrCreateMachine,
-      getOrCreateSession: mocks.mockGetOrCreateSession,
-    });
-    mocks.mockSetupOfflineReconnection.mockImplementation(() => ({
-      session: mocks.mockSession,
-      reconnectionHandle: { cancel: vi.fn() },
-      isOffline: false,
-    }));
-    mocks.mockStartHappyServer.mockResolvedValue({
-      url: 'http://127.0.0.1:9876',
-      stop: vi.fn(),
-    });
-  });
+  beforeEach(resetRunAcpMocks);
 
   it('wires backend messages through mapper into session envelopes', async () => {
     const runPromise = runAcp({
@@ -690,5 +714,147 @@ describe('runAcp', () => {
     expect(mocks.backendState.setConfigOptionCalls).toEqual([]);
     expect(mocks.backendState.setModeCalls).toEqual([]);
     expect(mocks.backendState.setModelCalls).toEqual([]);
+  });
+});
+
+describe('HOST-12 agent profile', () => {
+  const runEngine = (agentProfile?: string) => runAcp({
+    credentials: { token: 'token', encryption: { type: 'legacy', secret: new Uint8Array(32) } },
+    agentName: 'opencode',
+    command: 'opencode',
+    args: ['acp'],
+    agentProfile,
+  });
+
+  beforeEach(() => {
+    resetRunAcpMocks();
+  });
+
+  it('selects the profile as the ACP session mode right after the session starts', async () => {
+    const runPromise = runEngine('research');
+
+    await vi.waitFor(() => {
+      expect(mocks.backendState.setModeCalls).toEqual(['research']);
+    });
+
+    await mocks.getKillHandler()!();
+    await runPromise;
+
+    expect(mocks.backendState.startSessionCalls).toBe(1);
+  });
+
+  it('records the profile in session metadata so the relay copy carries it', async () => {
+    const runPromise = runEngine('research');
+
+    await vi.waitFor(() => {
+      expect(mocks.backendState.setModeCalls).toEqual(['research']);
+    });
+
+    await mocks.getKillHandler()!();
+    await runPromise;
+
+    expect(mocks.mockGetOrCreateSession).toHaveBeenCalledWith(expect.objectContaining({
+      metadata: expect.objectContaining({ agentProfile: 'research', flavor: 'opencode' }),
+    }));
+  });
+
+  it('selects no mode when the session runs on the default profile', async () => {
+    const runPromise = runEngine();
+
+    await vi.waitFor(() => {
+      expect(mocks.backendState.startSessionCalls).toBe(1);
+    });
+
+    await mocks.getKillHandler()!();
+    await runPromise;
+
+    expect(mocks.backendState.setModeCalls).toEqual([]);
+  });
+
+  it('fails the session when the engine rejects the profile', async () => {
+    mocks.backendState.setModeResult = false;
+
+    await expect(runEngine('missing-profile')).rejects.toThrow("Engine rejected agent profile 'missing-profile'");
+  });
+});
+
+describe('PERM-08 permission confirmation switch applied to the engine', () => {
+  const runEngine = () => runAcp({
+    credentials: { token: 'token', encryption: { type: 'legacy', secret: new Uint8Array(32) } },
+    agentName: 'opencode',
+    command: 'opencode',
+    args: ['acp'],
+  });
+
+  beforeEach(() => {
+    resetRunAcpMocks();
+  });
+
+  it('starts the engine on the allow baseline and surfaces no permission requests while off', async () => {
+    mocks.mockReadPermissionConfirmationEnabled.mockResolvedValue(false);
+
+    const runPromise = runEngine();
+    await vi.waitFor(() => {
+      expect(mocks.backendState.constructorArgs).not.toBeNull();
+    });
+    await mocks.getKillHandler()!();
+    await runPromise;
+
+    expect(mocks.backendState.constructorArgs.env).toMatchObject({
+      OPENCODE_PERMISSION: '{"*":"allow"}',
+    });
+    expect(mocks.backendState.constructorArgs.permissionHandler).toBeUndefined();
+  });
+
+  it('keeps the ACP permission round trip and pins no baseline while on', async () => {
+    mocks.mockReadPermissionConfirmationEnabled.mockResolvedValue(true);
+
+    const runPromise = runEngine();
+    await vi.waitFor(() => {
+      expect(mocks.backendState.constructorArgs).not.toBeNull();
+    });
+    await mocks.getKillHandler()!();
+    await runPromise;
+
+    expect(mocks.backendState.constructorArgs.env).not.toHaveProperty('OPENCODE_PERMISSION');
+    expect(mocks.backendState.constructorArgs.permissionHandler).toBeDefined();
+  });
+});
+
+describe('HOST-09 / HOST-11 credential injection at session start', () => {
+  beforeEach(() => {
+    resetRunAcpMocks();
+  });
+
+  it('injects the platform API key into the engine environment and connectors as MCP servers', async () => {
+    mocks.mockReadEngineCredentials.mockResolvedValue({
+      platformApiKey: 'platform-secret',
+      connectors: {
+        gmail: { command: 'gmail-mcp', args: ['--stdio'], env: { GMAIL_TOKEN: 'connector-secret' } },
+      },
+    });
+
+    const runPromise = runAcp({
+      credentials: { token: 'token', encryption: { type: 'legacy', secret: new Uint8Array(32) } },
+      agentName: 'opencode',
+      command: 'opencode',
+      args: ['acp'],
+    });
+    await vi.waitFor(() => {
+      expect(mocks.backendState.constructorArgs).not.toBeNull();
+    });
+    await mocks.getKillHandler()!();
+    await runPromise;
+
+    expect(mocks.backendState.constructorArgs.env).toMatchObject({ MODEL_API_KEY: 'platform-secret' });
+    expect(mocks.backendState.constructorArgs.mcpServers).toMatchObject({
+      gmail: { command: 'gmail-mcp', args: ['--stdio'], env: { GMAIL_TOKEN: 'connector-secret' } },
+    });
+    expect(mocks.backendState.constructorArgs.mcpServers.happy).toBeDefined();
+
+    const loggedSecret = mocks.mockLoggerDebug.mock.calls
+      .concat(mocks.mockConsoleLog.mock.calls)
+      .some((args) => args.some((arg: unknown) => JSON.stringify(arg ?? null).includes('secret')));
+    expect(loggedSecret).toBe(false);
   });
 });

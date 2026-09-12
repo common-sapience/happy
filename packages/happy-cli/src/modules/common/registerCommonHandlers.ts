@@ -8,6 +8,7 @@ import { run as runRipgrep } from '@/modules/ripgrep/index';
 import { run as runDifftastic } from '@/modules/difftastic/index';
 import { RpcHandlerManager } from '../../api/rpc/RpcHandlerManager';
 import { validatePath, PathValidationResult } from './pathSecurity';
+import type { EngineAgentName } from '@/agent/acp/acpAgentConfig';
 
 const execAsync = promisify(exec);
 
@@ -120,29 +121,21 @@ export interface SpawnSessionOptions {
     directory: string;
     sessionId?: string;
     approvedNewDirectoryCreation?: boolean;
-    agent?: 'claude' | 'codex' | 'gemini' | 'openclaw' | 'agy';
-    permissionMode?: string;
-    modelMode?: string;
-    effortLevel?: string;
+    /**
+     * The engine is the only agent the daemon starts; anything else is rejected
+     * (HOST-10). Left optional so a control end that does not name an agent
+     * still gets the engine.
+     */
+    agent?: EngineAgentName;
+    /**
+     * Name of the engine agent profile the session runs under (HOST-12). The
+     * profile is defined in the engine's managed config; the control end only
+     * passes its name and the daemon selects it as the ACP session mode.
+     */
+    agentProfile?: string;
     environmentVariables?: Record<string, string>;
-    token?: string;
-    /**
-     * If set, the daemon spawns the agent with `--resume <id>` so the new
-     * Happy session continues from an existing Claude conversation file.
-     * Used by the session fork / duplicate flow: the fork RPC produces a
-     * new Claude JSONL on disk, the spawn RPC then attaches a fresh Happy
-     * session to it.
-     */
-    resumeClaudeSessionId?: string;
-    /**
-     * If set, the daemon spawns Codex with `--resume <id>` so a fresh Happy
-     * session attaches to a forked Codex app-server thread.
-     */
-    resumeCodexThreadId?: string;
-    /** Happy session id this fork was branched from (lineage). */
+    /** Happy session id this session was branched from (lineage). */
     parentSessionId?: string;
-    /** Happy message id used as the rewind point (only set for "duplicate"). */
-    forkedFromMessageId?: string;
     /**
      * Marks the spawned session as a hidden "side chat" of `parentSessionId`.
      * Side chats are forked from a parent session but never surface in the
