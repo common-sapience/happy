@@ -108,7 +108,6 @@ describe('modelModeOptions', () => {
             'default',
             'bypassPermissions',
         ]);
-        expect(getDefaultPermissionModeKey('agy')).toBe('default');
     });
 
     it('only offers gemini modes runGemini actually honours', () => {
@@ -197,16 +196,10 @@ describe('modelModeOptions', () => {
         }
     });
 
-    it('uses code defaults for agent defaults', () => {
-        expect(getDefaultPermissionModeKey('claude')).toBe('auto');
-        expect(getDefaultModelKey('claude')).toBe('claude-opus-5');
-        expect(getDefaultEffortKey('claude')).toBe('medium');
-        expect(getDefaultPermissionModeKey('codex')).toBe('auto');
-        expect(getDefaultModelKey('codex')).toBe('gpt-5.6-sol');
-        expect(getDefaultEffortKey('codex')).toBe('medium');
-        expect(getDefaultPermissionModeKey('agy')).toBe('default');
-        expect(getDefaultModelKey('agy')).toBe('Gemini 3.8 Flash');
-        expect(getDefaultEffortKey('agy')).toBe('medium');
+    it('uses the engine code defaults whatever flavor a session carries', () => {
+        expect(getDefaultPermissionModeKey('opencode')).toBe('auto');
+        expect(getDefaultModelKey('opencode')).toBe('default');
+        expect(getDefaultEffortKey('opencode')).toBe(null);
     });
 
     it('prefers metadata models over hardcoded fallbacks', () => {
@@ -268,9 +261,7 @@ describe('modelModeOptions', () => {
         // must be agy's own list, not claude's opus/sonnet/haiku
         expect(models).toEqual(getAgyModelModes());
         const keys = models.map((m) => m.key);
-        // the agentDefaults agy default must be selectable
         expect(keys).toContain('Gemini 3.8 Flash');
-        expect(getDefaultModelKey('agy')).toBe('Gemini 3.8 Flash');
         expect(keys.filter((key) => key.startsWith('Gemini '))).toEqual(['Gemini 3.8 Flash']);
         expect(getEffortLevelsForModel('agy', 'Gemini 3.8 Flash').map((level) => level.key))
             .toEqual(['low', 'medium', 'high']);

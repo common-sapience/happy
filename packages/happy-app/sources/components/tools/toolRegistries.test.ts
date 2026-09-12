@@ -11,20 +11,17 @@ vi.mock('./views/TaskView', () => ({ TaskView: 'Task' }));
 vi.mock('./views/BashViewFull', () => ({ BashViewFull: 'TerminalFull' }));
 vi.mock('./views/EditViewFull', () => ({ EditViewFull: 'EditFull' }));
 vi.mock('./views/MultiEditViewFull', () => ({ MultiEditViewFull: 'MultiEditFull' }));
-vi.mock('./views/CodexBashView', () => ({ CodexBashView: 'CodexBash' }));
 vi.mock('./views/CodexPatchView', () => ({ CodexPatchView: 'Patch', CodexPatchViewFull: 'PatchFull' }));
 vi.mock('./views/CodexDiffView', () => ({ CodexDiffView: 'Diff', CodexDiffViewFull: 'DiffFull' }));
 vi.mock('./views/AskUserQuestionView', () => ({ AskUserQuestionView: 'Question' }));
 vi.mock('./views/RequestUserInputView', () => ({ RequestUserInputView: 'Request' }));
-vi.mock('./views/GeminiEditView', () => ({ GeminiEditView: 'GeminiEdit' }));
-vi.mock('./views/GeminiExecuteView', () => ({ GeminiExecuteView: 'GeminiExecute' }));
 vi.mock('./views/FileView', () => ({ FileView: 'File' }));
 vi.mock('@/text', () => ({ t: (key: string) => key }));
 
 import { getToolViewComponent, getToolFullViewComponent } from './views/_all';
 
 describe('tool registries', () => {
-    it.each(['apply_patch', 'CodexPatch', 'GeminiPatch'])('wires %s on both surfaces', name => {
+    it.each(['apply_patch'])('wires %s on both surfaces', name => {
         expect(getToolViewComponent(name)).toBe('Patch');
         expect(getToolFullViewComponent(name)).toBe('PatchFull');
     });

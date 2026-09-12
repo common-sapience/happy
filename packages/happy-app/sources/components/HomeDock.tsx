@@ -36,8 +36,6 @@ import { collectSessionPlaces, collectSessionWorkspaces } from '@/sync/agentSess
 import {
     collectMachineChoices,
     findMachineChoice,
-    machineChoiceAgentAvailable,
-    machineChoiceAgentVisible,
     resolveChoiceAgent,
     resolveWorktreeCreationMachine,
 } from '@/sync/machineChoices';
@@ -74,9 +72,8 @@ import {
 import { StatusDot } from './StatusDot';
 import { Shaker, type ShakeInstance } from './Shaker';
 import { hapticsError } from './haptics';
-import { HARNESS_ORDER, getHarnessName } from '@/utils/harnessCatalog';
+import { ENGINE_AGENT, getHarnessName } from '@/utils/harnessCatalog';
 import { getPermissionModeMenuLabel, getPermissionModeShortLabel } from '@/utils/permissionModeLabels';
-import { getRigMachineSessionCreation } from '@/sync/rigSessionCreation';
 import {
     MobileHeaderScrim,
     MOBILE_HOME_SCRIM_OVERLAY_OPACITY,
@@ -94,7 +91,7 @@ import {
 export const MOBILE_HOME_DOCK_CONTENT_INSET = 108;
 
 type EnvironmentSetting = 'machine' | 'project' | 'worktree';
-type AgentSetting = 'agent' | 'model' | 'permission' | 'effort';
+type AgentSetting = 'model' | 'permission' | 'effort';
 type PickerPage = EnvironmentSetting | AgentSetting;
 
 const CUSTOM_PROJECT_PATH_KEY = '__custom_project_path__';
@@ -769,15 +766,8 @@ export const HomeDock = React.memo(({
     const currentProject = resolveOption(projectOptions, [selectedPath, '~']);
     // Happy Agent's half of this computer, and only this computer's: a session asked for here is
     // never handed to a daemon somewhere else because that one happened to be reachable.
-    const rigSelectionMachine = selectedChoice?.rigMachine ?? null;
-    const rigSelectionCreation = React.useMemo(
-        () => getRigMachineSessionCreation(rigSelectionMachine?.metadata),
-        [rigSelectionMachine],
-    );
-    const rigCreation = agentType === 'rig' ? rigSelectionCreation : null;
     const happyCliVersion = selectedChoice?.happyMachine?.metadata?.happyCliVersion;
-    const supportsWorktree = rigCreation?.supportsWorktrees
-        ?? (agentType === 'rig' ? false : getSupportsWorktree(agentType));
+    const supportsWorktree = getSupportsWorktree(agentType);
     const selectedWorktreeKey = sessionType === 'worktree'
         ? worktreeKey ?? '__new__'
         : '__none__';
@@ -815,17 +805,11 @@ export const HomeDock = React.memo(({
             name: worktree.branch,
             description: worktree.path,
         })), [agentWorkspaces, picksWorkspaces, worktrees]);
-    const createsNativeHappyAgentWorkspace = agentType === 'rig'
-        && picksWorkspaces
-        && rigCreation !== null;
     const worktreeCreationMachine = React.useMemo(
         () => resolveWorktreeCreationMachine(selectedChoice, agentType, supportsWorktree),
         [agentType, selectedChoice, supportsWorktree],
     );
-    // Happy Agent owns workspace creation through its catalog-native spawn.
-    // Happy CLI's Git RPC remains only for the ordinary code-agent worktree flow.
-    const canCreateWorktree = createsNativeHappyAgentWorkspace
-        || (agentType !== 'rig' && worktreeCreationMachine !== null);
+    const canCreateWorktree = worktreeCreationMachine !== null;
 
     React.useEffect(() => {
         if (!supportsWorktree && !picksWorkspaces && sessionType === 'worktree') {
@@ -860,51 +844,26 @@ export const HomeDock = React.memo(({
         return options;
     }, [agentType, canCreateWorktree, existingWorktrees, picksWorkspaces, supportsWorktree, worktreeKey]);
     const currentWorktree = resolveOption(worktreeOptions, [selectedWorktreeKey]);
-    // Common harnesses stay listed but disabled when unavailable, so the picker
-    // still reads as a choice. Antigravity is niche and stays entirely absent
-    // until this computer explicitly reports it installed.
-    const harnessKeys = React.useMemo<NewSessionAgentType[]>(() => (
-        (HARNESS_ORDER.includes(agentType) ? [...HARNESS_ORDER] : [agentType, ...HARNESS_ORDER])
-            .filter((key) => machineChoiceAgentVisible(selectedChoice, key))
-    ), [agentType, selectedChoice]);
-    const availableAgents = React.useMemo<ModeOption[]>(() => (
-        harnessKeys.map((key) => {
-            const agent = { key, name: getHarnessName(key) };
-            return machineChoiceAgentAvailable(selectedChoice, key)
-                ? agent
-                : {
-                    ...agent,
-                    disabled: true,
-                    description: key === 'rig'
-                        ? 'Happy Agent is not running on this computer'
-                        : 'Not installed on this machine',
-                };
-        })
-    ), [harnessKeys, selectedChoice]);
-    const resolvedAgentType = resolveChoiceAgent(selectedChoice, agentType);
-    const defaults = React.useMemo(() => rigCreation
-        ? {
-            permissionMode: rigCreation.defaultPermissionMode ?? '',
-            modelMode: rigCreation.defaultModelKey ?? '',
-            effortLevel: rigCreation.defaultEffortForModel(rigCreation.defaultModelKey),
-        }
-        : resolveAgentDefaultConfig(defaultOverrides, agentType, happyCliVersion), [agentType, defaultOverrides, happyCliVersion, rigCreation]);
+    const defaults = React.useMemo(
+        () => resolveAgentDefaultConfig(defaultOverrides, agentType, happyCliVersion),
+        [agentType, defaultOverrides, happyCliVersion],
+    );
     const permissionOptions = React.useMemo(
         // The CLI daemon on the picked computer is what will parse the mode;
         // older CLIs drop the whole prompt on modes they do not know (`auto`).
-        () => rigCreation?.permissionModes ?? filterPermissionModesForCli(
+        () => filterPermissionModesForCli(
             getHardcodedPermissionModes(agentType, t),
             happyCliVersion,
         ),
-        [agentType, happyCliVersion, rigCreation],
+        [agentType, happyCliVersion],
     );
     const modelOptions = React.useMemo(
-        () => rigCreation?.models ?? includeConfiguredModel(
+        () => includeConfiguredModel(
             agentType,
             getHardcodedModelModes(agentType, t),
             defaults.modelMode,
         ),
-        [agentType, defaults.modelMode, rigCreation],
+        [agentType, defaults.modelMode],
     );
     // The code default last: when the saved and configured modes were both
     // filtered out for an old CLI, land there rather than on whichever mode
@@ -912,21 +871,15 @@ export const HomeDock = React.memo(({
     const currentPermission = resolveOption(permissionOptions, [
         permissionMode,
         defaults.permissionMode,
-        rigCreation ? null : getCodeAgentDefaults(agentType, happyCliVersion).permissionMode,
+        getCodeAgentDefaults(agentType, happyCliVersion).permissionMode,
     ]);
     const currentModel = resolveOption(modelOptions, [modelMode, defaults.modelMode]);
     const effortOptions = React.useMemo(
-        () => rigCreation
-            ? rigCreation.effortsForModel(currentModel?.key).map((key) => ({ key, name: key }))
-            : getEffortLevelsForModel(agentType, currentModel?.key ?? 'default'),
-        [agentType, currentModel?.key, rigCreation],
+        () => getEffortLevelsForModel(agentType, currentModel?.key ?? 'default'),
+        [agentType, currentModel?.key],
     );
-    const currentEffortDefault = rigCreation?.defaultEffortForModel(currentModel?.key)
-        ?? defaults.effortLevel;
-    const currentEffort = resolveOption(effortOptions, [effortLevel, currentEffortDefault]);
-    const currentAgent = availableAgents.find((agent) => agent.key === agentType)
-        ?? availableAgents[0]
-        ?? { key: agentType, name: getHarnessName(agentType) };
+    const currentEffort = resolveOption(effortOptions, [effortLevel, defaults.effortLevel]);
+    const currentAgent = { key: ENGINE_AGENT, name: getHarnessName(ENGINE_AGENT) };
     const permissionLabel = getPermissionModeShortLabel(currentPermission);
     const focusedPromptPlaceholder = resolveHomeDockPromptPlaceholder(currentAgent.key, currentAgent.name);
     const canSubmit = !isSubmitting && (
@@ -1158,29 +1111,6 @@ export const HomeDock = React.memo(({
         closeFocusMode();
     }, [closeFocusMode, closePicker, isSubmitting, refuse, sheetPage]);
 
-    const selectAgent = React.useCallback((agent: NewSessionAgentType) => {
-        const nextRigCreation = agent === 'rig' ? rigSelectionCreation : null;
-        const nextDefaults = nextRigCreation
-            ? {
-                permissionMode: nextRigCreation.defaultPermissionMode ?? '',
-                modelMode: nextRigCreation.defaultModelKey ?? '',
-                effortLevel: nextRigCreation.defaultEffortForModel(nextRigCreation.defaultModelKey),
-            }
-            : resolveAgentDefaultConfig(defaultOverrides, agent, happyCliVersion);
-        // Choosing Happy Agent no longer moves the machine selection: the computer already covers
-        // both daemons, and switching it under the person was what made the picker show two.
-        setAgentType(agent);
-        setPermissionMode(nextDefaults.permissionMode);
-        setModelMode(nextDefaults.modelMode);
-        if (nextDefaults.effortLevel) setEffortLevel(nextDefaults.effortLevel);
-    }, [defaultOverrides, happyCliVersion, rigSelectionCreation, setAgentType, setEffortLevel, setModelMode, setPermissionMode]);
-
-    React.useEffect(() => {
-        if (resolvedAgentType !== agentType) {
-            selectAgent(resolvedAgentType);
-        }
-    }, [agentType, resolvedAgentType, selectAgent]);
-
     type SettingsRow = {
         page: string;
         label: string;
@@ -1200,7 +1130,6 @@ export const HomeDock = React.memo(({
             value: currentWorktree?.name ?? (picksWorkspaces ? 'Main' : 'No worktree'),
             icon: 'git-branch-outline',
         },
-        { page: 'agent', label: 'HARNESS', value: currentAgent.name, icon: 'hardware-chip-outline' },
     ];
     const agentRows: SettingsRow[] = [
         ...(currentModel ? [{ page: 'model', label: t('agentInput.model.title'), value: currentModel.name, icon: 'cube-outline' as const }] : []),
@@ -1273,9 +1202,6 @@ export const HomeDock = React.memo(({
     };
 
     const getAgentPickerConfig = (setting: AgentSetting): PickerConfig => {
-        if (setting === 'agent') {
-            return { title: 'Harness', options: availableAgents, selectedKey: agentType, onSelect: (key) => selectAgent(key as NewSessionAgentType) };
-        }
         if (setting === 'model') {
             return { title: t('agentInput.model.title'), options: modelOptions, selectedKey: currentModel?.key, onSelect: setModelMode };
         }
