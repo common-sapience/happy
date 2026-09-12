@@ -46,7 +46,7 @@ vi.mock('@/daemon/run', () => ({
     initialMachineMetadata: {},
 }));
 
-vi.mock('@/claude/utils/startHappyServer', () => ({
+vi.mock('@/modules/common/startHappyServer', () => ({
     startHappyServer: mockStartHappyServer,
 }));
 
@@ -59,7 +59,7 @@ vi.mock('@/claude/utils/generateHookSettings', () => ({
     cleanupHookSettingsFile: vi.fn(),
 }));
 
-vi.mock('./registerKillSessionHandler', () => ({
+vi.mock('@/modules/common/registerKillSessionHandler', () => ({
     registerKillSessionHandler: mockRegisterKillSessionHandler,
 }));
 
