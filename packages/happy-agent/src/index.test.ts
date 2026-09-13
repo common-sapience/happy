@@ -6,6 +6,10 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const binPath = resolve(__dirname, '..', 'bin', 'happy-agent.mjs');
 
+// Every command needs a relay before it needs anything else, so the tests
+// that exercise the rest of the CLI name one.
+const RELAY_URL = 'https://relay.example.test';
+
 function runCli(...args: string[]): { stdout: string; stderr: string; exitCode: number } {
     try {
         const stdout = execFileSync(process.execPath, [
@@ -13,7 +17,7 @@ function runCli(...args: string[]): { stdout: string; stderr: string; exitCode: 
             '--no-deprecation',
             binPath,
             ...args,
-        ], { encoding: 'utf-8', env: { ...process.env, HAPPY_HOME_DIR: '/tmp/nonexistent-happy-test' } });
+        ], { encoding: 'utf-8', env: { ...process.env, HAPPY_HOME_DIR: '/tmp/nonexistent-happy-test', HAPPY_SERVER_URL: RELAY_URL } });
         return { stdout, stderr: '', exitCode: 0 };
     } catch (err: unknown) {
         const e = err as { stdout?: string; stderr?: string; status?: number };

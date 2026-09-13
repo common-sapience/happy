@@ -37,6 +37,10 @@ const binPath = resolve(__dirname, '..', 'bin', 'happy-agent.mjs');
 
 // --- CLI runner ---
 
+// Every command needs a relay before it needs anything else, so the tests
+// that exercise the rest of the CLI name one.
+const RELAY_URL = 'https://relay.example.test';
+
 function runCli(...args: string[]): { stdout: string; stderr: string; exitCode: number } {
     try {
         const stdout = execFileSync(process.execPath, [
@@ -44,7 +48,7 @@ function runCli(...args: string[]): { stdout: string; stderr: string; exitCode: 
             '--no-deprecation',
             binPath,
             ...args,
-        ], { encoding: 'utf-8', env: { ...process.env, HAPPY_HOME_DIR: '/tmp/nonexistent-happy-acceptance' } });
+        ], { encoding: 'utf-8', env: { ...process.env, HAPPY_HOME_DIR: '/tmp/nonexistent-happy-acceptance', HAPPY_SERVER_URL: RELAY_URL } });
         return { stdout, stderr: '', exitCode: 0 };
     } catch (err: unknown) {
         const e = err as { stdout?: string; stderr?: string; status?: number };
@@ -53,6 +57,21 @@ function runCli(...args: string[]): { stdout: string; stderr: string; exitCode: 
             stderr: e.stderr ?? '',
             exitCode: e.status ?? 1,
         };
+    }
+}
+
+function runCliWithoutRelay(...args: string[]): { stdout: string; stderr: string; exitCode: number } {
+    const env = { ...process.env, HAPPY_HOME_DIR: '/tmp/nonexistent-happy-acceptance' };
+    delete env.HAPPY_SERVER_URL;
+    try {
+        const stdout = execFileSync(process.execPath, ['--no-warnings', '--no-deprecation', binPath, ...args], {
+            encoding: 'utf-8',
+            env,
+        });
+        return { stdout, stderr: '', exitCode: 0 };
+    } catch (err: unknown) {
+        const e = err as { stdout?: string; stderr?: string; status?: number };
+        return { stdout: e.stdout ?? '', stderr: e.stderr ?? '', exitCode: e.status ?? 1 };
     }
 }
 
@@ -148,6 +167,14 @@ describe('Smoke: CLI command surface', () => {
             const { stdout, exitCode } = runCli('auth', 'logout');
             expect(exitCode).toBe(0);
             expect(stdout).toContain('Logged out');
+        });
+    });
+
+    describe('1b. no relay configured', () => {
+        it('says which address is missing instead of asking for a login', () => {
+            const { stderr, exitCode } = runCliWithoutRelay('list');
+            expect(exitCode).not.toBe(0);
+            expect(stderr).toContain('No relay is configured');
         });
     });
 
