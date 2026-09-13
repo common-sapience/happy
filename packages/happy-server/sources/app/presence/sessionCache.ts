@@ -1,6 +1,5 @@
 import { db } from "@/storage/db";
 import { log } from "@/utils/log";
-import { sessionCacheCounter, databaseUpdatesSkippedCounter } from "@/app/monitoring/metrics2";
 
 interface SessionCacheEntry {
     validUntil: number;
@@ -61,7 +60,6 @@ class ActivityCache {
         // Session was just stopped, archived or deleted - ignore heartbeats for a while
         // instead of caching it again and letting a batch flush revive it
         if (this.isSessionStopped(sessionId, now)) {
-            sessionCacheCounter.inc({ operation: 'session_validation', result: 'stopped' });
             return false;
         }
 
@@ -69,11 +67,9 @@ class ActivityCache {
         
         // Check cache first
         if (cached && cached.validUntil > now && cached.userId === userId) {
-            sessionCacheCounter.inc({ operation: 'session_validation', result: 'hit' });
             return true;
         }
         
-        sessionCacheCounter.inc({ operation: 'session_validation', result: 'miss' });
         
         // Cache miss - check database
         try {
@@ -84,7 +80,6 @@ class ActivityCache {
             if (session) {
                 // Session could have been stopped while we were reading the database
                 if (this.isSessionStopped(sessionId, Date.now())) {
-                    sessionCacheCounter.inc({ operation: 'session_validation', result: 'stopped' });
                     return false;
                 }
 
@@ -111,11 +106,9 @@ class ActivityCache {
         
         // Check cache first
         if (cached && cached.validUntil > now && cached.userId === userId) {
-            sessionCacheCounter.inc({ operation: 'machine_validation', result: 'hit' });
             return true;
         }
         
-        sessionCacheCounter.inc({ operation: 'machine_validation', result: 'miss' });
         
         // Cache miss - check database
         try {
@@ -150,7 +143,6 @@ class ActivityCache {
     queueSessionUpdate(sessionId: string, timestamp: number): boolean {
         // Heartbeat that was already in flight when the session was stopped
         if (this.isSessionStopped(sessionId, Date.now())) {
-            databaseUpdatesSkippedCounter.inc({ type: 'session' });
             return false;
         }
 
@@ -166,7 +158,6 @@ class ActivityCache {
             return true;
         }
         
-        databaseUpdatesSkippedCounter.inc({ type: 'session' });
         return false; // No update needed
     }
 
@@ -218,7 +209,6 @@ class ActivityCache {
             return true;
         }
         
-        databaseUpdatesSkippedCounter.inc({ type: 'machine' });
         return false; // No update needed
     }
 

@@ -5,7 +5,7 @@ This document covers the HTTP API surface and authentication flows. For WebSocke
 ## Method conventions
 - **GET** is used for reads.
 - **POST** is used for mutations or actions, even when the operation doesn't map cleanly to a single entity.
-- **DELETE** is used when intent is unambiguous (e.g., removing a token or deleting a session/artifact).
+- **DELETE** is used when intent is unambiguous (e.g., removing a push token or deleting a session).
 
 We intentionally avoid the full REST verb palette because many operations span multiple entities or have non-CRUD semantics.
 
@@ -50,60 +50,34 @@ Auth flows:
 - `POST /v1/machines` (create or load by id)
 - `GET /v1/machines`
 - `GET /v1/machines/:id`
+- `DELETE /v1/machines/:id`
 
-### Artifacts
-- `GET /v1/artifacts`
-- `GET /v1/artifacts/:id`
-- `POST /v1/artifacts`
-- `POST /v1/artifacts/:id` (versioned update)
-- `DELETE /v1/artifacts/:id`
-
-### Access keys
-- `GET /v1/access-keys/:sessionId/:machineId`
-- `POST /v1/access-keys/:sessionId/:machineId`
-- `PUT /v1/access-keys/:sessionId/:machineId`
-
-### Key-value store
-- `GET /v1/kv/:key`
-- `GET /v1/kv?prefix=...&limit=...`
-- `POST /v1/kv/bulk`
-- `POST /v1/kv` (batch mutate)
-
-### Account and usage
+### Account
 - `GET /v1/account/profile`
 - `GET /v1/account/settings`
 - `POST /v1/account/settings`
-- `POST /v1/usage/query`
+
+Usage and billing live on the platform, not here — the relay holds no usage facts (RULE-03).
 
 ### Push tokens
 - `POST /v1/push-tokens`
 - `DELETE /v1/push-tokens/:token`
 - `GET /v1/push-tokens`
 
-### Connect (GitHub + vendor tokens)
-- `GET /v1/connect/github/params`
-- `GET /v1/connect/github/callback`
-- `POST /v1/connect/github/webhook`
-- `DELETE /v1/connect/github`
-- `POST /v1/connect/:vendor/register` (`vendor` in `openai | anthropic | gemini`)
-- `GET /v1/connect/:vendor/token`
-- `DELETE /v1/connect/:vendor`
-- `GET /v1/connect/tokens`
+### Connect (connector records)
+A connector record says which machine of the account is connected to which external service.
+The credential never reaches the relay: it stays on the machine that authorized it (DEV-08, P-09),
+so a registration carrying a credential field is rejected and there is no route that returns one.
+- `POST /v1/connect/:vendor/register` — body `{ machineId, status? }`, `status` in `connected | disconnected`
+- `GET /v1/connect`
+- `DELETE /v1/connect/:vendor?machineId=...`
 
-### Users, friends, feed
-- `GET /v1/user/:id`
-- `GET /v1/user/search?query=...`
-- `POST /v1/friends/add`
-- `POST /v1/friends/remove`
-- `GET /v1/friends`
-- `GET /v1/feed`
-
-### Version and voice
+### Version
 - `POST /v1/version`
-- `POST /v1/voice/token`
 
-### Dev-only
-- `POST /logs-combined-from-cli-and-mobile-for-simple-ai-debugging` (only if enabled)
+### Health
+- `GET /health` — liveness plus a database round-trip. The only monitoring surface; the upstream
+  Prometheus endpoint and hosted log summary are gone.
 
 ## Implementation references
 - API routes: `packages/happy-server/sources/app/api/routes`

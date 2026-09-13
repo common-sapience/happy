@@ -6,14 +6,10 @@ import { createAdapter } from "@socket.io/redis-streams-adapter";
 import { Redis } from "ioredis";
 import { log } from "@/utils/log";
 import { auth } from "@/app/auth/auth";
-import { getMetricsLabelsFromSocket, redisStreamLagMsGauge, websocketConnectionsGauge, websocketEventsCounter } from "../monitoring/metrics2";
-import { usageHandler } from "./socket/usageHandler";
 import { rpcHandler } from "./socket/rpcHandler";
 import { pingHandler } from "./socket/pingHandler";
 import { sessionUpdateHandler } from "./socket/sessionUpdateHandler";
 import { machineUpdateHandler } from "./socket/machineUpdateHandler";
-import { artifactUpdateHandler } from "./socket/artifactUpdateHandler";
-import { accessKeyHandler } from "./socket/accessKeyHandler";
 
 export function startSocket(app: Fastify) {
     const io = new Server(app.server, {
@@ -51,25 +47,6 @@ export function startSocket(app: Fastify) {
         const streamClient = new Redis(process.env.REDIS_URL);
         io.adapter(createAdapter(streamClient, { maxLen: 200000, readCount: 2000 }));
         log({ module: 'websocket' }, 'Redis streams adapter enabled for multi-process support');
-
-        // Track stream reader lag: wrap onRawMessage to capture last-read offset,
-        // then periodically compare against stream HEAD.
-        let lastReadOffset = "0-0";
-        const adapter = io.of("/").adapter as any;
-        const origOnRawMessage = adapter.onRawMessage.bind(adapter);
-        adapter.onRawMessage = (msg: any, offset: string) => {
-            lastReadOffset = offset;
-            return origOnRawMessage(msg, offset);
-        };
-        setInterval(async () => {
-            try {
-                const info = await streamClient.xinfo("STREAM", "socket.io") as any[];
-                const headId = String(info[info.indexOf("last-generated-id") + 1]);
-                const headMs = parseInt(headId.split("-")[0]);
-                const readMs = parseInt(lastReadOffset.split("-")[0]);
-                redisStreamLagMsGauge.set(headMs - readMs);
-            } catch { /* stream may not exist yet */ }
-        }, 5000);
     }
 
     // Initialize event router with Socket.IO server instance
@@ -125,9 +102,8 @@ export function startSocket(app: Fastify) {
         const clientType = socket.data.clientType as 'session-scoped' | 'user-scoped' | 'machine-scoped' | undefined;
         const sessionId = socket.data.sessionId as string | undefined;
         const machineId = socket.data.machineId as string | undefined;
-        const labels = getMetricsLabelsFromSocket(socket);
 
-        log({ module: 'websocket' }, `Token verified: ${userId}, clientType: ${clientType || 'user-scoped'}, client: ${labels.client}, sessionId: ${sessionId || 'none'}, machineId: ${machineId || 'none'}, socketId: ${socket.id}`);
+        log({ module: 'websocket' }, `Token verified: ${userId}, clientType: ${clientType || 'user-scoped'}, sessionId: ${sessionId || 'none'}, machineId: ${machineId || 'none'}, socketId: ${socket.id}`);
 
         // Store connection based on type
         const metadata = { clientType: clientType || 'user-scoped', sessionId, machineId };
@@ -158,7 +134,6 @@ export function startSocket(app: Fastify) {
             };
         }
         eventRouter.addConnection(userId, connection);
-        websocketConnectionsGauge.inc({ type: connection.connectionType, ...labels });
 
         // Broadcast daemon online status
         if (connection.connectionType === 'machine-scoped') {
@@ -185,11 +160,8 @@ export function startSocket(app: Fastify) {
         });
 
         socket.on('disconnect', () => {
-            websocketEventsCounter.inc({ event_type: 'disconnect', ...labels });
-
             // Cleanup connections
             eventRouter.removeConnection(userId, connection);
-            websocketConnectionsGauge.dec({ type: connection.connectionType, ...labels });
 
             log({ module: 'websocket' }, `User disconnected: ${userId}`);
 
@@ -206,12 +178,9 @@ export function startSocket(app: Fastify) {
 
         // Handlers
         rpcHandler(userId, socket, io);
-        usageHandler(userId, socket);
         sessionUpdateHandler(userId, socket, connection);
         pingHandler(socket);
         machineUpdateHandler(userId, socket);
-        artifactUpdateHandler(userId, socket);
-        accessKeyHandler(userId, socket);
 
         // Ready
         log({ module: 'websocket' }, `User connected: ${userId}`);

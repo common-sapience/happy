@@ -10,21 +10,15 @@ import { connectRoutes } from "./routes/connectRoutes";
 import { accountRoutes } from "./routes/accountRoutes";
 import { startSocket } from "./socket";
 import { machinesRoutes } from "./routes/machinesRoutes";
-import { devRoutes } from "./routes/devRoutes";
 import { versionRoutes } from "./routes/versionRoutes";
-import { voiceRoutes } from "./routes/voiceRoutes";
-import { artifactsRoutes } from "./routes/artifactsRoutes";
-import { accessKeysRoutes } from "./routes/accessKeysRoutes";
-import { enableMonitoring } from "./utils/enableMonitoring";
 import { enableErrorHandlers } from "./utils/enableErrorHandlers";
 import { enableAuthentication } from "./utils/enableAuthentication";
-import { userRoutes } from "./routes/userRoutes";
-import { feedRoutes } from "./routes/feedRoutes";
-import { kvRoutes } from "./routes/kvRoutes";
 import { v3SessionRoutes } from "./routes/v3SessionRoutes";
 import { attachmentRoutes } from "./routes/attachmentRoutes";
 import { projectRoutes } from "./routes/projectRoutes";
 import { isLocalStorage, getLocalFilesDir } from "@/storage/files";
+import { db } from "@/storage/db";
+import { debug } from "@/utils/log";
 import * as path from "path";
 import * as fs from "fs";
 
@@ -74,7 +68,7 @@ export async function startApi(opts: StartApiOptions = {}) {
     const typed = app.withTypeProvider<ZodTypeProvider>() as unknown as Fastify;
 
     // Enable features
-    enableMonitoring(typed);
+    enableHealth(typed);
     enableErrorHandlers(typed, { skipNotFoundHandler: !!opts.staticDir });
     enableAuthentication(typed);
 
@@ -104,14 +98,7 @@ export async function startApi(opts: StartApiOptions = {}) {
     accountRoutes(typed);
     connectRoutes(typed);
     machinesRoutes(typed);
-    artifactsRoutes(typed);
-    accessKeysRoutes(typed);
-    devRoutes(typed);
     versionRoutes(typed);
-    voiceRoutes(typed);
-    userRoutes(typed);
-    feedRoutes(typed);
-    kvRoutes(typed);
     v3SessionRoutes(typed);
     attachmentRoutes(typed);
     projectRoutes(typed);
@@ -162,7 +149,7 @@ export async function startApi(opts: StartApiOptions = {}) {
             // Don't fall through for API/socket/files paths
             if (request.method !== 'GET') return reply.code(404).send({ error: 'Not found' });
             if (url.startsWith('/v1') || url.startsWith('/v3') || url.startsWith('/socket') ||
-                url.startsWith('/files/') || url.startsWith('/metrics') || url.startsWith('/health')) {
+                url.startsWith('/files/') || url.startsWith('/health')) {
                 return reply.code(404).send({ error: 'Not found' });
             }
             const indexPath = path.join(opts.staticDir!, 'index.html');
@@ -189,4 +176,29 @@ export async function startApi(opts: StartApiOptions = {}) {
     // End
     log(`API ready on http://${host}:${port}`);
     return { port, host };
+}
+
+/**
+ * Liveness probe for the deployment manifests. The upstream Prometheus endpoint and the
+ * hosted log summary are gone, so this is all the monitoring surface the relay exposes.
+ */
+function enableHealth(app: Fastify) {
+    app.get('/health', async (request, reply) => {
+        try {
+            await db.$queryRaw`SELECT 1`;
+            reply.send({
+                status: 'ok',
+                timestamp: new Date().toISOString(),
+                service: 'happy-server'
+            });
+        } catch (error) {
+            debug({ module: 'health' }, `health:database-check-failed error=${error}`);
+            reply.code(503).send({
+                status: 'error',
+                timestamp: new Date().toISOString(),
+                service: 'happy-server',
+                error: 'Database connectivity failed'
+            });
+        }
+    });
 }
