@@ -80,7 +80,8 @@ jobs:
       # repository's Actions secrets: with it the package is signed (and
       # notarized on macOS), without it the build still produces a package and
       # says so, and the archive is named `-unsigned`. Nothing here fails a
-      # build for a missing certificate.
+      # build for a missing certificate, and nothing an absent secret would
+      # leave blank reaches the build step.
       - name: Configure macOS code signing
         id: signing_macos
         if: runner.os == 'macOS'
@@ -94,13 +95,34 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
+
+          # Tauri reads these by name and does not ask whether the value is
+          # empty: an APPLE_CERTIFICATE that is set but blank makes it import a
+          # certificate that is not there and fail the bundle. So they are
+          # published to the build only once they all carry a real value.
+          publish() {
+            {
+              echo "$1<<HAPPY_SIGNING_VALUE"
+              echo "$2"
+              echo "HAPPY_SIGNING_VALUE"
+            } >> "$GITHUB_ENV"
+          }
+
           if [ -z "${APPLE_CERTIFICATE}" ] || [ -z "${APPLE_CERTIFICATE_PASSWORD}" ] || [ -z "${APPLE_SIGNING_IDENTITY}" ]; then
             echo "::warning::Unsigned macOS package: set the repository secrets APPLE_CERTIFICATE (base64 of the Developer ID .p12), APPLE_CERTIFICATE_PASSWORD and APPLE_SIGNING_IDENTITY to sign it. Users must right-click-open or run 'xattr -d com.apple.quarantine' on first launch."
             echo "signed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          publish APPLE_CERTIFICATE "${APPLE_CERTIFICATE}"
+          publish APPLE_CERTIFICATE_PASSWORD "${APPLE_CERTIFICATE_PASSWORD}"
+          publish APPLE_SIGNING_IDENTITY "${APPLE_SIGNING_IDENTITY}"
+
           if [ -z "${APPLE_ID}" ] || [ -z "${APPLE_PASSWORD}" ] || [ -z "${APPLE_TEAM_ID}" ]; then
             echo "::warning::Signed but not notarized: set APPLE_ID, APPLE_PASSWORD (an app-specific password) and APPLE_TEAM_ID to notarize. Gatekeeper still warns without notarization."
+          else
+            publish APPLE_ID "${APPLE_ID}"
+            publish APPLE_PASSWORD "${APPLE_PASSWORD}"
+            publish APPLE_TEAM_ID "${APPLE_TEAM_ID}"
           fi
           echo "signed=true" >> "$GITHUB_OUTPUT"
 
@@ -148,12 +170,6 @@ jobs:
         uses: tauri-apps/tauri-action@e834788a94591d81e3ae0bd9ec06366f5afb8994 # v0.5.23
         env:
           EXPO_PUBLIC_HAPPY_SERVER_URL: ${{ inputs.server_url }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: packages/happy-app
 
