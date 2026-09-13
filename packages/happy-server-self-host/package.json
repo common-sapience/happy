@@ -6,7 +6,6 @@
     "type": "git",
     "url": "https://github.com/slopus/happy"
   },
-  "homepage": "https://happy.engineering",
   "bugs": "https://github.com/slopus/happy/issues",
   "author": "Kirill Dubovitskiy",
   "license": "MIT",

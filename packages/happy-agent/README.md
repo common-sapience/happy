@@ -151,7 +151,7 @@ Exit code 0 when agent becomes idle, 1 on timeout.
 
 ## Environment Variables
 
-- `HAPPY_SERVER_URL` - API server URL (default: `https://api.cluster-fluster.com`)
+- `HAPPY_SERVER_URL` - Relay address. Required: no address is built in, and the CLI stops with a message without one
 - `HAPPY_HOME_DIR` - Home directory for credential storage (default: `~/.happy`)
 
 ## Session ID Matching

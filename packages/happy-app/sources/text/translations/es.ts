@@ -392,27 +392,28 @@ export const es: TranslationStructure = {
         placeholder: 'Escriba un comando o busque...',
     },
 
-    server: {
-        // Used by Server Configuration screen (app/(app)/server.tsx)
-        serverConfiguration: 'Configuración del servidor',
-        enterServerUrl: 'Ingresa una URL de servidor',
-        notValidHappyServer: 'No es un servidor Happy válido',
-        changeServer: 'Cambiar servidor',
-        continueWithServer: '¿Continuar con este servidor?',
-        resetToDefault: 'Restablecer por defecto',
-        resetServerDefault: '¿Restablecer servidor por defecto?',
-        validating: 'Validando...',
-        validatingServer: 'Validando servidor...',
-        serverReturnedError: 'El servidor devolvió un error',
-        failedToConnectToServer: 'Falló al conectar con el servidor',
-        currentlyUsingCustomServer: 'Actualmente usando servidor personalizado',
-        customServerUrlLabel: 'URL del servidor personalizado',
-        advancedFeatureFooter: 'Esta es una característica avanzada. Solo cambia el servidor si sabes lo que haces. Necesitarás cerrar sesión e iniciarla nuevamente después de cambiar servidores.',
-        services: 'Servicios',
-        useCustomServerForVoice: 'Usar servidor personalizado para voz',
-        customServerVoiceEnabled: 'Las credenciales y el uso de voz utilizan tu servidor personalizado',
-        customServerVoiceDisabled: 'La voz utiliza Happy Cloud y tu suscripción de Happy',
-        customServerVoiceFooter: 'Cuando está desactivado, iniciar la voz contacta con Happy Cloud y ElevenLabs. Actívalo solo si tu servidor personalizado está configurado para voz.',
+    relay: {
+        // Used by the relay address entry (components/RelayAddressEntry.tsx)
+        title: 'Relé',
+        firstRunTitle: 'Indica tu relé',
+        firstRunBody: 'Esta app llega a tus ordenadores a través de un relé que tú ejecutas. No hay ninguno por defecto, así que introduce su dirección para continuar.',
+        addressLabel: 'Dirección del relé',
+        addressPlaceholder: 'https://relay.example.com',
+        addressEmpty: 'Introduce la dirección del relé',
+        addressProtocol: 'La dirección debe empezar por http:// o https://',
+        addressFormat: 'Esa dirección no es válida',
+        checking: 'Comprobando el relé...',
+        checkingShort: 'Comprobando...',
+        notARelay: 'Nada respondió como relé en esa dirección',
+        unreachable: 'No se pudo contactar con esa dirección',
+        returnedError: 'El relé devolvió un error',
+        current: 'Este ordenador se conecta al relé de arriba',
+        changeTitle: 'Cambiar de relé',
+        changeBody: 'Tu cuenta vive en el relé que dejas, así que tendrás que iniciar sesión otra vez en el nuevo. ¿Continuar?',
+        forget: 'Olvidar relé',
+        forgetTitle: 'Olvidar este relé',
+        forgetBody: 'La app volverá a pedir una dirección y seguirá sin sesión hasta que le des una.',
+        footer: 'Los agentes se ejecutan en tus ordenadores; el relé solo pasa mensajes cifrados entre ellos y esta app. Cambiarlo cierra tu sesión.',
     },
 
     sessionInfo: {
@@ -911,11 +912,11 @@ export const es: TranslationStructure = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: 'Cliente móvil de Codex y Claude Code',
+        title: 'Un agente que maneja tu ordenador',
         subtitle: 'Cifrado de extremo a extremo y tu cuenta se guarda solo en tu dispositivo.',
         createAccount: 'Crear cuenta',
         linkOrRestoreAccount: 'Vincular o restaurar cuenta',
-        loginWithMobileApp: 'Iniciar sesión con aplicación móvil',
+        loginWithMobileApp: 'Iniciar sesión desde otro ordenador',
     },
 
     review: {

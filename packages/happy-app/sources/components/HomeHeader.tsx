@@ -4,7 +4,7 @@ import { useSocketStatus } from '@/sync/storage';
 import { Platform, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useSegments } from 'expo-router';
-import { getServerInfo } from '@/sync/serverConfig';
+import { getRelayLabel } from '@/sync/serverConfig';
 import { Image } from 'expo-image';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { t } from '@/text';
@@ -40,7 +40,7 @@ const stylesheet = StyleSheet.create((theme) => ({
 
 /**
  * The secondary line of the agent list's bar. A healthy socket says nothing: the
- * line is there to report a problem, and a custom server owns it outright.
+ * line is there to report a problem, and the relay address owns it outright.
  */
 function useHomeHeaderSubtitle(customSubtitle?: string): string | undefined {
     const socketStatus = useSocketStatus();
@@ -86,13 +86,8 @@ export const HomeHeader = React.memo(() => {
 
 export const HomeHeaderNotAuth = React.memo(() => {
     useSegments(); // Re-rendered automatically when screen navigates back
-    const serverInfo = getServerInfo();
     const { theme } = useUnistyles();
-    const subtitle = useHomeHeaderSubtitle(
-        serverInfo.isCustom
-            ? serverInfo.hostname + (serverInfo.port ? `:${serverInfo.port}` : '')
-            : undefined,
-    );
+    const subtitle = useHomeHeaderSubtitle(getRelayLabel() ?? undefined);
     return (
         <Header
             title={t('sidebar.agentsTitle')}

@@ -12,6 +12,8 @@ import { useIsLandscape } from "@/utils/responsive";
 import { Typography } from "@/constants/Typography";
 import { HomeHeaderNotAuth } from "@/components/HomeHeader";
 import { MainView } from "@/components/MainView";
+import { RelayAddressEntry } from "@/components/RelayAddressEntry";
+import { isRelayConfigured } from "@/sync/serverConfig";
 import { t } from '@/text';
 
 export default function Home() {
@@ -34,6 +36,7 @@ function NotAuthenticated() {
     const router = useRouter();
     const isLandscape = useIsLandscape();
     const insets = useSafeAreaInsets();
+    const [relayConfigured, setRelayConfigured] = React.useState(isRelayConfigured);
 
     const createAccount = async () => {
         try {
@@ -162,16 +165,33 @@ function NotAuthenticated() {
         </View>
     );
 
+    // No relay is built in, so an install that names none has nothing to log into
+    // yet: the address comes first, and only then the account (DESK-08).
+    const relayLayout = (
+        <View style={styles.relayContainer}>
+            <RelayAddressEntry
+                variant="firstRun"
+                onChanged={() => setRelayConfigured(isRelayConfigured())}
+            />
+        </View>
+    );
+
     return (
         <>
             <HomeHeaderNotAuth />
-            {isLandscape ? landscapeLayout : portraitLayout}
+            {!relayConfigured
+                ? relayLayout
+                : isLandscape ? landscapeLayout : portraitLayout}
         </>
     )
 }
 
 const styles = StyleSheet.create((theme) => ({
     // NotAuthenticated styles
+    relayContainer: {
+        flex: 1,
+        justifyContent: 'center',
+    },
     portraitContainer: {
         flex: 1,
         alignItems: 'center',

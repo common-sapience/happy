@@ -346,27 +346,28 @@ export const ru: TranslationStructure = {
         viewAll: 'Показать всех агентов',
     },
 
-    server: {
-        // Used by Server Configuration screen (app/(app)/server.tsx)
-        serverConfiguration: 'Настройка сервера',
-        enterServerUrl: 'Пожалуйста, введите URL сервера',
-        notValidHappyServer: 'Это не валидный сервер Happy',
-        changeServer: 'Изменить сервер',
-        continueWithServer: 'Продолжить с этим сервером?',
-        resetToDefault: 'Сбросить по умолчанию',
-        resetServerDefault: 'Сбросить сервер по умолчанию?',
-        validating: 'Проверка...',
-        validatingServer: 'Проверка сервера...',
-        serverReturnedError: 'Сервер вернул ошибку',
-        failedToConnectToServer: 'Не удалось подключиться к серверу',
-        currentlyUsingCustomServer: 'Сейчас используется пользовательский сервер',
-        customServerUrlLabel: 'URL пользовательского сервера',
-        advancedFeatureFooter: 'Это расширенная функция. Изменяйте сервер только если знаете, что делаете. Вам нужно будет выйти и войти снова после изменения серверов.',
-        services: 'Сервисы',
-        useCustomServerForVoice: 'Использовать пользовательский сервер для голоса',
-        customServerVoiceEnabled: 'Голосовые учетные данные и данные об использовании обрабатываются вашим сервером',
-        customServerVoiceDisabled: 'Голос использует Happy Cloud и вашу подписку Happy',
-        customServerVoiceFooter: 'Если выключено, при запуске голосового режима используются Happy Cloud и ElevenLabs. Включайте только если на вашем сервере настроена голосовая связь.',
+    relay: {
+        // Used by the relay address entry (components/RelayAddressEntry.tsx)
+        title: 'Релей',
+        firstRunTitle: 'Укажите релей',
+        firstRunBody: 'Приложение обращается к вашим компьютерам через релей, который вы запускаете. Адреса по умолчанию нет, введите его, чтобы продолжить.',
+        addressLabel: 'Адрес релея',
+        addressPlaceholder: 'https://relay.example.com',
+        addressEmpty: 'Введите адрес релея',
+        addressProtocol: 'Адрес должен начинаться с http:// или https://',
+        addressFormat: 'Это не корректный адрес',
+        checking: 'Проверка релея...',
+        checkingShort: 'Проверка...',
+        notARelay: 'По этому адресу релей не ответил',
+        unreachable: 'Не удалось подключиться к этому адресу',
+        returnedError: 'Релей вернул ошибку',
+        current: 'Этот компьютер подключается к указанному выше релею',
+        changeTitle: 'Изменить релей',
+        changeBody: 'Аккаунт остаётся на прежнем релее, поэтому на новом придётся войти заново. Продолжить?',
+        forget: 'Забыть релей',
+        forgetTitle: 'Забыть этот релей',
+        forgetBody: 'Приложение снова запросит адрес и останется без входа, пока вы его не укажете.',
+        footer: 'Агенты работают на ваших компьютерах; релей только передаёт зашифрованные сообщения между ними и приложением. Его изменение завершит сеанс.',
     },
 
     sessionInfo: {
@@ -917,11 +918,11 @@ export const ru: TranslationStructure = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: 'Мобильный клиент Codex и Claude Code',
+        title: 'Агент, который работает за вашим компьютером',
         subtitle: 'Сквозное шифрование, аккаунт хранится только на вашем устройстве.',
         createAccount: 'Создать аккаунт',
         linkOrRestoreAccount: 'Связать или восстановить аккаунт',
-        loginWithMobileApp: 'Войти через мобильное приложение',
+        loginWithMobileApp: 'Войти с другого компьютера',
     },
 
     review: {

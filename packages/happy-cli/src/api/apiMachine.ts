@@ -5,7 +5,7 @@
 
 import { io, Socket } from 'socket.io-client';
 import { logger } from '@/ui/logger';
-import { configuration } from '@/configuration';
+import { configuration, requireRelayUrl } from '@/configuration';
 import { MachineMetadata, DaemonState, Machine, Metadata, Update, UpdateMachineBody } from './types';
 import { isMetadataArchived } from './sessionArchiveMarker';
 import { registerCommonHandlers, SpawnSessionOptions, SpawnSessionResult } from '../modules/common/registerCommonHandlers';
@@ -360,7 +360,7 @@ export class ApiMachineClient {
     }
 
     connect() {
-        const serverUrl = configuration.serverUrl.replace(/^http/, 'ws');
+        const serverUrl = requireRelayUrl().replace(/^http/, 'ws');
         logger.debug(`[API MACHINE] Connecting to ${serverUrl}`);
 
         this.socket = io(serverUrl, {

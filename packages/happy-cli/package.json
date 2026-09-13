@@ -5,7 +5,6 @@
   "author": "Kirill Dubovitskiy",
   "license": "MIT",
   "type": "module",
-  "homepage": "https://happy.engineering",
   "bugs": "https://github.com/slopus/happy/issues",
   "repository": {
     "type": "git",

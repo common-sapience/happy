@@ -33,7 +33,7 @@ vi.mock('expo-router', () => ({
 }));
 
 vi.mock('@/sync/serverConfig', () => ({
-    getServerInfo: () => ({ isCustom: true, hostname: '192.168.0.108', port: 3005 }),
+    getRelayLabel: () => '192.168.0.108:3005',
 }));
 
 vi.mock('expo-image', async () => {
@@ -137,7 +137,7 @@ describe('home header connection status', () => {
         expect(renderHeader(React.createElement(HomeHeader)).props.subtitle).toBe(`status.${status}`);
     });
 
-    it('lets a custom server own the secondary line', () => {
+    it('lets the relay address own the secondary line', () => {
         socketStatus.status = 'connected';
         expect(renderHeader(React.createElement(HomeHeaderNotAuth)).props.subtitle).toBe('192.168.0.108:3005');
     });

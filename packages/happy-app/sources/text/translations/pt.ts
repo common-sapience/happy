@@ -391,27 +391,28 @@ export const pt: TranslationStructure = {
         placeholder: 'Digite um comando ou pesquise...',
     },
 
-    server: {
-        // Used by Server Configuration screen (app/(app)/server.tsx)
-        serverConfiguration: 'Configuração do servidor',
-        enterServerUrl: 'Por favor, insira uma URL do servidor',
-        notValidHappyServer: 'Não é um servidor Happy válido',
-        changeServer: 'Alterar servidor',
-        continueWithServer: 'Continuar com este servidor?',
-        resetToDefault: 'Redefinir para padrão',
-        resetServerDefault: 'Redefinir servidor para padrão?',
-        validating: 'Validando...',
-        validatingServer: 'Validando servidor...',
-        serverReturnedError: 'O servidor retornou um erro',
-        failedToConnectToServer: 'Falha ao conectar com o servidor',
-        currentlyUsingCustomServer: 'Atualmente usando servidor personalizado',
-        customServerUrlLabel: 'URL do servidor personalizado',
-        advancedFeatureFooter: 'Este é um recurso avançado. Altere o servidor apenas se souber o que está fazendo. Você precisará sair e entrar novamente após alterar servidores.',
-        services: 'Serviços',
-        useCustomServerForVoice: 'Usar servidor personalizado para voz',
-        customServerVoiceEnabled: 'As credenciais e o uso de voz utilizam seu servidor personalizado',
-        customServerVoiceDisabled: 'A voz utiliza a Happy Cloud e sua assinatura Happy',
-        customServerVoiceFooter: 'Quando desativado, iniciar a voz contata a Happy Cloud e a ElevenLabs. Ative somente se seu servidor personalizado estiver configurado para voz.',
+    relay: {
+        // Used by the relay address entry (components/RelayAddressEntry.tsx)
+        title: 'Relé',
+        firstRunTitle: 'Indique o seu relé',
+        firstRunBody: 'Este app alcança os seus computadores por um relé que você mesmo executa. Não existe um padrão, então informe o endereço dele para continuar.',
+        addressLabel: 'Endereço do relé',
+        addressPlaceholder: 'https://relay.example.com',
+        addressEmpty: 'Informe o endereço do relé',
+        addressProtocol: 'O endereço precisa começar com http:// ou https://',
+        addressFormat: 'Esse endereço não é válido',
+        checking: 'Verificando o relé...',
+        checkingShort: 'Verificando...',
+        notARelay: 'Nada respondeu como relé nesse endereço',
+        unreachable: 'Não foi possível alcançar esse endereço',
+        returnedError: 'O relé retornou um erro',
+        current: 'Este computador se conecta ao relé acima',
+        changeTitle: 'Trocar de relé',
+        changeBody: 'Sua conta fica no relé que você deixa, então será preciso entrar de novo no novo relé. Continuar?',
+        forget: 'Esquecer relé',
+        forgetTitle: 'Esquecer este relé',
+        forgetBody: 'O app pedirá um endereço outra vez e continuará desconectado até você informar um.',
+        footer: 'Os agentes rodam nos seus computadores; o relé apenas repassa mensagens cifradas entre eles e este app. Trocá-lo encerra a sessão.',
     },
 
     sessionInfo: {
@@ -910,11 +911,11 @@ export const pt: TranslationStructure = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: 'Cliente móvel Codex e Claude Code',
+        title: 'Um agente que opera o seu computador',
         subtitle: 'Criptografado ponta a ponta e sua conta é armazenada apenas no seu dispositivo.',
         createAccount: 'Criar conta',
         linkOrRestoreAccount: 'Vincular ou restaurar conta',
-        loginWithMobileApp: 'Fazer login com aplicativo móvel',
+        loginWithMobileApp: 'Entrar a partir de outro computador',
     },
 
     review: {

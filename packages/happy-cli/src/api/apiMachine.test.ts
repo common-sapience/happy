@@ -18,9 +18,10 @@ vi.mock('socket.io-client', () => ({
 
 vi.mock('@/configuration', () => ({
     configuration: {
-        serverUrl: 'http://127.0.0.1:3005',
+        relayUrl: 'http://127.0.0.1:3005',
         currentCliVersion: 'test'
-    }
+    },
+    requireRelayUrl: () => 'http://127.0.0.1:3005'
 }));
 
 vi.mock('@/ui/logger', () => ({

@@ -406,27 +406,28 @@ export const en = {
         placeholder: 'Type a command or search...',
     },
 
-    server: {
-        // Used by Server Configuration screen (app/(app)/server.tsx)
-        serverConfiguration: 'Server Configuration',
-        enterServerUrl: 'Please enter a server URL',
-        notValidHappyServer: 'Not a valid Happy Server',
-        changeServer: 'Change Server',
-        continueWithServer: 'Continue with this server?',
-        resetToDefault: 'Reset to Default',
-        resetServerDefault: 'Reset server to default?',
-        validating: 'Validating...',
-        validatingServer: 'Validating server...',
-        serverReturnedError: 'Server returned an error',
-        failedToConnectToServer: 'Failed to connect to server',
-        currentlyUsingCustomServer: 'Currently using custom server',
-        customServerUrlLabel: 'Custom Server URL',
-        advancedFeatureFooter: "This is an advanced feature. Only change the server if you know what you're doing. You will need to log out and log in again after changing servers.",
-        services: 'Services',
-        useCustomServerForVoice: 'Use Custom Server for Voice',
-        customServerVoiceEnabled: 'Voice credentials and usage use your custom server',
-        customServerVoiceDisabled: 'Voice uses Happy Cloud and your Happy subscription',
-        customServerVoiceFooter: 'When off, starting voice contacts Happy Cloud and ElevenLabs. Turn this on only if your custom server is configured for voice.',
+    relay: {
+        // Used by the relay address entry (components/RelayAddressEntry.tsx)
+        title: 'Relay',
+        firstRunTitle: 'Name your relay',
+        firstRunBody: 'This app reaches your computers through a relay you run. There is no default one, so enter its address to continue.',
+        addressLabel: 'Relay address',
+        addressPlaceholder: 'https://relay.example.com',
+        addressEmpty: 'Enter a relay address',
+        addressProtocol: 'The address has to start with http:// or https://',
+        addressFormat: 'That is not a valid address',
+        checking: 'Checking the relay...',
+        checkingShort: 'Checking...',
+        notARelay: 'Nothing answered as a relay at that address',
+        unreachable: 'Could not reach that address',
+        returnedError: 'The relay returned an error',
+        current: 'This computer reaches the relay above',
+        changeTitle: 'Change relay',
+        changeBody: 'Your account lives on the relay you leave, so you have to log in again on the new one. Continue?',
+        forget: 'Forget relay',
+        forgetTitle: 'Forget this relay',
+        forgetBody: 'The app asks for an address again and stays logged out until you give it one.',
+        footer: 'Agents run on your computers; the relay only passes encrypted messages between them and this app. Changing it signs you out.',
     },
 
     sessionInfo: {
@@ -939,11 +940,11 @@ export const en = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: 'Codex and Claude Code mobile client',
+        title: 'An agent that works your computer',
         subtitle: 'End-to-end encrypted and your account is stored only on your device.',
         createAccount: 'Create account',
         linkOrRestoreAccount: 'Link or restore account',
-        loginWithMobileApp: 'Login with mobile app',
+        loginWithMobileApp: 'Log in from another computer',
     },
 
     review: {

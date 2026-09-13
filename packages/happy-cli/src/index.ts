@@ -29,7 +29,8 @@ import { spawnHappyCLI } from './utils/spawnHappyCLI'
 import { ensureDaemonRunning } from './daemon/ensureDaemonRunning'
 import { sanitizeSessionEnvironment } from './daemon/sessionEnvironment'
 import { AGENT_PROFILE_FLAG } from './daemon/engineLaunch'
-import { ONLY_IF_AUTHENTICATED_FLAG, shouldDeferDaemonStart } from './daemon/autostart'
+import { ONLY_IF_AUTHENTICATED_FLAG, relayRefusalMessage, shouldDeferDaemonStart } from './daemon/autostart'
+import { configuration } from './configuration'
 
 /**
  * Starts an engine session over ACP. Shared by `happy acp ...` and the
@@ -225,6 +226,11 @@ Conversation history is preserved on the server, but in-flight tool calls are in
       return
 
     } else if (daemonSubcommand === 'start') {
+      const refusal = relayRefusalMessage(configuration.relayUrl, configuration.settingsFile)
+      if (refusal) {
+        console.error(chalk.red('Error:'), refusal)
+        process.exit(1)
+      }
       // Spawn detached daemon process
       const child = spawnHappyCLI(['daemon', 'start-sync'], {
         detached: true,
@@ -251,6 +257,11 @@ Conversation history is preserved on the server, but in-flight tool calls are in
       }
       process.exit(0);
     } else if (daemonSubcommand === 'start-sync') {
+      const refusal = relayRefusalMessage(configuration.relayUrl, configuration.settingsFile)
+      if (refusal) {
+        console.error(chalk.red('Error:'), refusal)
+        process.exit(1)
+      }
       if (shouldDeferDaemonStart(args.slice(2), (await readCredentials()) !== null)) {
         console.log('This computer is not authenticated yet, so the daemon has nothing to connect; log in and start it again.')
         process.exit(0)

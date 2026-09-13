@@ -35,7 +35,7 @@ export function getEnvironmentInfo(): Record<string, any> {
         workingDirectory: process.cwd(),
         processArgv: process.argv,
         happyDir: configuration?.happyHomeDir,
-        serverUrl: configuration?.serverUrl,
+        relayUrl: configuration?.relayUrl,
         logsDir: configuration?.logsDir,
         processPid: process.pid,
         nodeVersion: process.version,
@@ -231,8 +231,7 @@ export async function runDoctorCommand(): Promise<void> {
 
     // Support and bug reports
     console.log(chalk.bold('\n🐛 Support & Bug Reports'));
-    console.log(`Report issues: ${chalk.blue('https://github.com/slopus/happy-cli/issues')}`);
-    console.log(`Documentation: ${chalk.blue('https://happy.engineering/')}`);
+    console.log(`Report issues: ${chalk.blue('https://github.com/common-sapience/happy/issues')}`);
 
     // ── Concise useful info last (visible without scrolling) ──
 
@@ -245,7 +244,7 @@ export async function runDoctorCommand(): Promise<void> {
     // Configuration
     console.log(chalk.bold('\n⚙️  Configuration'));
     console.log(`Happy Home: ${chalk.blue(configuration.happyHomeDir)}`);
-    console.log(`Server URL: ${chalk.blue(configuration.serverUrl)}`);
+    console.log(`Relay: ${configuration.relayUrl ? chalk.blue(configuration.relayUrl) : chalk.yellow('not configured')}`);
     console.log(`Logs Dir: ${chalk.blue(configuration.logsDir)}`);
 
     // Authentication

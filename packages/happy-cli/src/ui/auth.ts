@@ -1,5 +1,5 @@
 import { decodeBase64, encodeBase64, encodeBase64Url } from "@/api/encryption";
-import { configuration } from "@/configuration";
+import { configuration, requireRelayUrl } from "@/configuration";
 import { randomBytes } from "node:crypto";
 import tweetnacl from 'tweetnacl';
 import axios from 'axios';
@@ -31,10 +31,10 @@ export async function doAuth(): Promise<Credentials | null> {
     // Create a new authentication request
     try {
         if (process.env.DEBUG) {
-            console.log(`[AUTH DEBUG] Sending auth request to: ${configuration.serverUrl}/v1/auth/request`);
+            console.log(`[AUTH DEBUG] Sending auth request to: ${requireRelayUrl()}/v1/auth/request`);
             console.log(`[AUTH DEBUG] Public key: ${encodeBase64(keypair.publicKey).substring(0, 20)}...`);
         }
-        await axios.post(`${configuration.serverUrl}/v1/auth/request`, {
+        await axios.post(`${requireRelayUrl()}/v1/auth/request`, {
             publicKey: encodeBase64(keypair.publicKey),
             supportsV2: true
         }, {
@@ -117,6 +117,11 @@ async function doWebAuth(keypair: tweetnacl.BoxKeyPair): Promise<Credentials | n
     console.log('\nWeb Authentication\n');
 
     const webUrl = generateWebAuthUrl(keypair.publicKey);
+    if (!webUrl) {
+        console.log('No controller address is configured, so there is no page to open.');
+        console.log('Set HAPPY_WEBAPP_URL to the controller that serves this relay, then try again.\n');
+        return null;
+    }
     console.log('Opening your browser...');
 
     const browserOpened = await openBrowser(webUrl);
@@ -159,7 +164,7 @@ async function waitForAuthentication(keypair: tweetnacl.BoxKeyPair): Promise<Cre
     try {
         while (!cancelled) {
             try {
-                const response = await axios.post(`${configuration.serverUrl}/v1/auth/request`, {
+                const response = await axios.post(`${requireRelayUrl()}/v1/auth/request`, {
                     publicKey: encodeBase64(keypair.publicKey),
                     supportsV2: true
                 }, {

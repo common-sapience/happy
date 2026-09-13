@@ -14,7 +14,7 @@ const { appendFormFile, cleanupFormFile } = vi.hoisted(() => ({
 }));
 
 vi.mock('./serverConfig', () => ({
-    getServerUrl: () => 'https://api.cluster-fluster.com',
+    getServerUrl: () => 'https://relay.example.test',
     rewriteLoopbackHost: (url: string) => url,
 }));
 
@@ -27,8 +27,8 @@ const credentials: AuthCredentials = {
     secret: 'test-secret',
 };
 
-const storageUrl = 'https://files.cluster-fluster.com/happy/session-1/ref?X-Amz-Signature=s3-secret&policy=secret-policy';
-const apiBlobUrl = 'https://api.cluster-fluster.com/v1/sessions/session-1/attachments/blob?X-Amz-Signature=s3-secret';
+const storageUrl = 'https://files.relay.example.test/happy/session-1/ref?X-Amz-Signature=s3-secret&policy=secret-policy';
+const apiBlobUrl = 'https://relay.example.test/v1/sessions/session-1/attachments/blob?X-Amz-Signature=s3-secret';
 
 let fetchMock: ReturnType<typeof vi.fn>;
 
@@ -64,7 +64,7 @@ describe('requestAttachmentUpload', () => {
         expect(getAttachmentDiagnostic(error)).toEqual({
             leg: 'request-upload',
             method: 'POST',
-            host: 'api.cluster-fluster.com',
+            host: 'relay.example.test',
             target: 'happy-api',
             status: 500,
             statusText: 'Internal Server Error',
@@ -89,7 +89,7 @@ describe('requestAttachmentUpload', () => {
         expect(getAttachmentDiagnostic(error)).toEqual({
             leg: 'request-upload',
             method: 'POST',
-            host: 'api.cluster-fluster.com',
+            host: 'relay.example.test',
             target: 'happy-api',
             status: 413,
             statusText: 'Payload Too Large',
@@ -110,7 +110,7 @@ describe('requestAttachmentUpload', () => {
         expect(getAttachmentDiagnostic(error)).toEqual({
             leg: 'request-upload',
             method: 'POST',
-            host: 'api.cluster-fluster.com',
+            host: 'relay.example.test',
             target: 'happy-api',
             message: 'Failed to fetch',
         });
@@ -131,11 +131,11 @@ describe('requestAttachmentUpload', () => {
 
         expect(error.message).toContain('request-upload response parse error');
         expect(error.message).toContain('Unexpected token');
-        expect(error.message).toContain('[url:api.cluster-fluster.com]');
+        expect(error.message).toContain('[url:relay.example.test]');
         expect(getAttachmentDiagnostic(error)).toEqual({
             leg: 'request-upload',
             method: 'POST',
-            host: 'api.cluster-fluster.com',
+            host: 'relay.example.test',
             target: 'happy-api',
             message: expect.stringContaining('Unexpected token'),
         });
@@ -161,7 +161,7 @@ describe('uploadEncryptedBlob', () => {
         expect(getAttachmentDiagnostic(error)).toEqual({
             leg: 'blob-upload',
             method: 'POST',
-            host: 'files.cluster-fluster.com',
+            host: 'files.relay.example.test',
             target: 'external-storage',
             message: 'Failed to fetch',
         });
@@ -190,7 +190,7 @@ describe('uploadEncryptedBlob', () => {
         expect(getAttachmentDiagnostic(error)).toEqual({
             leg: 'blob-upload',
             method: 'POST',
-            host: 'files.cluster-fluster.com',
+            host: 'files.relay.example.test',
             target: 'external-storage',
             status: 403,
             statusText: 'Forbidden',
@@ -211,7 +211,7 @@ describe('uploadEncryptedBlob', () => {
         expect(getAttachmentDiagnostic(error)).toEqual({
             leg: 'blob-upload',
             method: 'PUT',
-            host: 'api.cluster-fluster.com',
+            host: 'relay.example.test',
             target: 'happy-api',
             message: 'Failed to fetch',
         });
@@ -233,7 +233,7 @@ describe('downloadEncryptedAttachment', () => {
         expect(getAttachmentDiagnostic(error)).toEqual({
             leg: 'request-download',
             method: 'POST',
-            host: 'api.cluster-fluster.com',
+            host: 'relay.example.test',
             target: 'happy-api',
             message: 'Failed to fetch',
         });
@@ -257,7 +257,7 @@ describe('downloadEncryptedAttachment', () => {
         expect(getAttachmentDiagnostic(error)).toEqual({
             leg: 'request-download',
             method: 'POST',
-            host: 'api.cluster-fluster.com',
+            host: 'relay.example.test',
             target: 'happy-api',
             status: 404,
             statusText: 'Not Found',
@@ -282,7 +282,7 @@ describe('downloadEncryptedAttachment', () => {
         expect(getAttachmentDiagnostic(error)).toEqual({
             leg: 'request-download',
             method: 'POST',
-            host: 'api.cluster-fluster.com',
+            host: 'relay.example.test',
             target: 'happy-api',
             message: expect.stringContaining('Invalid JSON'),
         });
@@ -307,7 +307,7 @@ describe('downloadEncryptedAttachment', () => {
         expect(getAttachmentDiagnostic(error)).toEqual({
             leg: 'blob-download',
             method: 'GET',
-            host: 'files.cluster-fluster.com',
+            host: 'files.relay.example.test',
             target: 'external-storage',
             message: 'Failed to fetch',
         });
@@ -336,7 +336,7 @@ describe('downloadEncryptedAttachment', () => {
         expect(getAttachmentDiagnostic(error)).toEqual({
             leg: 'blob-download',
             method: 'GET',
-            host: 'files.cluster-fluster.com',
+            host: 'files.relay.example.test',
             target: 'external-storage',
             status: 403,
             statusText: 'Forbidden',
@@ -366,7 +366,7 @@ describe('downloadEncryptedAttachment', () => {
         expect(getAttachmentDiagnostic(error)).toEqual({
             leg: 'blob-download',
             method: 'GET',
-            host: 'files.cluster-fluster.com',
+            host: 'files.relay.example.test',
             target: 'external-storage',
             message: expect.stringContaining('stream reset'),
         });

@@ -13,8 +13,8 @@ import {
 
 describe('sanitizeAttachmentUrlHost', () => {
     it('keeps only the host and port from absolute URLs', () => {
-        expect(sanitizeAttachmentUrlHost('https://files.cluster-fluster.com/happy/sessions/ref?X-Amz-Signature=secret'))
-            .toBe('files.cluster-fluster.com');
+        expect(sanitizeAttachmentUrlHost('https://files.relay.example.test/happy/sessions/ref?X-Amz-Signature=secret'))
+            .toBe('files.relay.example.test');
         expect(sanitizeAttachmentUrlHost('http://127.0.0.1:3005/v1/sessions/abc?token=secret'))
             .toBe('127.0.0.1:3005');
     });
@@ -30,22 +30,22 @@ describe('sanitizeAttachmentUrlHost', () => {
 describe('classifyAttachmentTransferTarget', () => {
     it('classifies URLs on the Happy API host as happy-api', () => {
         expect(classifyAttachmentTransferTarget(
-            'https://api.cluster-fluster.com/v1/sessions/abc/attachments/blob',
-            'https://api.cluster-fluster.com',
+            'https://relay.example.test/v1/sessions/abc/attachments/blob',
+            'https://relay.example.test',
         )).toBe('happy-api');
     });
 
     it('classifies other valid hosts as external-storage', () => {
         expect(classifyAttachmentTransferTarget(
-            'https://files.cluster-fluster.com/happy/abc?policy=secret',
-            'https://api.cluster-fluster.com',
+            'https://files.relay.example.test/happy/abc?policy=secret',
+            'https://relay.example.test',
         )).toBe('external-storage');
     });
 
     it('classifies invalid URLs as unknown', () => {
         expect(classifyAttachmentTransferTarget(
             '/v1/sessions/abc/attachments/blob',
-            'https://api.cluster-fluster.com',
+            'https://relay.example.test',
         )).toBe('unknown');
     });
 });
@@ -55,8 +55,8 @@ describe('attachment diagnostic serialization', () => {
         const diagnostic = createAttachmentDiagnostic({
             leg: 'blob-upload',
             method: 'POST',
-            url: 'https://files.cluster-fluster.com/happy/sessions/ref?X-Amz-Signature=secret&policy=secret',
-            serverUrl: 'https://api.cluster-fluster.com',
+            url: 'https://files.relay.example.test/happy/sessions/ref?X-Amz-Signature=secret&policy=secret',
+            serverUrl: 'https://relay.example.test',
             response: {
                 status: 403,
                 statusText: 'Forbidden',
@@ -66,7 +66,7 @@ describe('attachment diagnostic serialization', () => {
         expect(diagnostic).toEqual({
             leg: 'blob-upload',
             method: 'POST',
-            host: 'files.cluster-fluster.com',
+            host: 'files.relay.example.test',
             target: 'external-storage',
             status: 403,
             statusText: 'Forbidden',
@@ -79,7 +79,7 @@ describe('attachment diagnostic serialization', () => {
         const serialized = JSON.stringify(rendered);
 
         expect(serialized).toContain('"leg":"blob-upload"');
-        expect(serialized).toContain('"host":"files.cluster-fluster.com"');
+        expect(serialized).toContain('"host":"files.relay.example.test"');
         expect(serialized).toContain('"platform":"web"');
         expect(serialized).toContain('"client":"web/1.2.3"');
         expect(serialized).not.toContain('/happy/sessions/ref');
@@ -92,15 +92,15 @@ describe('attachment diagnostic serialization', () => {
         const diagnostic = createAttachmentDiagnostic({
             leg: 'blob-download',
             method: 'GET',
-            url: 'https://files.cluster-fluster.com/happy/sessions/ref?AWSAccessKeyId=secret',
-            serverUrl: 'https://api.cluster-fluster.com',
+            url: 'https://files.relay.example.test/happy/sessions/ref?AWSAccessKeyId=secret',
+            serverUrl: 'https://relay.example.test',
             message: 'Failed to fetch',
         });
 
         expect(diagnostic).toEqual({
             leg: 'blob-download',
             method: 'GET',
-            host: 'files.cluster-fluster.com',
+            host: 'files.relay.example.test',
             target: 'external-storage',
             message: 'Failed to fetch',
         });
@@ -110,16 +110,16 @@ describe('attachment diagnostic serialization', () => {
         const dirtyDiagnostic = createAttachmentDiagnostic({
             leg: 'blob-download',
             url: 'https://X-Amz-Signature=secret',
-            serverUrl: 'https://api.cluster-fluster.com',
+            serverUrl: 'https://relay.example.test',
         });
         const safeDiagnostic = createAttachmentDiagnostic({
             leg: 'blob-download',
-            url: 'https://files.cluster-fluster.com/happy/ref?X-Amz-Signature=secret',
-            serverUrl: 'https://api.cluster-fluster.com',
+            url: 'https://files.relay.example.test/happy/ref?X-Amz-Signature=secret',
+            serverUrl: 'https://relay.example.test',
         });
 
         expect(dirtyDiagnostic).not.toHaveProperty('host');
-        expect(safeDiagnostic.host).toBe('files.cluster-fluster.com');
+        expect(safeDiagnostic.host).toBe('files.relay.example.test');
 
         const serialized = JSON.stringify(dirtyDiagnostic).toLowerCase();
         expect(serialized).not.toContain('x-amz-signature');
@@ -131,13 +131,13 @@ describe('attachment diagnostic serialization', () => {
         const diagnostic = createAttachmentDiagnostic({
             leg: 'blob-download',
             method: 'GET',
-            url: 'https://files.cluster-fluster.com/happy/ref?X-Amz-Signature=secret',
-            serverUrl: 'https://api.cluster-fluster.com',
-            message: 'Fetch failed for https://files.cluster-fluster.com/happy/ref?X-Amz-Signature=secret&policy=secret using Bearer secret-token',
+            url: 'https://files.relay.example.test/happy/ref?X-Amz-Signature=secret',
+            serverUrl: 'https://relay.example.test',
+            message: 'Fetch failed for https://files.relay.example.test/happy/ref?X-Amz-Signature=secret&policy=secret using Bearer secret-token',
             reason: 'Read failed from file:///Users/devdvlive/Projects/happy/local.bin and /Users/devdvlive/Projects/happy/other.bin',
         });
 
-        expect(diagnostic.message).toContain('files.cluster-fluster.com');
+        expect(diagnostic.message).toContain('files.relay.example.test');
         expect(diagnostic.reason).toContain('[local-file]');
 
         const serialized = JSON.stringify(diagnostic);
@@ -382,10 +382,10 @@ describe('attachment diagnostic serialization', () => {
         const rendered = formatAttachmentDiagnosticForLog({
             leg: 'blob-download',
             method: 'GET',
-            host: 'https://files.cluster-fluster.com/happy/ref?X-Amz-Signature=secret',
+            host: 'https://files.relay.example.test/happy/ref?X-Amz-Signature=secret',
             target: 'external-storage',
             status: 403,
-            statusText: 'Forbidden from https://files.cluster-fluster.com/happy/ref?X-Amz-Signature=secret',
+            statusText: 'Forbidden from https://files.relay.example.test/happy/ref?X-Amz-Signature=secret',
             message: 'Failed to fetch',
             reason: 'missing-blob-key',
         }, {
@@ -393,7 +393,7 @@ describe('attachment diagnostic serialization', () => {
             client: 'web/1.2.3 Bearer secret-token /data/data/com.happy/cache/blob.bin',
         });
 
-        expect(rendered.host).toBe('files.cluster-fluster.com');
+        expect(rendered.host).toBe('files.relay.example.test');
         expect(rendered.message).toBe('Failed to fetch');
         expect(rendered.reason).toBe('missing-blob-key');
 
@@ -423,7 +423,7 @@ describe('attachment diagnostic serialization', () => {
         const rendered = [
             'C:\\Users\\devdvlive\\My Projects\\happy\\blob.bin',
             'data:,SECRET',
-            'user:secret@files.cluster-fluster.com',
+            'user:secret@files.relay.example.test',
             'file:///Users/devdvlive/My Projects/happy/blob.bin',
         ].map((host) => formatAttachmentDiagnosticForLog({
             leg: 'blob-download',
@@ -449,11 +449,11 @@ describe('attachment diagnostic serialization', () => {
         });
         const userInfoHost = formatAttachmentDiagnosticForLog({
             leg: 'blob-download',
-            host: 'https://user:secret@files.cluster-fluster.com/path',
+            host: 'https://user:secret@files.relay.example.test/path',
         });
 
         expect(dirtyKeyValueHost).not.toHaveProperty('host');
-        expect(userInfoHost.host).toBe('files.cluster-fluster.com');
+        expect(userInfoHost.host).toBe('files.relay.example.test');
 
         const serialized = JSON.stringify([dirtyKeyValueHost, userInfoHost]);
         expect(serialized).not.toContain('X-Amz-Signature');
@@ -465,12 +465,12 @@ describe('attachment diagnostic serialization', () => {
     it('preserves safe host values', () => {
         expect(formatAttachmentDiagnosticForLog({
             leg: 'blob-download',
-            host: 'files.cluster-fluster.com',
-        }).host).toBe('files.cluster-fluster.com');
+            host: 'files.relay.example.test',
+        }).host).toBe('files.relay.example.test');
         expect(formatAttachmentDiagnosticForLog({
             leg: 'blob-download',
-            host: 'api.cluster-fluster.com:3005',
-        }).host).toBe('api.cluster-fluster.com:3005');
+            host: 'relay.example.test:3005',
+        }).host).toBe('relay.example.test:3005');
         expect(formatAttachmentDiagnosticForLog({
             leg: 'blob-download',
             host: '127.0.0.1:3005',
@@ -485,11 +485,11 @@ describe('attachment diagnostic serialization', () => {
         const dirtyDiagnostic = {
             leg: 'blob-download',
             method: 'GET',
-            host: 'files.cluster-fluster.com',
+            host: 'files.relay.example.test',
             target: 'external-storage',
             message: 'Failed to fetch',
             reason: 'missing-blob-key',
-            url: 'https://files.cluster-fluster.com/happy/ref?X-Amz-Signature=secret',
+            url: 'https://files.relay.example.test/happy/ref?X-Amz-Signature=secret',
             ref: 'happy/session-1/ref',
         } as ConstructorParameters<typeof AttachmentDiagnosticError>[1] & {
             url: string;
@@ -576,8 +576,8 @@ describe('AttachmentDiagnosticError', () => {
         const error = createAttachmentDiagnosticError('Blob upload (POST) failed: 403 Forbidden', {
             leg: 'blob-upload',
             method: 'POST',
-            url: 'https://files.cluster-fluster.com/happy/ref?X-Amz-Signature=secret',
-            serverUrl: 'https://api.cluster-fluster.com',
+            url: 'https://files.relay.example.test/happy/ref?X-Amz-Signature=secret',
+            serverUrl: 'https://relay.example.test',
             response: {
                 status: 403,
                 statusText: 'Forbidden',
@@ -589,7 +589,7 @@ describe('AttachmentDiagnosticError', () => {
         expect(getAttachmentDiagnostic(error)).toEqual({
             leg: 'blob-upload',
             method: 'POST',
-            host: 'files.cluster-fluster.com',
+            host: 'files.relay.example.test',
             target: 'external-storage',
             status: 403,
             statusText: 'Forbidden',
@@ -602,16 +602,16 @@ describe('AttachmentDiagnosticError', () => {
 
     it('sanitizes unsafe wrapper error messages', () => {
         const error = createAttachmentDiagnosticError(
-            'Blob upload failed for https://files.cluster-fluster.com/happy/ref?X-Amz-Signature=secret using Bearer secret-token at /data/user/0/com.happy/cache/blob.bin',
+            'Blob upload failed for https://files.relay.example.test/happy/ref?X-Amz-Signature=secret using Bearer secret-token at /data/user/0/com.happy/cache/blob.bin',
             {
                 leg: 'blob-upload',
                 method: 'POST',
-                url: 'https://files.cluster-fluster.com/happy/ref?X-Amz-Signature=secret',
-                serverUrl: 'https://api.cluster-fluster.com',
+                url: 'https://files.relay.example.test/happy/ref?X-Amz-Signature=secret',
+                serverUrl: 'https://relay.example.test',
             },
         );
 
-        expect(error.message).toContain('files.cluster-fluster.com');
+        expect(error.message).toContain('files.relay.example.test');
         expect(errorMessageFromUnknown(error)).toBe(error.message);
         expect(errorMessageFromUnknown(new Error('Failed to fetch'))).toBe('Failed to fetch');
 
@@ -627,8 +627,8 @@ describe('AttachmentDiagnosticError', () => {
         const error = createAttachmentDiagnosticError('Blob upload (POST) failed: 403 Forbidden', {
             leg: 'blob-upload',
             method: 'POST',
-            url: 'https://files.cluster-fluster.com/happy/ref?X-Amz-Signature=secret',
-            serverUrl: 'https://api.cluster-fluster.com',
+            url: 'https://files.relay.example.test/happy/ref?X-Amz-Signature=secret',
+            serverUrl: 'https://relay.example.test',
             response: {
                 status: 403,
                 statusText: 'Forbidden',
@@ -641,7 +641,7 @@ describe('AttachmentDiagnosticError', () => {
         expect(getAttachmentDiagnostic(error)).toEqual({
             leg: 'blob-upload',
             method: 'POST',
-            host: 'files.cluster-fluster.com',
+            host: 'files.relay.example.test',
             target: 'external-storage',
             status: 403,
             statusText: 'Forbidden',

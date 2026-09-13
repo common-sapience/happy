@@ -5,7 +5,7 @@ import { AgentState, ClientToServerEvents, FileEventMessage, FileEventMessageSch
 import { decodeBase64, decryptBlob, decrypt, encodeBase64, encrypt, encryptBlob } from './encryption';
 import { isMetadataArchived } from './sessionArchiveMarker';
 import { backoff, delay } from '@/utils/time';
-import { configuration } from '@/configuration';
+import { configuration, requireRelayUrl } from '@/configuration';
 import { randomUUID } from 'node:crypto';
 import { AsyncLock } from '@/utils/lock';
 import { deriveKey } from '@/utils/deriveKey';
@@ -204,7 +204,7 @@ export class ApiSessionClient extends EventEmitter {
         // Create socket
         //
 
-        this.socket = io(configuration.serverUrl, {
+        this.socket = io(requireRelayUrl(), {
             auth: {
                 token: this.token,
                 clientType: 'session-scoped' as const,
@@ -349,7 +349,7 @@ export class ApiSessionClient extends EventEmitter {
 
     private async requestAttachmentUpload(filename: string, size: number): Promise<AttachmentUploadResult> {
         const response = await axios.post<AttachmentUploadResult>(
-            `${configuration.serverUrl}/v1/sessions/${encodeURIComponent(this.sessionId)}/attachments/request-upload`,
+            `${requireRelayUrl()}/v1/sessions/${encodeURIComponent(this.sessionId)}/attachments/request-upload`,
             { filename, size },
             {
                 headers: this.authHeaders(),
@@ -389,7 +389,7 @@ export class ApiSessionClient extends EventEmitter {
         const headers: Record<string, string> = {
             'Content-Type': 'application/octet-stream',
         };
-        if (upload.uploadUrl.startsWith(configuration.serverUrl)) {
+        if (upload.uploadUrl.startsWith(requireRelayUrl())) {
             headers.Authorization = `Bearer ${this.token}`;
         }
 
@@ -425,7 +425,7 @@ export class ApiSessionClient extends EventEmitter {
      * presigned URL that does not accept extra headers.
      */
     async downloadAttachment(ref: string): Promise<Uint8Array> {
-        const requestUrl = `${configuration.serverUrl}/v1/sessions/${this.sessionId}/attachments/request-download`;
+        const requestUrl = `${requireRelayUrl()}/v1/sessions/${this.sessionId}/attachments/request-download`;
         const requestRes = await axios.post(
             requestUrl,
             { ref },
@@ -439,7 +439,7 @@ export class ApiSessionClient extends EventEmitter {
             throw new Error('request-download returned no downloadUrl');
         }
 
-        const isServerUrl = downloadUrl.startsWith(configuration.serverUrl);
+        const isServerUrl = downloadUrl.startsWith(requireRelayUrl());
         const headers: Record<string, string> = {};
         if (isServerUrl) {
             headers['Authorization'] = `Bearer ${this.token}`;
@@ -538,7 +538,7 @@ export class ApiSessionClient extends EventEmitter {
         let afterSeq = this.lastReceivedSeq;
         while (true) {
             const response = await axios.get<V3GetSessionMessagesResponse>(
-                `${configuration.serverUrl}/v3/sessions/${encodeURIComponent(this.sessionId)}/messages`,
+                `${requireRelayUrl()}/v3/sessions/${encodeURIComponent(this.sessionId)}/messages`,
                 {
                     params: {
                         after_seq: afterSeq,
@@ -602,7 +602,7 @@ export class ApiSessionClient extends EventEmitter {
             const batch = this.pendingOutbox.slice(batchStart);
 
             const response = await axios.post<V3PostSessionMessagesResponse>(
-                `${configuration.serverUrl}/v3/sessions/${encodeURIComponent(this.sessionId)}/messages`,
+                `${requireRelayUrl()}/v3/sessions/${encodeURIComponent(this.sessionId)}/messages`,
                 {
                     messages: batch
                 },

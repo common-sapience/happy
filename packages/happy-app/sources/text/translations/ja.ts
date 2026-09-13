@@ -393,27 +393,28 @@ export const ja: TranslationStructure = {
         placeholder: 'コマンドを入力または検索...',
     },
 
-    server: {
-        // Used by Server Configuration screen (app/(app)/server.tsx)
-        serverConfiguration: 'サーバー設定',
-        enterServerUrl: 'サーバーURLを入力してください',
-        notValidHappyServer: '有効なHappy Serverではありません',
-        changeServer: 'サーバーを変更',
-        continueWithServer: 'このサーバーで続行しますか？',
-        resetToDefault: 'デフォルトにリセット',
-        resetServerDefault: 'サーバーをデフォルトにリセットしますか？',
-        validating: '検証中...',
-        validatingServer: 'サーバーを検証中...',
-        serverReturnedError: 'サーバーがエラーを返しました',
-        failedToConnectToServer: 'サーバーへの接続に失敗しました',
-        currentlyUsingCustomServer: '現在カスタムサーバーを使用中',
-        customServerUrlLabel: 'カスタムサーバーURL',
-        advancedFeatureFooter: "これは高度な機能です。何をしているか理解している場合のみサーバーを変更してください。サーバー変更後は再度ログインが必要です。",
-        services: 'サービス',
-        useCustomServerForVoice: '音声にカスタムサーバーを使用',
-        customServerVoiceEnabled: '音声認証情報と使用量はカスタムサーバーを使用します',
-        customServerVoiceDisabled: '音声は Happy Cloud と Happy サブスクリプションを使用します',
-        customServerVoiceFooter: 'オフの場合、音声の開始時に Happy Cloud と ElevenLabs へ接続します。カスタムサーバーで音声が設定済みの場合のみオンにしてください。',
+    relay: {
+        // Used by the relay address entry (components/RelayAddressEntry.tsx)
+        title: 'リレー',
+        firstRunTitle: 'リレーのアドレスを入力',
+        firstRunBody: 'このアプリは自分で運用するリレー経由でコンピューターに接続します。既定のアドレスはないため、入力してから続行してください。',
+        addressLabel: 'リレーのアドレス',
+        addressPlaceholder: 'https://relay.example.com',
+        addressEmpty: 'リレーのアドレスを入力してください',
+        addressProtocol: 'アドレスは http:// または https:// で始まる必要があります',
+        addressFormat: '有効なアドレスではありません',
+        checking: 'リレーを確認中...',
+        checkingShort: '確認中...',
+        notARelay: 'そのアドレスではリレーが応答しませんでした',
+        unreachable: 'そのアドレスに接続できませんでした',
+        returnedError: 'リレーがエラーを返しました',
+        current: 'このコンピューターは上のリレーに接続します',
+        changeTitle: 'リレーを変更',
+        changeBody: 'アカウントは元のリレーに残るため、新しいリレーでは再度ログインが必要です。続行しますか？',
+        forget: 'リレーを削除',
+        forgetTitle: 'このリレーを削除',
+        forgetBody: 'アプリは再びアドレスを尋ね、入力するまでログインしません。',
+        footer: 'エージェントは自分のコンピューターで動き、リレーはその間の暗号化メッセージを中継するだけです。変更するとログアウトします。',
     },
 
     sessionInfo: {
@@ -912,11 +913,11 @@ export const ja: TranslationStructure = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: 'CodexとClaude Codeのモバイルクライアント',
+        title: 'あなたのコンピューターを操作するエージェント',
         subtitle: 'エンドツーエンド暗号化され、アカウントはデバイスにのみ保存されます。',
         createAccount: 'アカウントを作成',
         linkOrRestoreAccount: 'アカウントをリンクまたは復元',
-        loginWithMobileApp: 'モバイルアプリでログイン',
+        loginWithMobileApp: '別のコンピューターからログイン',
     },
 
     review: {

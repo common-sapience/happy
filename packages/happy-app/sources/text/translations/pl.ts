@@ -409,27 +409,28 @@ export const pl: TranslationStructure = {
         placeholder: 'Wpisz polecenie lub wyszukaj...',
     },
 
-    server: {
-        // Used by Server Configuration screen (app/(app)/server.tsx)
-        serverConfiguration: 'Konfiguracja serwera',
-        enterServerUrl: 'Proszę wprowadzić URL serwera',
-        notValidHappyServer: 'To nie jest prawidłowy serwer Happy',
-        changeServer: 'Zmień serwer',
-        continueWithServer: 'Kontynuować z tym serwerem?',
-        resetToDefault: 'Resetuj do domyślnego',
-        resetServerDefault: 'Zresetować serwer do domyślnego?',
-        validating: 'Sprawdzanie...',
-        validatingServer: 'Sprawdzanie serwera...',
-        serverReturnedError: 'Serwer zwrócił błąd',
-        failedToConnectToServer: 'Nie udało się połączyć z serwerem',
-        currentlyUsingCustomServer: 'Aktualnie używany jest niestandardowy serwer',
-        customServerUrlLabel: 'URL niestandardowego serwera',
-        advancedFeatureFooter: 'To jest zaawansowana funkcja. Zmieniaj serwer tylko jeśli wiesz, co robisz. Po zmianie serwera będziesz musiał się wylogować i zalogować ponownie.',
-        services: 'Usługi',
-        useCustomServerForVoice: 'Użyj niestandardowego serwera dla głosu',
-        customServerVoiceEnabled: 'Dane uwierzytelniające i użycie głosu korzystają z niestandardowego serwera',
-        customServerVoiceDisabled: 'Głos korzysta z Happy Cloud i subskrypcji Happy',
-        customServerVoiceFooter: 'Gdy ta opcja jest wyłączona, uruchomienie głosu łączy się z Happy Cloud i ElevenLabs. Włącz ją tylko wtedy, gdy niestandardowy serwer jest skonfigurowany do obsługi głosu.',
+    relay: {
+        // Used by the relay address entry (components/RelayAddressEntry.tsx)
+        title: 'Przekaźnik',
+        firstRunTitle: 'Wskaż przekaźnik',
+        firstRunBody: 'Aplikacja łączy się z twoimi komputerami przez przekaźnik, który sam uruchamiasz. Nie ma adresu domyślnego, podaj go, aby kontynuować.',
+        addressLabel: 'Adres przekaźnika',
+        addressPlaceholder: 'https://relay.example.com',
+        addressEmpty: 'Podaj adres przekaźnika',
+        addressProtocol: 'Adres musi zaczynać się od http:// lub https://',
+        addressFormat: 'To nie jest prawidłowy adres',
+        checking: 'Sprawdzanie przekaźnika...',
+        checkingShort: 'Sprawdzanie...',
+        notARelay: 'Pod tym adresem nic nie odpowiedziało jako przekaźnik',
+        unreachable: 'Nie udało się połączyć z tym adresem',
+        returnedError: 'Przekaźnik zwrócił błąd',
+        current: 'Ten komputer łączy się z przekaźnikiem powyżej',
+        changeTitle: 'Zmień przekaźnik',
+        changeBody: 'Twoje konto zostaje na dotychczasowym przekaźniku, więc na nowym trzeba zalogować się ponownie. Kontynuować?',
+        forget: 'Zapomnij przekaźnik',
+        forgetTitle: 'Zapomnieć ten przekaźnik',
+        forgetBody: 'Aplikacja znów poprosi o adres i pozostanie wylogowana, dopóki go nie podasz.',
+        footer: 'Agenci działają na twoich komputerach; przekaźnik tylko przekazuje zaszyfrowane wiadomości między nimi a aplikacją. Zmiana adresu wylogowuje.',
     },
 
     sessionInfo: {
@@ -927,11 +928,11 @@ export const pl: TranslationStructure = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: 'Mobilny klient Codex i Claude Code',
+        title: 'Agent, który obsługuje twój komputer',
         subtitle: 'Szyfrowanie end-to-end, a Twoje konto jest przechowywane tylko na Twoim urządzeniu.',
         createAccount: 'Utwórz konto',
         linkOrRestoreAccount: 'Połącz lub przywróć konto',
-        loginWithMobileApp: 'Zaloguj się przez aplikację mobilną',
+        loginWithMobileApp: 'Zaloguj się z innego komputera',
     },
 
     review: {

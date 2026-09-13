@@ -393,27 +393,28 @@ export const zhHans: TranslationStructure = {
         placeholder: '输入命令或搜索...',
     },
 
-    server: {
-        // Used by Server Configuration screen (app/(app)/server.tsx)
-        serverConfiguration: '服务器配置',
-        enterServerUrl: '请输入服务器 URL',
-        notValidHappyServer: '不是有效的 Happy 服务器',
-        changeServer: '更改服务器',
-        continueWithServer: '继续使用此服务器？',
-        resetToDefault: '重置为默认',
-        resetServerDefault: '重置服务器为默认值？',
-        validating: '验证中...',
-        validatingServer: '正在验证服务器...',
-        serverReturnedError: '服务器返回错误',
-        failedToConnectToServer: '连接服务器失败',
-        currentlyUsingCustomServer: '当前使用自定义服务器',
-        customServerUrlLabel: '自定义服务器 URL',
-        advancedFeatureFooter: "这是一个高级功能。只有在您知道自己在做什么时才更改服务器。更改服务器后您需要重新登录。",
-        services: '服务',
-        useCustomServerForVoice: '使用自定义服务器处理语音',
-        customServerVoiceEnabled: '语音凭据和用量由您的自定义服务器处理',
-        customServerVoiceDisabled: '语音使用 Happy Cloud 和您的 Happy 订阅',
-        customServerVoiceFooter: '关闭时，启动语音会连接 Happy Cloud 和 ElevenLabs。仅当您的自定义服务器已配置语音功能时才启用。',
+    relay: {
+        // Used by the relay address entry (components/RelayAddressEntry.tsx)
+        title: '中继',
+        firstRunTitle: '填写你的中继地址',
+        firstRunBody: '本应用通过你自己运行的中继连接你的电脑。没有默认地址，填写后才能继续。',
+        addressLabel: '中继地址',
+        addressPlaceholder: 'https://relay.example.com',
+        addressEmpty: '请填写中继地址',
+        addressProtocol: '地址必须以 http:// 或 https:// 开头',
+        addressFormat: '这不是一个有效地址',
+        checking: '正在检查中继...',
+        checkingShort: '检查中...',
+        notARelay: '该地址上没有中继响应',
+        unreachable: '无法连接该地址',
+        returnedError: '中继返回了错误',
+        current: '本机连接上面这个中继',
+        changeTitle: '更换中继',
+        changeBody: '账户留在原来的中继上，换到新中继需要重新登录。是否继续？',
+        forget: '忘记中继',
+        forgetTitle: '忘记这个中继',
+        forgetBody: '应用会再次询问地址，在你填写之前保持未登录。',
+        footer: 'agent 运行在你的电脑上，中继只在电脑与本应用之间转发密文。更换中继会退出登录。',
     },
 
     sessionInfo: {
@@ -912,11 +913,11 @@ export const zhHans: TranslationStructure = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: 'Codex 和 Claude Code 移动客户端',
+        title: '能操作你电脑的 agent',
         subtitle: '端到端加密，您的账户仅存储在您的设备上。',
         createAccount: '创建账户',
         linkOrRestoreAccount: '链接或恢复账户',
-        loginWithMobileApp: '使用移动应用登录',
+        loginWithMobileApp: '用另一台电脑登录',
     },
 
     review: {

@@ -392,27 +392,28 @@ export const zhHant: TranslationStructure = {
         placeholder: '輸入命令或搜尋...',
     },
 
-    server: {
-        // Used by Server Configuration screen (app/(app)/server.tsx)
-        serverConfiguration: '伺服器設定',
-        enterServerUrl: '請輸入伺服器 URL',
-        notValidHappyServer: '不是有效的 Happy 伺服器',
-        changeServer: '更改伺服器',
-        continueWithServer: '繼續使用此伺服器？',
-        resetToDefault: '重設為預設',
-        resetServerDefault: '重設伺服器為預設值？',
-        validating: '驗證中...',
-        validatingServer: '正在驗證伺服器...',
-        serverReturnedError: '伺服器返回錯誤',
-        failedToConnectToServer: '連線伺服器失敗',
-        currentlyUsingCustomServer: '目前使用自訂伺服器',
-        customServerUrlLabel: '自訂伺服器 URL',
-        advancedFeatureFooter: "這是一個進階功能。只有在您知道自己在做什麼時才更改伺服器。更改伺服器後您需要重新登入。",
-        services: '服務',
-        useCustomServerForVoice: '使用自訂伺服器處理語音',
-        customServerVoiceEnabled: '語音憑證和用量由您的自訂伺服器處理',
-        customServerVoiceDisabled: '語音使用 Happy Cloud 和您的 Happy 訂閱',
-        customServerVoiceFooter: '關閉時，啟動語音會連線至 Happy Cloud 和 ElevenLabs。僅當您的自訂伺服器已設定語音功能時才啟用。',
+    relay: {
+        // Used by the relay address entry (components/RelayAddressEntry.tsx)
+        title: '中繼',
+        firstRunTitle: '填寫你的中繼位址',
+        firstRunBody: '本應用透過你自己執行的中繼連線你的電腦。沒有預設位址，填寫後才能繼續。',
+        addressLabel: '中繼位址',
+        addressPlaceholder: 'https://relay.example.com',
+        addressEmpty: '請填寫中繼位址',
+        addressProtocol: '位址必須以 http:// 或 https:// 開頭',
+        addressFormat: '這不是有效的位址',
+        checking: '正在檢查中繼...',
+        checkingShort: '檢查中...',
+        notARelay: '該位址上沒有中繼回應',
+        unreachable: '無法連線該位址',
+        returnedError: '中繼回傳了錯誤',
+        current: '本機連線上面這個中繼',
+        changeTitle: '更換中繼',
+        changeBody: '帳戶留在原本的中繼上，換到新中繼需要重新登入。是否繼續？',
+        forget: '忘記中繼',
+        forgetTitle: '忘記這個中繼',
+        forgetBody: '應用會再次詢問位址，在你填寫之前維持未登入。',
+        footer: 'agent 執行在你的電腦上，中繼只在電腦與本應用之間轉發密文。更換中繼會登出。',
     },
 
     sessionInfo: {
@@ -911,11 +912,11 @@ export const zhHant: TranslationStructure = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: 'Codex 和 Claude Code 行動用戶端',
+        title: '能操作你電腦的 agent',
         subtitle: '端對端加密，您的帳戶僅儲存在您的裝置上。',
         createAccount: '建立帳戶',
         linkOrRestoreAccount: '連結或恢復帳戶',
-        loginWithMobileApp: '使用行動應用程式登入',
+        loginWithMobileApp: '用另一台電腦登入',
     },
 
     review: {

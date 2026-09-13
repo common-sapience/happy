@@ -390,27 +390,28 @@ export const it: TranslationStructure = {
         placeholder: 'Digita un comando o cerca...',
     },
 
-    server: {
-        // Used by Server Configuration screen (app/(app)/server.tsx)
-        serverConfiguration: 'Configurazione server',
-        enterServerUrl: 'Inserisci un URL del server',
-        notValidHappyServer: 'Non è un Happy Server valido',
-        changeServer: 'Cambia server',
-        continueWithServer: 'Continuare con questo server?',
-        resetToDefault: 'Ripristina predefinito',
-        resetServerDefault: 'Ripristinare il server predefinito?',
-        validating: 'Verifica...',
-        validatingServer: 'Verifica del server...',
-        serverReturnedError: 'Il server ha restituito un errore',
-        failedToConnectToServer: 'Impossibile connettersi al server',
-        currentlyUsingCustomServer: 'Attualmente si usa un server personalizzato',
-        customServerUrlLabel: 'URL server personalizzato',
-        advancedFeatureFooter: 'Questa è una funzionalità avanzata. Cambia il server solo se sai cosa stai facendo. Dovrai disconnetterti e accedere di nuovo dopo aver cambiato server.',
-        services: 'Servizi',
-        useCustomServerForVoice: 'Usa il server personalizzato per la voce',
-        customServerVoiceEnabled: 'Le credenziali e l’utilizzo vocale usano il server personalizzato',
-        customServerVoiceDisabled: 'La voce usa Happy Cloud e il tuo abbonamento Happy',
-        customServerVoiceFooter: 'Quando è disattivato, l’avvio della voce contatta Happy Cloud ed ElevenLabs. Attivalo solo se il server personalizzato è configurato per la voce.',
+    relay: {
+        // Used by the relay address entry (components/RelayAddressEntry.tsx)
+        title: 'Relay',
+        firstRunTitle: 'Indica il tuo relay',
+        firstRunBody: 'Questa app raggiunge i tuoi computer attraverso un relay che gestisci tu. Non ce n’è uno predefinito: inserisci il suo indirizzo per continuare.',
+        addressLabel: 'Indirizzo del relay',
+        addressPlaceholder: 'https://relay.example.com',
+        addressEmpty: 'Inserisci l’indirizzo del relay',
+        addressProtocol: 'L’indirizzo deve iniziare con http:// o https://',
+        addressFormat: 'Questo indirizzo non è valido',
+        checking: 'Verifica del relay...',
+        checkingShort: 'Verifica...',
+        notARelay: 'A quell’indirizzo non ha risposto nessun relay',
+        unreachable: 'Impossibile raggiungere quell’indirizzo',
+        returnedError: 'Il relay ha restituito un errore',
+        current: 'Questo computer si collega al relay indicato sopra',
+        changeTitle: 'Cambia relay',
+        changeBody: 'Il tuo account resta sul relay che abbandoni, quindi sul nuovo dovrai accedere di nuovo. Continuare?',
+        forget: 'Dimentica relay',
+        forgetTitle: 'Dimenticare questo relay',
+        forgetBody: 'L’app chiederà di nuovo un indirizzo e resterà disconnessa finché non glielo dai.',
+        footer: 'Gli agenti girano sui tuoi computer; il relay passa solo messaggi cifrati tra loro e questa app. Cambiarlo ti disconnette.',
     },
 
     sessionInfo: {
@@ -909,11 +910,11 @@ export const it: TranslationStructure = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: 'Client mobile di Codex e Claude Code',
+        title: 'Un agente che usa il tuo computer',
         subtitle: 'Crittografia end-to-end e account memorizzato solo sul tuo dispositivo.',
         createAccount: 'Crea account',
         linkOrRestoreAccount: 'Collega o ripristina account',
-        loginWithMobileApp: 'Accedi con l\'app mobile',
+        loginWithMobileApp: 'Accedi da un altro computer',
     },
 
     review: {

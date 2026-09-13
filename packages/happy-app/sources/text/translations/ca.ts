@@ -392,27 +392,28 @@ export const ca: TranslationStructure = {
         placeholder: 'Escriu una comanda o cerca...',
     },
 
-    server: {
-        // Used by Server Configuration screen (app/(app)/server.tsx)
-        serverConfiguration: 'Configuració del servidor',
-        enterServerUrl: 'Introdueix una URL del servidor',
-        notValidHappyServer: 'No és un servidor Happy vàlid',
-        changeServer: 'Canvia el servidor',
-        continueWithServer: 'Continuar amb aquest servidor?',
-        resetToDefault: 'Reinicia per defecte',
-        resetServerDefault: 'Reiniciar el servidor per defecte?',
-        validating: 'Validant...',
-        validatingServer: 'Validant el servidor...',
-        serverReturnedError: 'El servidor ha retornat un error',
-        failedToConnectToServer: 'Ha fallat la connexió amb el servidor',
-        currentlyUsingCustomServer: 'Actualment utilitzant un servidor personalitzat',
-        customServerUrlLabel: 'URL del servidor personalitzat',
-        advancedFeatureFooter: 'Aquesta és una funció avançada. Només canvia el servidor si saps el que fas. Hauràs de tancar la sessió i tornar-la a iniciar després de canviar els servidors.',
-        services: 'Serveis',
-        useCustomServerForVoice: 'Utilitza el servidor personalitzat per a la veu',
-        customServerVoiceEnabled: 'Les credencials i l’ús de veu utilitzen el teu servidor personalitzat',
-        customServerVoiceDisabled: 'La veu utilitza Happy Cloud i la teva subscripció de Happy',
-        customServerVoiceFooter: 'Quan està desactivat, iniciar la veu contacta amb Happy Cloud i ElevenLabs. Activa-ho només si el teu servidor personalitzat està configurat per a veu.',
+    relay: {
+        // Used by the relay address entry (components/RelayAddressEntry.tsx)
+        title: 'Relé',
+        firstRunTitle: 'Indica el teu relé',
+        firstRunBody: 'Aquesta app arriba als teus ordinadors a través d’un relé que executes tu. No n’hi ha cap per defecte, així que introdueix-ne l’adreça per continuar.',
+        addressLabel: 'Adreça del relé',
+        addressPlaceholder: 'https://relay.example.com',
+        addressEmpty: 'Introdueix l’adreça del relé',
+        addressProtocol: 'L’adreça ha de començar amb http:// o https://',
+        addressFormat: 'Aquesta adreça no és vàlida',
+        checking: 'Comprovant el relé...',
+        checkingShort: 'Comprovant...',
+        notARelay: 'A aquesta adreça no ha respost cap relé',
+        unreachable: 'No s’ha pogut contactar amb aquesta adreça',
+        returnedError: 'El relé ha retornat un error',
+        current: 'Aquest ordinador es connecta al relé de dalt',
+        changeTitle: 'Canvia de relé',
+        changeBody: 'El teu compte viu al relé que deixes, així que hauràs d’iniciar la sessió de nou al nou. Vols continuar?',
+        forget: 'Oblida el relé',
+        forgetTitle: 'Oblidar aquest relé',
+        forgetBody: 'L’app tornarà a demanar una adreça i es mantindrà sense sessió fins que n’hi doneu una.',
+        footer: 'Els agents s’executen als teus ordinadors; el relé només passa missatges xifrats entre ells i aquesta app. Canviar-lo tanca la sessió.',
     },
 
     sessionInfo: {
@@ -911,11 +912,11 @@ export const ca: TranslationStructure = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: 'Client mòbil de Codex i Claude Code',
+        title: 'Un agent que fa servir el teu ordinador',
         subtitle: 'Xifrat punt a punt i el teu compte s\'emmagatzema només al teu dispositiu.',
         createAccount: 'Crea un compte',
         linkOrRestoreAccount: 'Enllaça o restaura un compte',
-        loginWithMobileApp: 'Inicia sessió amb l\'aplicació mòbil',
+        loginWithMobileApp: 'Inicia la sessió des d’un altre ordinador',
     },
 
     review: {
