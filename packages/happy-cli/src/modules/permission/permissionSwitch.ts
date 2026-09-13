@@ -6,9 +6,18 @@
  * default: the engine then runs on an allow baseline of its own and the daemon
  * surfaces no permission requests to the control end. Turning it on restores the
  * ACP permission round trip, where the daemon only forwards and never decides.
+ *
+ * Scope of a change (PERM-05): the baseline is pinned into the engine process
+ * environment when a session starts, so a session already running keeps the rule
+ * it was started with. A flipped switch governs every session started after it,
+ * and the engine of a running session is left alone rather than re-decided by the
+ * daemon — the daemon forwards permission requests, it never answers them
+ * (RULE-04). Turning the switch on and having it apply to a session already
+ * running needs the engine to accept a permission-rule change over its own
+ * interface (T-13).
  */
 
-import { readSettings } from '@/persistence';
+import { readSettings, updateSettings } from '@/persistence';
 
 /**
  * Engine permission baseline used while the switch is off. The engine grants
@@ -20,6 +29,26 @@ export const ENGINE_PERMISSION_ENV_VAR = 'OPENCODE_PERMISSION';
 export async function readPermissionConfirmationEnabled(): Promise<boolean> {
   const settings = await readSettings();
   return settings.permissionConfirmationEnabled === true;
+}
+
+/**
+ * Writes the switch and returns the value the host settled on (PERM-05, RULE-10).
+ *
+ * Any paired control end may flip it, so the write goes through the locked
+ * read-modify-write of the settings file: a concurrent writer of an unrelated
+ * field must not lose its change, and a half-written settings file must never be
+ * readable. A non-boolean is refused rather than coerced — the caller is remote,
+ * and `deny by default` means an unparseable request changes nothing.
+ */
+export async function writePermissionConfirmationEnabled(enabled: boolean): Promise<boolean> {
+  if (typeof enabled !== 'boolean') {
+    throw new Error('permission confirmation switch must be a boolean');
+  }
+  const settled = await updateSettings((current) => ({
+    ...current,
+    permissionConfirmationEnabled: enabled,
+  }));
+  return settled.permissionConfirmationEnabled === true;
 }
 
 /**

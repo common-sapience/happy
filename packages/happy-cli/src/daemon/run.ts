@@ -38,6 +38,10 @@ import { ENGINE_AGENT_NAME } from '@/agent/acp/acpAgentConfig';
 import { buildEngineSessionLaunchArgs, rejectNonEngineSpawn } from './engineLaunch';
 import { ensureMemoryDirectory } from '@/modules/memory/memoryDirectory';
 import {
+  readPermissionConfirmationEnabled,
+  writePermissionConfirmationEnabled,
+} from '@/modules/permission/permissionSwitch';
+import {
   DREAM_AGENT_PROFILE,
   DREAM_PROMPT,
   MemoryConsolidationRunner,
@@ -740,10 +744,15 @@ export async function startDaemon(): Promise<void> {
     // Create API client
     const api = await ApiClient.create(credentials);
 
+    // PERM-08 / DESK-17: the switch travels in the machine metadata from the first registration,
+    // so a control end can render the setting from the machine list alone.
+    const permissionConfirmationEnabled = await readPermissionConfirmationEnabled();
+    logger.debug(`[DAEMON RUN] Permission confirmation ${permissionConfirmationEnabled ? 'enabled' : 'disabled'}`);
+
     // Get or create machine
     const machine = await api.getOrCreateMachine({
       machineId,
-      metadata: initialMachineMetadata,
+      metadata: { ...initialMachineMetadata, permissionConfirmationEnabled },
       daemonState: initialDaemonState
     });
     logger.debug(`[DAEMON RUN] Machine registered: ${machine.id}`);
@@ -798,6 +807,8 @@ export async function startDaemon(): Promise<void> {
       stopSession,
       archiveSession,
       runDream: () => memoryConsolidation.runNow(),
+      getPermissionConfirmation: readPermissionConfirmationEnabled,
+      setPermissionConfirmation: writePermissionConfirmationEnabled,
       requestShutdown: () => requestShutdown('happy-app')
     });
 

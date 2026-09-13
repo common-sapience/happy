@@ -4,10 +4,12 @@ import type { Machine } from './types';
 
 const {
     mockIo,
-    mockShouldReconnect
+    mockShouldReconnect,
+    mockReadPermissionConfirmationEnabled
 } = vi.hoisted(() => ({
     mockIo: vi.fn(),
-    mockShouldReconnect: vi.fn(() => true)
+    mockShouldReconnect: vi.fn(() => true),
+    mockReadPermissionConfirmationEnabled: vi.fn(async () => false)
 }));
 
 vi.mock('socket.io-client', () => ({
@@ -58,6 +60,10 @@ vi.mock('@/utils/lidState', () => ({
     shouldReconnect: mockShouldReconnect
 }));
 
+vi.mock('@/modules/permission/permissionSwitch', () => ({
+    readPermissionConfirmationEnabled: mockReadPermissionConfirmationEnabled
+}));
+
 const registeredHandlers = new Map<string, (params: unknown) => unknown>();
 
 type SocketHandler = (...args: any[]) => void;
@@ -94,6 +100,7 @@ describe('ApiMachineClient socket reconnection', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockShouldReconnect.mockReturnValue(true);
+        mockReadPermissionConfirmationEnabled.mockResolvedValue(false);
         socketHandlers = {};
         mockSocket = {
             connected: false,
@@ -227,6 +234,8 @@ describe('HOST-10 / HOST-12 machine spawn RPC', () => {
             stopSession: vi.fn(() => true),
             archiveSession: vi.fn(async () => {}),
             runDream: vi.fn(async () => 'dream-session-1'),
+            getPermissionConfirmation: vi.fn(async () => false),
+            setPermissionConfirmation: vi.fn(async (enabled: boolean) => enabled),
             requestShutdown: vi.fn()
         });
         return registeredHandlers.get('spawn-happy-session')!;
@@ -235,7 +244,15 @@ describe('HOST-10 / HOST-12 machine spawn RPC', () => {
     it('HOST-10: registers no other-agent RPC', () => {
         registerHandlers();
 
-        expect([...registeredHandlers.keys()].sort()).toEqual(['archive-session', 'run-dream', 'spawn-happy-session', 'stop-daemon', 'stop-session']);
+        expect([...registeredHandlers.keys()].sort()).toEqual([
+            'archive-session',
+            'get-permission-confirmation',
+            'run-dream',
+            'set-permission-confirmation',
+            'spawn-happy-session',
+            'stop-daemon',
+            'stop-session'
+        ]);
     });
 
     it('HOST-12: forwards the requested agent profile to the daemon', async () => {
@@ -269,6 +286,8 @@ describe('RL-07 archive RPC and the plaintext marker', () => {
             stopSession: vi.fn(() => true),
             archiveSession,
             runDream: vi.fn(async () => 'dream-session-1'),
+            getPermissionConfirmation: vi.fn(async () => false),
+            setPermissionConfirmation: vi.fn(async (enabled: boolean) => enabled),
             requestShutdown: vi.fn()
         });
         return registeredHandlers.get('archive-session')!;
@@ -406,6 +425,8 @@ describe('ENG-19 / T-15 run-dream RPC', () => {
             stopSession: vi.fn(() => true),
             archiveSession: vi.fn(async () => {}),
             runDream,
+            getPermissionConfirmation: vi.fn(async () => false),
+            setPermissionConfirmation: vi.fn(async (enabled: boolean) => enabled),
             requestShutdown: vi.fn()
         });
         return registeredHandlers.get('run-dream')!;
@@ -429,5 +450,212 @@ describe('ENG-19 / T-15 run-dream RPC', () => {
         runDream.mockRejectedValueOnce(new Error('A memory consolidation pass is already running on this machine'));
 
         await expect(run({})).rejects.toThrow('already running');
+    });
+});
+
+describe('PERM-08 / PERM-05 / DESK-17 permission confirmation RPC', () => {
+    const getPermissionConfirmation = vi.fn(async () => false);
+    const setPermissionConfirmation = vi.fn(async (enabled: boolean) => enabled);
+
+    const registerHandlers = () => {
+        registeredHandlers.clear();
+        getPermissionConfirmation.mockClear();
+        setPermissionConfirmation.mockClear();
+        const client = new ApiMachineClient('fake-token', makeMachine());
+        client.setRPCHandlers({
+            spawnSession: vi.fn(async () => ({ type: 'success' as const, sessionId: 'session-1' })),
+            stopSession: vi.fn(() => true),
+            archiveSession: vi.fn(async () => {}),
+            runDream: vi.fn(async () => 'dream-session-1'),
+            getPermissionConfirmation,
+            setPermissionConfirmation,
+            requestShutdown: vi.fn()
+        });
+        return {
+            get: registeredHandlers.get('get-permission-confirmation')!,
+            set: registeredHandlers.get('set-permission-confirmation')!
+        };
+    };
+
+    it('DESK-17: reads the switch with no parameters', async () => {
+        const { get } = registerHandlers();
+
+        await expect(get({})).resolves.toEqual({ enabled: false });
+        expect(getPermissionConfirmation).toHaveBeenCalledTimes(1);
+    });
+
+    it('DESK-17: reports the switch as on once the host has it on', async () => {
+        const { get } = registerHandlers();
+        getPermissionConfirmation.mockResolvedValueOnce(true);
+
+        await expect(get(undefined)).resolves.toEqual({ enabled: true });
+    });
+
+    it('PERM-05: a control end turns the switch on and gets the settled value back', async () => {
+        const { set } = registerHandlers();
+
+        await expect(set({ enabled: true })).resolves.toEqual({ enabled: true });
+        expect(setPermissionConfirmation).toHaveBeenCalledWith(true);
+    });
+
+    it('PERM-05: a control end turns the switch off again', async () => {
+        const { set } = registerHandlers();
+
+        await expect(set({ enabled: false })).resolves.toEqual({ enabled: false });
+        expect(setPermissionConfirmation).toHaveBeenCalledWith(false);
+    });
+
+    it('PERM-05: answers with the value the host settled on, not the value asked for', async () => {
+        const { set } = registerHandlers();
+        setPermissionConfirmation.mockResolvedValueOnce(false);
+
+        await expect(set({ enabled: true })).resolves.toEqual({ enabled: false });
+    });
+
+    it('PERM-08: refuses anything that is not a boolean and writes nothing', async () => {
+        const { set } = registerHandlers();
+
+        await expect(set({})).rejects.toThrow('enabled must be a boolean');
+        await expect(set(undefined)).rejects.toThrow('enabled must be a boolean');
+        await expect(set({ enabled: 'true' })).rejects.toThrow('enabled must be a boolean');
+        await expect(set({ enabled: 1 })).rejects.toThrow('enabled must be a boolean');
+        expect(setPermissionConfirmation).not.toHaveBeenCalled();
+    });
+
+    it('PERM-08: surfaces a host that could not write the switch', async () => {
+        const { set } = registerHandlers();
+        setPermissionConfirmation.mockRejectedValueOnce(new Error('settings file is locked'));
+
+        await expect(set({ enabled: true })).rejects.toThrow('settings file is locked');
+    });
+});
+
+describe('PERM-08 / DESK-17 the machine metadata carries the switch', () => {
+    let socketHandlers: SocketHandlers;
+    let mockSocket: any;
+
+    const emitSocketEvent = (event: string, ...args: any[]) => {
+        const handlers = socketHandlers[event] || [];
+        handlers.forEach((handler) => handler(...args));
+    };
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockShouldReconnect.mockReturnValue(true);
+        mockReadPermissionConfirmationEnabled.mockResolvedValue(false);
+        socketHandlers = {};
+        mockSocket = {
+            connected: true,
+            connect: vi.fn(),
+            on: vi.fn((event: string, handler: SocketHandler) => {
+                if (!socketHandlers[event]) {
+                    socketHandlers[event] = [];
+                }
+                socketHandlers[event].push(handler);
+            }),
+            emit: vi.fn(),
+            emitWithAck: vi.fn(() => new Promise(() => {})),
+            close: vi.fn(),
+            io: { on: vi.fn() }
+        };
+        mockIo.mockReturnValue(mockSocket);
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    /** Stands in for the relay: every accepted write becomes the machine's stored metadata. */
+    const connectedClient = (machine: Machine) => {
+        const client = new ApiMachineClient('fake-token', machine);
+        const published: any[] = [];
+        const spy = vi.spyOn(client, 'updateMachineMetadata').mockImplementation(async (handler) => {
+            const settled = handler(machine.metadata);
+            machine.metadata = settled;
+            published.push(settled);
+        });
+        client.connect();
+        return { client, published, spy };
+    };
+
+    it('DESK-17: publishes the switch on the heartbeat, so no RPC round trip is needed to render it', async () => {
+        mockReadPermissionConfirmationEnabled.mockResolvedValue(true);
+        const machine = makeMachine();
+        const storedMetadata = machine.metadata as Machine['metadata'] & { displayName?: string };
+        storedMetadata.displayName = 'My Mac';
+        const { client, published } = connectedClient(machine);
+
+        emitSocketEvent('connect');
+        await vi.waitFor(() => {
+            expect(published.some((metadata) => metadata.permissionConfirmationEnabled === true)).toBe(true);
+        });
+
+        // Additive: the field a control end reads arrives next to everything already stored.
+        expect(machine.metadata).toEqual(expect.objectContaining({
+            host: 'localhost',
+            displayName: 'My Mac',
+            permissionConfirmationEnabled: true
+        }));
+
+        client.shutdown();
+    });
+
+    it('DESK-17: publishes the switch as off when that is what the host holds', async () => {
+        const machine = makeMachine();
+        const { client } = connectedClient(machine);
+
+        emitSocketEvent('connect');
+        await vi.waitFor(() => {
+            expect(machine.metadata!.permissionConfirmationEnabled).toBe(false);
+        });
+
+        client.shutdown();
+    });
+
+    it('PERM-08: writes no metadata of its own while the published copy already matches the host', async () => {
+        const machine = makeMachine();
+        machine.metadata!.permissionConfirmationEnabled = false;
+        const { client, published } = connectedClient(machine);
+
+        emitSocketEvent('connect');
+        await vi.waitFor(() => {
+            expect(mockReadPermissionConfirmationEnabled).toHaveBeenCalled();
+        });
+        await mockReadPermissionConfirmationEnabled.mock.results[0]!.value;
+        await Promise.resolve();
+
+        // The only write is the first heartbeat's capability repair, which carries the switch
+        // through untouched. An unchanged switch never costs a metadata version of its own.
+        expect(published).toHaveLength(1);
+        expect(published[0]).toEqual(expect.objectContaining({
+            cliAvailability: { opencode: false, detectedAt: 0 },
+            permissionConfirmationEnabled: false
+        }));
+
+        client.shutdown();
+    });
+
+    it('PERM-05: a switch written over RPC reaches the metadata without waiting for a heartbeat', async () => {
+        registeredHandlers.clear();
+        const machine = makeMachine();
+        const { client, published } = connectedClient(machine);
+        client.setRPCHandlers({
+            spawnSession: vi.fn(async () => ({ type: 'success' as const, sessionId: 'session-1' })),
+            stopSession: vi.fn(() => true),
+            archiveSession: vi.fn(async () => {}),
+            runDream: vi.fn(async () => 'dream-session-1'),
+            getPermissionConfirmation: vi.fn(async () => false),
+            setPermissionConfirmation: vi.fn(async (enabled: boolean) => enabled),
+            requestShutdown: vi.fn()
+        });
+
+        await registeredHandlers.get('set-permission-confirmation')!({ enabled: true });
+
+        expect(published.at(-1)).toEqual(expect.objectContaining({
+            host: 'localhost',
+            permissionConfirmationEnabled: true
+        }));
+
+        client.shutdown();
     });
 });

@@ -14,6 +14,7 @@ import { backoff } from '@/utils/time';
 import { RpcHandlerManager } from './rpc/RpcHandlerManager';
 import { detectCLIAvailability, CLIAvailability } from '@/utils/detectCLI';
 import { shouldReconnect } from '@/utils/lidState';
+import { readPermissionConfirmationEnabled } from '@/modules/permission/permissionSwitch';
 
 interface ServerToDaemonEvents {
     update: (data: Update) => void;
@@ -101,6 +102,10 @@ type MachineRpcHandlers = {
     archiveSession: (sessionId: string, archived: boolean) => Promise<void>;
     /** ENG-19 / T-15: start the memory consolidation pass now, returning its session id. */
     runDream: () => Promise<string>;
+    /** PERM-08 / DESK-17: read this host's permission confirmation switch. */
+    getPermissionConfirmation: () => Promise<boolean>;
+    /** PERM-05 / PERM-08: write the switch, answering with the value the host settled on. */
+    setPermissionConfirmation: (enabled: boolean) => Promise<boolean>;
     requestShutdown: () => void;
 }
 
@@ -145,6 +150,8 @@ export class ApiMachineClient {
         stopSession,
         archiveSession,
         runDream,
+        getPermissionConfirmation,
+        setPermissionConfirmation,
         requestShutdown
     }: MachineRpcHandlers) {
         // Register spawn session handler
@@ -214,6 +221,30 @@ export class ApiMachineClient {
             const sessionId = await runDream();
             logger.debug(`[API MACHINE] Memory consolidation pass started as session ${sessionId}`);
             return { started: true, sessionId };
+        });
+
+        // Permission confirmation switch (PERM-08, DESK-17). The switch is a host fact and a
+        // control end is only its editor (PERM-05), so reading and writing both go through the
+        // host: the answer is always the value the host settled on, never the value asked for.
+        this.rpcHandlerManager.registerHandler('get-permission-confirmation', async () => {
+            const enabled = await getPermissionConfirmation();
+            return { enabled };
+        });
+
+        // A remote caller is not trusted to send a boolean (RULE-05): anything else changes
+        // nothing. The new value governs sessions started from now on — a session already
+        // running keeps the baseline pinned into its engine process environment.
+        this.rpcHandlerManager.registerHandler('set-permission-confirmation', async (params: any) => {
+            const { enabled } = params || {};
+
+            if (typeof enabled !== 'boolean') {
+                throw new Error('enabled must be a boolean');
+            }
+
+            const settled = await setPermissionConfirmation(enabled);
+            logger.debug(`[API MACHINE] Permission confirmation switch set to ${settled}`);
+            await this.publishPermissionConfirmation(settled);
+            return { enabled: settled };
         });
 
         // Register stop daemon handler
@@ -442,6 +473,38 @@ export class ApiMachineClient {
             })).catch((err) => {
                 logger.debug('[API MACHINE] Failed to update machine capabilities:', err);
             });
+        }
+
+        // PERM-08 / DESK-17: the settings file on this host is the switch's authority, so the
+        // heartbeat repairs the published copy whenever the two have drifted apart — a different
+        // daemon variant or a hand-edited file changes the switch without passing through here.
+        readPermissionConfirmationEnabled()
+            .then((enabled) => this.publishPermissionConfirmation(enabled))
+            .catch((err) => {
+                logger.debug('[API MACHINE] Failed to publish the permission confirmation switch:', err);
+            });
+    }
+
+    /**
+     * Keep the published copy of the permission confirmation switch in step with the host
+     * (PERM-08, DESK-17). Additive: every other metadata field, including the ones the app owns,
+     * is carried through untouched. A relay that refuses the write does not fail the caller — the
+     * switch itself is already persisted on the host, and the next heartbeat retries.
+     */
+    private async publishPermissionConfirmation(enabled: boolean): Promise<void> {
+        if (this.machine.metadata?.permissionConfirmationEnabled === enabled) {
+            return;
+        }
+        if (!this.socket?.connected) {
+            return;
+        }
+        try {
+            await this.updateMachineMetadata((metadata) => ({
+                ...(metadata || {} as any),
+                permissionConfirmationEnabled: enabled,
+            }));
+        } catch (err) {
+            logger.debug('[API MACHINE] Failed to publish the permission confirmation switch:', err);
         }
     }
 
