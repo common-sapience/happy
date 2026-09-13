@@ -38,9 +38,9 @@ const stylesheet = StyleSheet.create((theme) => ({
     },
     glassSurface: {
         overflow: 'hidden',
-        borderWidth: Platform.select({ web: 0, default: StyleSheet.hairlineWidth }),
+        borderWidth: StyleSheet.hairlineWidth,
         borderColor: theme.colors.glass.border,
-        backgroundColor: Platform.select({ web: 'transparent', android: theme.colors.glass.backgroundStrong, default: 'transparent' }),
+        backgroundColor: Platform.select({ android: theme.colors.glass.backgroundStrong, default: 'transparent' }),
     },
     accentTint: {
         ...StyleSheet.absoluteFillObject,
@@ -138,20 +138,21 @@ export const RoundButton = React.memo((props: { size?: RoundButtonSize, display?
                 props.style])}
             onPress={doAction}
         >
-            {Platform.OS === 'web' ? content : (
+            {/* Glass is for containers, not for text. The inverted display is
+                the secondary action — plain text — and must never read as heavy
+                as the one primary action on the screen. */}
+            {props.display === 'inverted' ? content : (
                 <MobileGlassSurface
                     enabled
                     interactive
                     intensity={72}
-                    tintColor={props.display === 'inverted' ? undefined : display.backgroundColor}
+                    tintColor={display.backgroundColor}
                     style={[
                         styles.glassSurface,
                         { borderRadius: size.height / 2 },
                     ]}
                 >
-                    {props.display !== 'inverted' && (
                     <View pointerEvents="none" style={[styles.accentTint, { backgroundColor: display.backgroundColor }]} />
-                    )}
                     {content}
                 </MobileGlassSurface>
             )}

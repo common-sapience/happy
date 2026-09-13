@@ -79,9 +79,12 @@ export const Header = React.memo((props: HeaderProps) => {
     const isDesktop = Platform.OS === 'web' || isRunningOnMac();
     const isNativePhone = !isDesktop && !isTablet;
     const glassControlsEnabled = isNativePhone && Platform.OS === 'ios';
+    // Desktop is the title bar: the whole header is one glass layer and the
+    // controls sit on it. The phone's scrim and title pill stay phone-only.
+    const desktopGlassChrome = isDesktop;
     const isAndroidHeader = isNativePhone && Platform.OS === 'android';
-    const headerLeftUsesGlass = headerLeftGlass && glassControlsEnabled;
-    const headerRightUsesGlass = headerRightGlass && glassControlsEnabled;
+    const headerLeftUsesGlass = headerLeftGlass && (glassControlsEnabled || desktopGlassChrome);
+    const headerRightUsesGlass = headerRightGlass && (glassControlsEnabled || desktopGlassChrome);
     const contentHeight = glassControlsEnabled ? Math.max(headerHeight, MOBILE_GLASS_HEADER_HEIGHT) : headerHeight;
     const centerTitle = (titleAlignment ?? (isNativePhone ? mobileTitleAlignment : 'start')) === 'center';
     const homeBackdrop = headerBackdropVariant === 'home';
@@ -129,6 +132,13 @@ export const Header = React.memo((props: HeaderProps) => {
         });
     }, [backdropOpacity, backdropShouldBeVisible, backdropStrength, backdropStrengthTarget, glassControlsEnabled]);
 
+    // The screen-level headerStyle predates this material and still paints an
+    // opaque bar on desktop; the header owns its own chrome material now, so the
+    // background it asks for is dropped while the rest of its style is kept.
+    const headerStyleWithoutBackground = desktopGlassChrome && headerStyle
+        ? { ...headerStyle, backgroundColor: undefined }
+        : headerStyle;
+
     const containerStyle = [
         styles.container,
         headerTransparent && !isAndroidHeader && styles.containerTransparent,
@@ -138,9 +148,9 @@ export const Header = React.memo((props: HeaderProps) => {
             paddingTop,
         },
         headerShadowVisible && styles.shadow,
-        headerStyle,
+        headerStyleWithoutBackground,
         isAndroidHeader && (headerBackdropVisible ? styles.containerAndroidScrolled : styles.containerNormal),
-        glassControlsEnabled && styles.containerTransparent,
+        (glassControlsEnabled || desktopGlassChrome) && styles.containerTransparent,
     ];
 
     const subtitleStyle = [
@@ -157,6 +167,15 @@ export const Header = React.memo((props: HeaderProps) => {
 
     return (
         <View style={containerStyle}>
+            {desktopGlassChrome && (
+                <MobileGlassSurface
+                    pointerEvents="none"
+                    nativeEffect
+                    material="static"
+                    intensity={76}
+                    style={styles.desktopChromeSurface}
+                />
+            )}
             {glassControlsEnabled && backdropMounted && (
                 <Animated.View
                     pointerEvents="none"
@@ -258,10 +277,23 @@ interface ExtendedNavigationOptions extends Partial<NativeStackHeaderProps['opti
 // Default back button component
 const DefaultBackButton: React.FC<{ tintColor?: string; onPress: () => void }> = ({ tintColor = '#000', onPress }) => {
     const styles = stylesheet;
+    // Desktop: the same glass control as the phone, with the platform's own
+    // back affordance and a hit area larger than the circle it draws.
     if (Platform.OS === 'web' || isRunningOnMac()) {
         return (
-            <Pressable onPress={onPress} hitSlop={15}>
-                <Ionicons name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'} size={24} color={tintColor} />
+            <Pressable
+                onPress={onPress}
+                hitSlop={15}
+                style={({ pressed }) => [styles.backButton, pressed && styles.controlPressed]}
+            >
+                <MobileGlassSurface
+                    interactive
+                    material="static"
+                    intensity={76}
+                    style={styles.backButtonGlass}
+                >
+                    <Ionicons name="chevron-back" size={24} color={tintColor} />
+                </MobileGlassSurface>
             </Pressable>
         );
     }
@@ -324,14 +356,9 @@ const NavigationHeaderComponent: React.FC<NavigationHeaderComponentProps> = Reac
                     numberOfLines={1}
                     ellipsizeMode="tail"
                     style={[
-                        {
-                            fontSize: isDesktop ? 17 : 16,
-                            fontWeight: '600',
-                            textAlign: titleAlign,
-                            color: options.headerTintColor || '#000',
-                            maxWidth: '100%',
-                            flexShrink: 1,
-                        },
+                        stylesheet.navigationTitle,
+                        { textAlign: titleAlign },
+                        options.headerTintColor ? { color: options.headerTintColor } : null,
                         Typography.default('semiBold'),
                         options.headerTitleStyle
                     ]}
@@ -349,7 +376,9 @@ const NavigationHeaderComponent: React.FC<NavigationHeaderComponentProps> = Reac
                 numberOfLines={1}
                 ellipsizeMode="tail"
                 style={[
-                    { fontSize: 17, fontWeight: '600', textAlign: titleAlign, color: options.headerTintColor || '#000', maxWidth: '100%', flexShrink: 1 },
+                    stylesheet.navigationTitle,
+                    { textAlign: titleAlign },
+                    options.headerTintColor ? { color: options.headerTintColor } : null,
                     Typography.default('semiBold'),
                     options.headerTitleStyle
                 ]}
@@ -429,6 +458,15 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
     containerAndroidScrolled: {
         backgroundColor: theme.colors.surfaceHigh,
     },
+    // Desktop title bar material. It fills the header and only draws its bottom
+    // edge, so the bar separates from content without boxing it in.
+    desktopChromeSurface: {
+        ...StyleSheet.absoluteFillObject,
+        borderTopWidth: 0,
+        borderLeftWidth: 0,
+        borderRightWidth: 0,
+        borderBottomColor: theme.colors.glass.divider,
+    },
     // Backdrops are material layers behind floating controls. The Home variant
     // stays stable while content scrolls; other headers may still opt into a
     // stronger underlap state.
@@ -501,11 +539,11 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
         paddingHorizontal: 14,
         borderRadius: MOBILE_GLASS_CONTROL_RADIUS,
         overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: theme.dark ? 'rgba(255, 255, 255, 0.18)' : '#FFFFFF',
-        shadowColor: '#000000',
+        borderWidth: theme.colors.glass.borderWidth,
+        borderColor: theme.colors.glass.border,
+        shadowColor: theme.colors.glass.shadow,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: theme.dark ? 0.24 : 0.06,
+        shadowOpacity: 1,
         shadowRadius: 20,
     },
     rightContainer: {
@@ -526,11 +564,11 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
             android: theme.colors.glass.backgroundStrong,
             default: 'transparent',
         }),
-        borderWidth: Platform.select({ ios: 1, default: 0 }),
-        borderColor: theme.dark ? 'rgba(255, 255, 255, 0.18)' : '#FFFFFF',
-        shadowColor: '#000000',
+        borderWidth: Platform.select({ ios: theme.colors.glass.borderWidth, default: 0 }),
+        borderColor: theme.colors.glass.border,
+        shadowColor: theme.colors.glass.shadow,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: Platform.select({ ios: theme.dark ? 0.24 : 0.06, default: 0 }),
+        shadowOpacity: Platform.select({ ios: 1, default: 0 }),
         shadowRadius: 20,
         elevation: 0,
     },
@@ -547,11 +585,11 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
             android: theme.colors.glass.backgroundStrong,
             default: 'transparent',
         }),
-        borderWidth: Platform.select({ ios: 1, default: 0 }),
-        borderColor: theme.dark ? 'rgba(255, 255, 255, 0.18)' : '#FFFFFF',
-        shadowColor: '#000000',
+        borderWidth: Platform.select({ ios: theme.colors.glass.borderWidth, default: 0 }),
+        borderColor: theme.colors.glass.border,
+        shadowColor: theme.colors.glass.shadow,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: Platform.select({ ios: theme.dark ? 0.24 : 0.06, default: 0 }),
+        shadowOpacity: Platform.select({ ios: 1, default: 0 }),
         shadowRadius: 20,
         elevation: 0,
     },
@@ -574,23 +612,32 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
         alignItems: 'center',
         justifyContent: 'center',
     },
+    // Titles React Navigation builds for us, as opposed to the title slot a
+    // screen renders itself.
+    navigationTitle: {
+        fontSize: theme.typography.subtitle.fontSize,
+        fontWeight: theme.typography.subtitle.fontWeight,
+        color: theme.colors.header.tint,
+        maxWidth: '100%',
+        flexShrink: 1,
+    },
     title: {
-        fontSize: Platform.OS === 'web' ? 17 : 16,
-        fontWeight: '600',
+        fontSize: theme.typography.subtitle.fontSize,
+        fontWeight: theme.typography.subtitle.fontWeight,
         textAlign: 'center',
         color: theme.colors.header.tint,
         ...Typography.default('semiBold'),
     },
     subtitle: {
-        fontSize: Platform.OS === 'web' ? 13 : 12,
-        fontWeight: '400',
+        fontSize: theme.typography.caption.fontSize,
+        fontWeight: theme.typography.caption.fontWeight,
         textAlign: 'left',
         marginTop: Platform.OS === 'web' ? 2 : 1,
         color: theme.colors.header.tint,
         ...Typography.default('regular'),
     },
     desktopSubtitle: {
-        fontSize: 13,
+        fontSize: theme.typography.caption.fontSize,
         textAlign: Platform.OS === 'ios' ? 'center' : 'left',
         marginTop: 2,
     },
@@ -600,7 +647,7 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
         shadowOpacity: theme.colors.shadow.opacity,
         shadowRadius: 3,
         elevation: 4,
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
+        boxShadow: `0 1px 3px ${theme.colors.shadow.color}`,
     },
     backButton: {
         width: Platform.select({ web: 36, default: MOBILE_GLASS_CONTROL_SIZE }),
@@ -626,11 +673,11 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
             android: theme.colors.glass.backgroundStrong,
             default: 'transparent',
         }),
-        borderWidth: Platform.select({ ios: 1, default: 0 }),
-        borderColor: theme.dark ? 'rgba(255, 255, 255, 0.18)' : '#FFFFFF',
-        shadowColor: '#000000',
+        borderWidth: Platform.select({ ios: theme.colors.glass.borderWidth, default: 0 }),
+        borderColor: theme.colors.glass.border,
+        shadowColor: theme.colors.glass.shadow,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: Platform.select({ ios: theme.dark ? 0.24 : 0.06, default: 0 }),
+        shadowOpacity: Platform.select({ ios: 1, default: 0 }),
         shadowRadius: 20,
         elevation: 0,
     },

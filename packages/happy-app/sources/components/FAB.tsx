@@ -8,42 +8,41 @@ import { MobileGlassSurface } from './MobileGlass';
 const stylesheet = StyleSheet.create((theme, runtime) => ({
     container: {
         position: 'absolute',
-        right: 16,
+        right: theme.margins.lg,
     },
     button: {
-        borderRadius: 20,
-        width: 56,
-        height: 56,
-        padding: Platform.select({ web: 16, default: 0 }),
+        borderRadius: theme.borderRadius.xxxl,
+        width: theme.minTouchTarget + 12,
+        height: theme.minTouchTarget + 12,
         overflow: 'visible',
-        shadowColor: Platform.select({ web: theme.colors.shadow.color, default: 'transparent' }),
-        shadowOffset: { width: 0, height: 2 },
-        shadowRadius: Platform.select({ web: 3.84, default: 0 }),
-        shadowOpacity: Platform.select({ web: theme.colors.shadow.opacity, default: 0 }),
-        elevation: Platform.select({ web: 5, default: 0 }),
     },
     buttonDefault: {
-        backgroundColor: Platform.select({ web: theme.colors.fab.background, default: 'transparent' }),
+        backgroundColor: 'transparent',
     },
     buttonPressed: {
-        backgroundColor: Platform.select({ web: theme.colors.fab.backgroundPressed, default: 'transparent' }),
-        opacity: Platform.select({ web: 1, default: 0.72 }),
-        transform: Platform.select({ web: [], default: [{ scale: 0.97 }] }),
+        backgroundColor: 'transparent',
+        opacity: 0.72,
+        transform: [{ scale: 0.97 }],
     },
     glass: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        borderRadius: 20,
+        borderRadius: theme.borderRadius.xxxl,
         overflow: 'hidden',
-        backgroundColor: Platform.select({ web: 'transparent', android: theme.colors.glass.backgroundStrong, default: 'transparent' }),
-        borderWidth: Platform.select({ web: 0, default: StyleSheet.hairlineWidth }),
+        backgroundColor: Platform.select({ android: theme.colors.glass.backgroundStrong, default: 'transparent' }),
+        borderWidth: StyleSheet.hairlineWidth,
         borderColor: theme.colors.glass.border,
         shadowColor: theme.colors.glass.shadow,
-        shadowOffset: { width: 0, height: 8 },
+        shadowOffset: { width: 0, height: theme.colors.glass.elevation.offset },
         shadowOpacity: Platform.select({ web: 0, default: 1 }),
         shadowRadius: 18,
         elevation: Platform.select({ android: 8, default: 0 }),
+    },
+    accentTint: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: theme.colors.fab.background,
+        opacity: 0.68,
     },
 }));
 
@@ -55,7 +54,7 @@ export const FAB = React.memo(({ onPress }: { onPress: () => void }) => {
         <View
             style={[
                 styles.container,
-                { bottom: safeArea.bottom + 16 }
+                { bottom: safeArea.bottom + theme.margins.lg }
             ]}
         >
             <Pressable
@@ -65,13 +64,13 @@ export const FAB = React.memo(({ onPress }: { onPress: () => void }) => {
                 ]}
                 onPress={onPress}
             >
-                {Platform.OS === 'web' ? (
+                <MobileGlassSurface interactive intensity={76} style={styles.glass}>
+                    {/* The one primary action on the screen is the only thing
+                        allowed colour here, and the icon needs the tint to stay
+                        legible over whatever the glass is blurring. */}
+                    <View pointerEvents="none" style={styles.accentTint} />
                     <Ionicons name="add" size={24} color={theme.colors.fab.icon} />
-                ) : (
-                    <MobileGlassSurface interactive intensity={76} style={styles.glass}>
-                        <Ionicons name="add" size={24} color={theme.colors.fab.icon} />
-                    </MobileGlassSurface>
-                )}
+                </MobileGlassSurface>
             </Pressable>
         </View>
     )
