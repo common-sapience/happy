@@ -196,8 +196,11 @@ export const lightTheme = {
             border: 'rgba(0, 0, 0, 0.1)'
         },
         button: {
+            // The one accent of the theme, on the one filled action per screen.
+            // Pure black reads as chrome rather than as an action, and its dark
+            // counterpart disappeared into the dark background entirely.
             primary: {
-                background: '#000000',
+                background: '#007AFF',
                 tint: '#FFFFFF',
                 disabled: '#C0C0C0',
             },
@@ -455,9 +458,9 @@ export const darkTheme = {
         },
         button: {
             primary: {
-                background: '#000000',
+                background: '#0A84FF',
                 tint: '#FFFFFF',
-                disabled: '#C0C0C0',
+                disabled: '#48484A',
             },
             secondary: {
                 tint: '#8E8E93',
