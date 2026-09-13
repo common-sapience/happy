@@ -1,7 +1,7 @@
 import * as z from 'zod';
 import { compareVersionsWithPrerelease, isWellFormedVersion } from '@/utils/versionUtils';
 
-export const agentKeys = ['claude', 'codex', 'gemini', 'openclaw', 'agy'] as const;
+export const agentKeys = ['opencode'] as const;
 export type AgentKey = typeof agentKeys[number];
 
 export const AgentDefaultOverrideSchema = z.object({
@@ -11,11 +11,7 @@ export const AgentDefaultOverrideSchema = z.object({
 }).passthrough();
 
 export const AgentDefaultOverridesSchema = z.object({
-    claude: AgentDefaultOverrideSchema.optional(),
-    codex: AgentDefaultOverrideSchema.optional(),
-    gemini: AgentDefaultOverrideSchema.optional(),
-    openclaw: AgentDefaultOverrideSchema.optional(),
-    agy: AgentDefaultOverrideSchema.optional(),
+    opencode: AgentDefaultOverrideSchema.optional(),
 }).passthrough().default({});
 
 export type AgentDefaultOverride = z.infer<typeof AgentDefaultOverrideSchema>;
@@ -29,14 +25,10 @@ export type AgentDefaultConfig = {
 };
 
 const codeAgentDefaults: Record<AgentKey, AgentDefaultConfig> = {
-    // Auto is the reviewed everyday mode for both shipped code agents. The
-    // old CLI fallback is applied only when a machine version is known below;
-    // a user override is kept separate and is never rewritten here.
-    claude: { permissionMode: 'auto', modelMode: 'claude-opus-5', effortLevel: 'medium' },
-    codex: { permissionMode: 'auto', modelMode: 'gpt-5.6-sol', effortLevel: 'medium' },
-    gemini: { permissionMode: 'default', modelMode: 'gemini-2.5-pro', effortLevel: null },
-    openclaw: { permissionMode: 'default', modelMode: 'default', effortLevel: null },
-    agy: { permissionMode: 'default', modelMode: 'Gemini 3.8 Flash', effortLevel: 'medium' },
+    // The engine's own profile owns the real model and tool settings; these are
+    // only the composer's starting values. A user override is kept separate and
+    // is never rewritten here.
+    opencode: { permissionMode: 'auto', modelMode: 'default', effortLevel: null },
 };
 
 // `auto` first shipped in happy-cli 1.2.1-beta.2, for Claude and Codex alike.
@@ -59,11 +51,8 @@ function resolveCodeDefaultPermissionMode(
         : 'default';
 }
 
-export function normalizeAgentKey(flavor: string | null | undefined): AgentKey {
-    if (flavor === 'codex' || flavor === 'gemini' || flavor === 'openclaw' || flavor === 'agy') {
-        return flavor;
-    }
-    return 'claude';
+export function normalizeAgentKey(_flavor: string | null | undefined): AgentKey {
+    return 'opencode';
 }
 
 export function getCodeAgentDefaults(

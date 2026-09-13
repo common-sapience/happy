@@ -3,7 +3,7 @@ import { storage } from '@/sync/storage';
 import { sync } from '@/sync/sync';
 
 /** Mounted is not visible: a native-stack preload must not activate a chat. */
-export function useSessionVisibility(sessionId: string, active: boolean, embedded: boolean, realtimeStatus: string) {
+export function useSessionVisibility(sessionId: string, active: boolean, embedded: boolean) {
     const claimedView = React.useRef(false);
     React.useLayoutEffect(() => {
         if (!active) return;
@@ -12,7 +12,7 @@ export function useSessionVisibility(sessionId: string, active: boolean, embedde
             storage.getState().setCurrentViewingSession(sessionId);
         }
         sync.onSessionVisible(sessionId);
-    }, [sessionId, active, embedded, realtimeStatus]);
+    }, [sessionId, active, embedded]);
 
     // Keep the existing ownership while a session's info/files/changes screen
     // sits above it. Only release on unmount, and only if this instance ever

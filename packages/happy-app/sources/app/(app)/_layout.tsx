@@ -3,7 +3,7 @@ import 'react-native-reanimated';
 import * as React from 'react';
 import { Typography } from '@/constants/Typography';
 import { createHeader, createPlainHeader } from '@/components/navigation/Header';
-import { Platform, TouchableOpacity, Text, View, Image } from 'react-native';
+import { Platform, Text, View, Image } from 'react-native';
 import { isRunningOnMac } from '@/utils/platform';
 import { useUnistyles } from 'react-native-unistyles';
 import { t } from '@/text';
@@ -58,14 +58,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: false,
                     headerTitle: ''
-                }}
-            />
-            <Stack.Screen
-                name="inbox/index"
-                options={{
-                    headerShown: false,
-                    headerTitle: t('tabs.inbox'),
-                    headerBackTitle: t('common.home')
                 }}
             />
             <Stack.Screen
@@ -160,12 +152,6 @@ export default function RootLayout() {
                 }}
             />
             <Stack.Screen
-                name="settings/agents"
-                options={{
-                    headerTitle: 'Agents',
-                }}
-            />
-            <Stack.Screen
                 name="terminal/connect"
                 options={{
                     headerTitle: t('navigation.connectTerminal'),
@@ -228,36 +214,6 @@ export default function RootLayout() {
                 }}
             />
             <Stack.Screen
-                name="artifacts/index"
-                options={{
-                    headerShown: true,
-                    headerTitle: t('artifacts.title'),
-                    headerBackTitle: t('common.back'),
-                }}
-            />
-            <Stack.Screen
-                name="artifacts/[id]"
-                options={{
-                    headerShown: false, // We'll set header dynamically
-                }}
-            />
-            <Stack.Screen
-                name="artifacts/new"
-                options={{
-                    headerShown: true,
-                    headerTitle: t('artifacts.new'),
-                    headerBackTitle: t('common.cancel'),
-                }}
-            />
-            <Stack.Screen
-                name="artifacts/edit/[id]"
-                options={{
-                    headerShown: true,
-                    headerTitle: t('artifacts.edit'),
-                    headerBackTitle: t('common.cancel'),
-                }}
-            />
-            <Stack.Screen
                 name="text-selection"
                 options={{
                     headerShown: true,
@@ -265,128 +221,13 @@ export default function RootLayout() {
                     headerBackTitle: t('common.back'),
                 }}
             />
-            <Stack.Screen
-                name="friends/index"
-                options={({ navigation }) => ({
-                    headerShown: true,
-                    headerTitle: t('navigation.friends'),
-                    headerBackTitle: t('common.back'),
-                    headerRight: () => (
-                        <TouchableOpacity
-                            onPress={() => navigation.navigate('friends/search' as never)}
-                            style={{ paddingHorizontal: 16 }}
-                        >
-                            <Text style={{ color: theme.colors.button.primary.tint, fontSize: 16 }}>
-                                {t('friends.addFriend')}
-                            </Text>
-                        </TouchableOpacity>
-                    ),
-                })}
-            />
-            <Stack.Screen
-                name="friends/search"
-                options={{
-                    headerShown: true,
-                    headerTitle: t('friends.addFriend'),
-                    headerBackTitle: t('common.back'),
-                }}
-            />
-            <Stack.Screen
-                name="user/[id]"
-                options={{
-                    headerShown: true,
-                    headerTitle: '',
-                    headerBackTitle: t('common.back'),
-                }}
-            />
-            <Stack.Screen
-                name="dev/index"
-                options={{
-                    headerTitle: 'Developer Tools',
-                }}
-            />
 
-            <Stack.Screen
-                name="dev/list-demo"
-                options={{
-                    headerTitle: 'List Components Demo',
-                }}
-            />
-            <Stack.Screen
-                name="dev/typography"
-                options={{
-                    headerTitle: 'Typography',
-                }}
-            />
-            <Stack.Screen
-                name="dev/colors"
-                options={{
-                    headerTitle: 'Colors',
-                }}
-            />
-            <Stack.Screen
-                name="dev/tools2"
-                options={{
-                    headerTitle: 'Tool Views Demo',
-                }}
-            />
-            <Stack.Screen
-                name="dev/masked-progress"
-                options={{
-                    headerTitle: 'Masked Progress',
-                }}
-            />
-            <Stack.Screen
-                name="dev/diff-bench"
-                options={{
-                    headerTitle: 'Diff Benchmark',
-                }}
-            />
-            <Stack.Screen
-                name="dev/shimmer-demo"
-                options={{
-                    headerTitle: 'Shimmer View Demo',
-                }}
-            />
-            <Stack.Screen
-                name="dev/multi-text-input"
-                options={{
-                    headerTitle: 'Multi Text Input',
-                }}
-            />
-            <Stack.Screen
-                name="dev/session-composer"
-                options={{
-                    headerTitle: 'Session Composer',
-                }}
-            />
-            <Stack.Screen
-                name="dev/rig-preview"
-                options={{
-                    headerTitle: 'Rig Preview',
-                }}
-            />
             <Stack.Screen
                 name="session/recent"
                 options={{
                     headerShown: true,
                     headerTitle: t('sessionHistory.title'),
                     headerBackTitle: t('common.back'),
-                }}
-            />
-            <Stack.Screen
-                name="settings/connect/claude"
-                options={{
-                    headerShown: true,
-                    headerTitle: 'Connect to Claude',
-                    headerBackTitle: t('common.back'),
-                    // headerStyle: {
-                    //     backgroundColor: Platform.OS === 'web' ? theme.colors.header.background : '#1F1E1C',
-                    // },
-                    // headerTintColor: Platform.OS === 'web' ? theme.colors.header.tint : '#FFFFFF',
-                    // headerTitleStyle: {
-                    //     color: Platform.OS === 'web' ? theme.colors.header.tint : '#FFFFFF',
-                    // },
                 }}
             />
             <Stack.Screen

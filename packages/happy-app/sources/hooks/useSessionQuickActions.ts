@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useHappyAction } from '@/hooks/useHappyAction';
 import { useNavigateToSession } from '@/hooks/useNavigateToSession';
 import { Modal } from '@/modal';
-import { machineResumeSession, sessionArchive, sessionKill, sessionSetAgentModes, forkAndSpawn, type ForkSource } from '@/sync/ops';
+import { machineResumeSession, sessionArchive, sessionKill, sessionSetAgentModes } from '@/sync/ops';
 import { maybeCleanupWorktree } from '@/hooks/useWorktreeCleanup';
 import { storage, useLocalSetting, useMachine, useSetting } from '@/sync/storage';
 import { Machine, Session } from '@/sync/storageTypes';
@@ -13,10 +13,8 @@ import { HappyError } from '@/utils/errors';
 import { copySessionMetadataToClipboard, copySessionMetadataAndLogsToClipboard } from '@/utils/copySessionMetadataToClipboard';
 import { useSessionStatus } from '@/utils/sessionUtils';
 import { isMachineOnline } from '@/utils/machineUtils';
-import { getSessionForkSource } from '@/utils/sessionFork';
 import { useRouter } from 'expo-router';
 import { useSession } from '@/sync/storage';
-import { DuplicateSheet } from '@/components/DuplicateSheet';
 import type { SessionActionShortcutId } from '@/keyboard/shortcuts';
 import { isRigMetadata } from '@/sync/rig';
 
@@ -140,26 +138,6 @@ export function useSessionQuickActions(
         [machine, session, sessionStatus.isConnected],
     );
 
-    // Fork eligibility — separate from resume because fork works on both
-    // active AND inactive provider sessions. Fork/duplicate still use the
-    // legacy rollout flag because resumeSupport does not prove that the daemon
-    // implements the newer fork RPC.
-    const forkSource = React.useMemo(() => getSessionForkSource(session), [
-        session.id,
-        session.metadata?.flavor,
-        session.metadata?.machineId,
-        session.metadata?.path,
-        session.metadata?.claudeSessionId,
-        session.metadata?.codexThreadId,
-    ]);
-    const canFork = Boolean(
-        continuationExperimentsEnabled
-        && !isRigMetadata(session.metadata)
-        && forkSource
-        && machine
-        && isMachineOnline(machine)
-    );
-
     const openDetails = React.useCallback(() => {
         router.push(`/session/${session.id}/info`);
     }, [router, session.id]);
@@ -258,35 +236,6 @@ export function useSessionQuickActions(
         performResume();
     }, [performResume]);
 
-    // Fork the session (no truncation) — copies the on-disk Claude JSONL
-    // and spawns a fresh Happy session on the same machine. Works for
-    // both active and inactive sessions; the source row stays untouched.
-    const [forking, performFork] = useHappyAction(async () => {
-        if (!canFork) {
-            throw new HappyError(t('session.forkErrorMissingMetadata'), false);
-        }
-        if (!forkSource) {
-            throw new HappyError(t('session.forkErrorMissingMetadata'), false);
-        }
-        const result = await forkAndSpawn(forkSource as ForkSource);
-        if (result.type !== 'success') {
-            throw new HappyError(result.type === 'error' ? result.errorMessage : t('session.forkErrorGeneric'), false);
-        }
-        navigateToSession(result.sessionId);
-    });
-
-    const forkSession = React.useCallback(() => {
-        performFork();
-    }, [performFork]);
-
-    const openDuplicateSheet = React.useCallback(() => {
-        if (!canFork) return;
-        Modal.show({
-            component: DuplicateSheet,
-            props: { sessionId: session.id },
-        } as any);
-    }, [canFork, session.id]);
-
     const canCopySessionMetadata = __DEV__ || devModeEnabled;
 
     const actionItems = React.useMemo<SessionActionItem[]>(() => {
@@ -296,11 +245,6 @@ export function useSessionQuickActions(
 
         if (resumeAvailability.canShowResume) {
             items.push({ id: 'resume', icon: 'play-circle-outline', label: t('sessionInfo.resumeSession'), onPress: resumeSession });
-        }
-
-        if (canFork) {
-            items.push({ id: 'fork', icon: 'git-branch-outline', label: t('session.forkAction'), onPress: forkSession });
-            items.push({ id: 'duplicate', icon: 'time-outline', label: t('session.duplicateAction'), onPress: openDuplicateSheet });
         }
 
         if (canCopySessionMetadata) {
@@ -314,13 +258,9 @@ export function useSessionQuickActions(
     }, [
         archiveSession,
         canCopySessionMetadata,
-        canFork,
         copySessionMetadata,
         copySessionMetadataAndLogs,
-        forkSource,
-        forkSession,
         openDetails,
-        openDuplicateSheet,
         resumeAvailability.canShowResume,
         resumeSession,
     ]);
@@ -344,13 +284,9 @@ export function useSessionQuickActions(
         canCopySessionMetadata,
         canResume: resumeAvailability.canResume,
         canShowResume: resumeAvailability.canShowResume,
-        canFork,
         copySessionMetadata,
         copySessionMetadataAndLogs,
-        forkSession,
-        forking,
         openDetails,
-        openDuplicateSheet,
         resumeSession,
         resumeSessionSubtitle: resumeAvailability.subtitle,
         resumingSession,

@@ -4,7 +4,6 @@ import { useCallback } from 'react';
 import { Platform } from 'react-native';
 import { storage } from '@/sync/storage';
 import { sync } from '@/sync/sync';
-import { trackSessionSwitched } from '@/track';
 import { perfMark } from '@/utils/perfLog';
 import { isRunningOnMac } from '@/utils/platform';
 
@@ -33,7 +32,6 @@ export function navigateToSession(router: Router, sessionId: string) {
     perfMark(`session-open:${sessionId}`);
     const session = storage.getState().sessions[sessionId];
     if (session) {
-        trackSessionSwitched(session);
     }
 
     router.push(sessionHref(sessionId));

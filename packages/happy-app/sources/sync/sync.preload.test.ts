@@ -9,9 +9,6 @@ const mocks = vi.hoisted(() => ({
     applyOlderMessagesPagination: vi.fn(),
     setModes: vi.fn(),
     gitInvalidate: vi.fn(),
-    voiceFocus: vi.fn(),
-    voiceMessages: vi.fn(),
-    voiceReady: vi.fn(),
 }));
 
 // Exercise the real Sync orchestration, locking and pagination with only the
@@ -35,7 +32,6 @@ vi.mock('@/sync/storage', () => ({ storage: { getState: () => ({
 }) } }));
 vi.mock('@/sync/ops', () => ({ sessionSetAgentModes: mocks.setModes }));
 vi.mock('@/sync/persistence', () => ({ loadPendingSettings: () => ({}), savePendingSettings: vi.fn() }));
-vi.mock('@/sync/revenueCat', () => ({ RevenueCat: {}, LogLevel: {}, PaywallResult: {} }));
 vi.mock('@/sync/serverConfig', () => ({ getServerUrl: () => 'https://example.invalid' }));
 vi.mock('@/sync/pushRegistration', () => ({ syncCurrentPushToken: vi.fn() }));
 vi.mock('@/sync/apiArtifacts', () => ({ fetchArtifact: vi.fn(), fetchArtifacts: vi.fn(), createArtifact: vi.fn(), updateArtifact: vi.fn() }));
@@ -47,15 +43,11 @@ vi.mock('@/sync/projects', () => ({ decryptProjectRecord: vi.fn(), loadProjectAv
 vi.mock('@/sync/typesRaw', () => ({ normalizeRawMessage: (_id: string, _localId: string, _time: number, content: unknown) => content }));
 vi.mock('@/config', () => ({ config: {} }));
 vi.mock('@/log', () => ({ log: { log: vi.fn() } }));
-vi.mock('@/track', () => ({ tracking: null }));
 vi.mock('@/modal', () => ({ Modal: {} }));
 vi.mock('@/text', () => ({ t: (key: string) => key }));
 vi.mock('@/encryption/blob', () => ({}));
 vi.mock('@/utils/readFileBytes', () => ({}));
 vi.mock('@/sync/gitStatusSync', () => ({ gitStatusSync: { getSync: () => ({ invalidate: mocks.gitInvalidate }) } }));
-vi.mock('@/realtime/hooks/voiceHooks', () => ({ voiceHooks: {
-    onSessionFocus: mocks.voiceFocus, onMessages: mocks.voiceMessages, onReady: mocks.voiceReady,
-} }));
 
 import { sync } from './sync';
 
@@ -108,9 +100,6 @@ describe('chat preload sync integration', () => {
         expect(mocks.request.mock.calls[0][0]).toBe('/v3/sessions/a/messages?before_seq=2147483647&limit=100');
         expect(mocks.applyMessages.mock.calls[0][2]).toBe('preload');
         expect(mocks.state.currentViewingSessionId).toBeNull();
-        expect(mocks.voiceFocus).not.toHaveBeenCalled();
-        expect(mocks.voiceMessages).not.toHaveBeenCalled();
-        expect(mocks.voiceReady).not.toHaveBeenCalled();
         expect(mocks.gitInvalidate).not.toHaveBeenCalled();
         expect(older).not.toHaveBeenCalled();
         engine.preloadSession('a');
@@ -130,8 +119,6 @@ describe('chat preload sync integration', () => {
         expect(mocks.request).toHaveBeenCalledOnce();
         expect(encryption.decryptMessages).toHaveBeenCalledOnce();
         expect(mocks.applyMessages.mock.calls[0][2]).toBe('sync');
-        expect(mocks.voiceMessages).toHaveBeenCalledOnce();
-        expect(mocks.voiceFocus).toHaveBeenCalledWith('a', {});
     });
 
     it('revalidates a completed preload and starts older history only after a visit', async () => {
@@ -203,7 +190,6 @@ describe('chat preload sync integration', () => {
         const older = vi.spyOn(engine, 'loadOlderMessages');
         engine.onSessionDataUpdated('a');
         await engine.getMessagesSync('a').awaitQueue();
-        expect(mocks.voiceFocus).toHaveBeenCalledWith('a', {});
         expect(mocks.state.currentViewingSessionId).toBeNull();
         expect(older).not.toHaveBeenCalled();
     });

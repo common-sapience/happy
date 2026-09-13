@@ -20,25 +20,19 @@ import { ChatList } from '@/components/ChatList';
 import { Deferred } from '@/components/Deferred';
 import { EmptyMessages } from '@/components/EmptyMessages';
 import { Avatar } from '@/components/Avatar';
-import { VoiceAssistantStatusBar, VOICE_PILL_TOTAL_HEIGHT } from '@/components/VoiceAssistantStatusBar';
 import { useDraft } from '@/hooks/useDraft';
 import { useSessionVisibility } from '@/hooks/useSessionVisibility';
 import { useImagePicker } from '@/hooks/useImagePicker';
 import { Modal } from '@/modal';
-import { voiceHooks } from '@/realtime/hooks/voiceHooks';
-import { getCurrentVoiceConversationId, getCurrentVoiceSessionDurationSeconds, startRealtimeSession, stopRealtimeSession } from '@/realtime/RealtimeSession';
-import { sessionAbort, sessionCancelCommunication, sessionGoalAction, sessionSetAgentModes, spawnSideChat, sessionKill, sessionArchive } from '@/sync/ops';
-import { storage, useIsDataReady, useLocalSetting, useRealtimeStatus, useSessionGitStatus, useSessionMessages, useSessionPendingCommunications, useSessionProjectAvatar, useSessionUsage, useSetting, useSideChatSessions } from '@/sync/storage';
+import { sessionAbort, sessionCancelCommunication, sessionGoalAction, sessionSetAgentModes, sessionKill, sessionArchive } from '@/sync/ops';
+import { storage, useIsDataReady, useLocalSetting, useSessionGitStatus, useSessionMessages, useSessionPendingCommunications, useSessionProjectAvatar, useSessionUsage, useSetting, useSideChatSessions } from '@/sync/storage';
 import { useSession } from '@/sync/storage';
-import { getSessionForkSource } from '@/utils/sessionFork';
 import { useHappyAction } from '@/hooks/useHappyAction';
 import { HappyError } from '@/utils/errors';
 import { Session } from '@/sync/storageTypes';
 import { sync } from '@/sync/sync';
 import { supportsImageAttachmentsForFlavor } from '@/sync/attachmentSupport';
 import { t } from '@/text';
-import { tracking } from '@/track';
-import { getVoiceMessageCount, getVoiceOnboardingPromptLoadCount } from '@/sync/persistence';
 import { isRunningOnMac } from '@/utils/platform';
 import { useDeviceType, useHeaderHeight, useIsLandscape, useIsTablet } from '@/utils/responsive';
 import { resolveSessionGitPresentation } from '@/utils/sessionGitPresentation';
@@ -103,7 +97,6 @@ export const SessionView = React.memo((props: { id: string }) => {
     const contentRunsUnderHeader = deviceType === 'phone'
         && Platform.OS !== 'web'
         && !isLandscape;
-    const realtimeStatus = useRealtimeStatus();
     const isTablet = useIsTablet();
     const { width: windowWidth } = useWindowDimensions();
     const fileDiffsSidebarEnabled = useSetting('fileDiffsSidebar');
@@ -188,7 +181,6 @@ export const SessionView = React.memo((props: { id: string }) => {
     // is no separate per-tab add button. Which side chat is focused lives here
     // (not in the panel) so the picker can create-and-focus a new one in one go.
     const rawSideChats = useSideChatSessions(sessionId);
-    const sideChatForkSource = session ? getSessionForkSource(session) : null;
     const [activeSideChatId, setActiveSideChatId] = React.useState<string | null>(null);
     // Optimistically hide a side chat the instant it's closed. The server's
     // /archive only flips active=false (not lifecycleState), so if the CLI is
@@ -227,18 +219,10 @@ export const SessionView = React.memo((props: { id: string }) => {
         })();
     }, []);
 
+    // Starting a side chat rode on the provider-specific fork RPC, which is
+    // gone with the other agents. Existing side chats still render.
     const [creatingSideChat, createSideChat] = useHappyAction(async () => {
-        if (!sideChatForkSource) {
-            throw new HappyError(t('sideChat.unavailable'), false);
-        }
-        const result = await spawnSideChat(sideChatForkSource);
-        if (result.type === 'error') {
-            throw new HappyError(result.errorMessage, true);
-        }
-        if (result.type === 'success') {
-            setActiveSideChatId(result.sessionId);
-            openSidebarPanel('sideChat');
-        }
+        throw new HappyError(t('sideChat.unavailable'), false);
     });
 
     const closeSideChat = React.useCallback((id: string) => {
@@ -413,7 +397,7 @@ export const SessionView = React.memo((props: { id: string }) => {
                     paddingTop: !(isLandscape && deviceType === 'phone' && Platform.OS !== 'web')
                         ? contentRunsUnderHeader
                             ? 0
-                            : safeArea.top + mobileHeaderHeight + (!isTablet && realtimeStatus !== 'disconnected' ? VOICE_PILL_TOTAL_HEIGHT : 0)
+                            : safeArea.top + mobileHeaderHeight
                         : 0,
                 }}
             >
@@ -459,10 +443,6 @@ export const SessionView = React.memo((props: { id: string }) => {
                         onTitlePress={session ? () => router.push(`/session/${sessionId}/info`) : undefined}
                         onBackPress={() => router.back()}
                     />
-                    {/* Voice status bar below header - not on tablet (shown in sidebar) */}
-                    {!isTablet && realtimeStatus !== 'disconnected' && (
-                        <VoiceAssistantStatusBar variant="full" />
-                    )}
                 </View>
             )}
         </>
@@ -545,7 +525,7 @@ export const SessionView = React.memo((props: { id: string }) => {
                         onSelectSideChat={setActiveSideChatId}
                         onCloseSideChat={closeSideChat}
                         onCreateSideChat={createSideChat}
-                        canCreateSideChat={!!sideChatForkSource}
+                        canCreateSideChat={false}
                         creatingSideChat={creatingSideChat}
                     />
                 </View>
@@ -692,7 +672,6 @@ export function SessionViewLoaded({
         setIsChatAtBottom(true);
     }, [sessionId, usesFloatingMobileDock]);
 
-    const realtimeStatus = useRealtimeStatus();
     const { messages, isLoaded } = useSessionMessages(sessionId);
     const pendingCommunications = useSessionPendingCommunications(sessionId);
     const acknowledgedCliVersions = useLocalSetting('acknowledgedCliVersions');
@@ -703,7 +682,6 @@ export function SessionViewLoaded({
         : deviceType === 'phone' && Platform.OS !== 'web'
             ? safeArea.top
                 + MOBILE_GLASS_HEADER_HEIGHT
-                + (realtimeStatus !== 'disconnected' ? VOICE_PILL_TOTAL_HEIGHT : 0)
                 + 12
             : undefined;
 
@@ -926,59 +904,8 @@ export function SessionViewLoaded({
         });
     }, [sessionId, visibleAgentGoal?.text]);
 
-    // Handle microphone button press - memoized to prevent button flashing
-    const handleMicrophonePress = React.useCallback(async () => {
-        if (realtimeStatus === 'connecting') {
-            return; // Prevent actions during transitions
-        }
-        if (realtimeStatus === 'disconnected' || realtimeStatus === 'error') {
-            try {
-                const initialPrompt = voiceHooks.onVoiceStarted(sessionId);
-                const conversationId = await startRealtimeSession(sessionId, initialPrompt);
-                if (conversationId) {
-                    const hasPro = storage.getState().purchases.entitlements['pro'] ?? false;
-                    tracking?.capture('voice_session_started', {
-                        session_id: sessionId,
-                        elevenlabs_conversation_id: conversationId,
-                        has_pro: hasPro,
-                        onboarding_prompt_load_count: getVoiceOnboardingPromptLoadCount(),
-                        voice_message_count: getVoiceMessageCount(),
-                    });
-                }
-            } catch (error) {
-                console.error('Failed to start realtime session:', error);
-                Modal.alert(t('common.error'), t('errors.voiceSessionFailed'));
-                tracking?.capture('voice_session_error', {
-                    session_id: sessionId,
-                    elevenlabs_conversation_id: getCurrentVoiceConversationId(),
-                    error: error instanceof Error ? error.message : 'Unknown error',
-                });
-            }
-        } else if (realtimeStatus === 'connected') {
-            const conversationId = getCurrentVoiceConversationId();
-            const durationSeconds = getCurrentVoiceSessionDurationSeconds();
-            await stopRealtimeSession();
-            tracking?.capture('voice_session_stopped', {
-                session_id: sessionId,
-                elevenlabs_conversation_id: conversationId,
-                ...(durationSeconds !== undefined ? { duration_seconds: durationSeconds } : {}),
-            });
 
-            // Notify voice assistant about voice session stop
-            voiceHooks.onVoiceStopped();
-        }
-    }, [realtimeStatus, sessionId]);
-
-    // Memoize mic button state to prevent flashing during chat transitions.
-    // While a call runs the pill under the header is the only stop control,
-    // so the composer mic disappears instead of doubling as a stop button.
-    const voiceSessionActive = realtimeStatus === 'connected' || realtimeStatus === 'connecting';
-    const micButtonState = useMemo(() => ({
-        onMicPress: voiceSessionActive ? undefined : handleMicrophonePress,
-        isMicActive: false,
-    }), [handleMicrophonePress, voiceSessionActive]);
-
-    useSessionVisibility(sessionId, active, embedded, realtimeStatus);
+    useSessionVisibility(sessionId, active, embedded);
 
     let content = (
         <>
@@ -1029,8 +956,6 @@ export function SessionViewLoaded({
                 connectionStatus={connectionStatus}
                 blockSend={isRig && session.thinking && session.metadata?.capabilities?.steering !== true}
                 onSend={handleSend}
-                onMicPress={(embedded || isDisconnected) ? undefined : micButtonState.onMicPress}
-                isMicActive={(embedded || isDisconnected) ? false : micButtonState.isMicActive}
                 onAbort={isDisconnected || !rigCanAbort(session.metadata) ? undefined : handleAbort}
                 showAbortButton={rigCanAbort(session.metadata) && (
                     sessionStatus.state === 'thinking'

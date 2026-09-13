@@ -35,6 +35,7 @@ import { useHeaderHeight } from '@/utils/responsive';
 import { t } from '@/text';
 import { useAllMachines, useLocalSetting, useSessions, useSetting, storage } from '@/sync/storage';
 import type { NewSessionAgentType } from '@/sync/persistence';
+import { ENGINE_AGENT, getHarnessName } from '@/utils/harnessCatalog';
 import { sync } from '@/sync/sync';
 import { isMachineOnline } from '@/utils/machineUtils';
 import { machineSpawnNewSession, sessionSetAgentModes } from '@/sync/ops';
@@ -101,34 +102,20 @@ import {
     LocalBlurHalo,
 } from '@/components/AnimatedOverlay';
 
-// Agent icon assets
-const agentIcons = {
-    rig: require('@/assets/images/logo-black.png'),
-    claude: require('@/assets/images/icon-claude.png'),
-    codex: require('@/assets/images/icon-gpt.png'),
-    openclaw: require('@/assets/images/icon-openclaw.png'),
-    gemini: require('@/assets/images/icon-gemini.png'),
-    agy: require('@/assets/images/icon-agy.png'),
-};
-
 type AgentKey = NewSessionAgentType;
-// Lowercased to match this screen's type, but the same names and pick order as
-// the Home composer's harness picker. Retired harnesses are absent from both.
+// One agent, so the composer has no harness picker. The entry stays a list so
+// the single place that names the agent is still this one.
 const ALL_AGENTS: { key: AgentKey; label: string }[] = [
-    { key: 'claude', label: 'claude code' },
-    { key: 'codex', label: 'codex' },
-    { key: 'agy', label: 'antigravity' },
-    { key: 'rig', label: 'happy' },
+    { key: ENGINE_AGENT, label: getHarnessName(ENGINE_AGENT).toLowerCase() },
 ];
 
 type PickerItem = { key: string; label: string; subtitle?: string; dimmed?: boolean; section?: string };
 
-type PickerType = 'machine' | 'path' | 'worktree' | 'agent' | 'model' | 'effort' | 'permission' | 'settings';
+type PickerType = 'machine' | 'path' | 'worktree' | 'model' | 'effort' | 'permission' | 'settings';
 
 const NATIVE_PICKER_TOP: Record<PickerType, number> = {
     machine: 48,
     path: 96,
-    agent: 144,
     model: 144,
     effort: 144,
     permission: 192,
@@ -855,17 +842,9 @@ function NewSessionScreen() {
         }
     }, [draftAgent, selectedAgent, setSelectedAgent]);
 
-    const selectedRigMachine = selectedChoice?.rigMachine ?? null;
-    const selectedRigCreation = React.useMemo(
-        () => getRigMachineSessionCreation(selectedRigMachine?.metadata),
-        [selectedRigMachine],
-    );
-    const rigCreation = selectedAgent === 'rig' ? selectedRigCreation : null;
     const happyCliVersion = selectedChoice?.happyMachine?.metadata?.happyCliVersion;
-    const supportsWorktree = rigCreation?.supportsWorktrees
-        ?? (selectedAgent === 'rig' ? false : getSupportsWorktree(selectedAgent));
-    const selectedHomeDir = selectedChoice?.happyMachine?.metadata?.homeDir
-        ?? selectedChoice?.rigMachine?.metadata?.homeDir;
+    const supportsWorktree = getSupportsWorktree(selectedAgent);
+    const selectedHomeDir = selectedChoice?.happyMachine?.metadata?.homeDir;
 
     // Build machine picker items: online first, then offline
     const machineItems = React.useMemo<PickerItem[]>(() => {
@@ -952,20 +931,14 @@ function NewSessionScreen() {
         return () => clearTimeout(timeout);
     }, [resolvedSelectedPath]);
 
-    // Existing Happy Agent workspaces are named places in the same project. Happy Agent creates
-    // new ones through its own catalog; Git worktree RPCs remain for ordinary code-agent projects.
     const picksWorkspaces = selectedProjectId !== null;
-    const createsNativeHappyAgentWorkspace = selectedAgent === 'rig'
-        && picksWorkspaces
-        && rigCreation !== null;
     const worktreeMachine = selectedChoice?.happyMachine ?? selectedMachine;
     const canPickWorktree = supportsWorktree || picksWorkspaces;
     const worktreeCreationMachine = React.useMemo(
         () => resolveWorktreeCreationMachine(selectedChoice, selectedAgent, supportsWorktree),
         [selectedAgent, selectedChoice, supportsWorktree],
     );
-    const canCreateWorktree = createsNativeHappyAgentWorkspace
-        || (selectedAgent !== 'rig' && worktreeCreationMachine !== null);
+    const canCreateWorktree = worktreeCreationMachine !== null;
     const worktreeMachineId = worktreeMachine?.id ?? null;
     const worktreeMachineOnline = worktreeMachine !== null && isMachineOnline(worktreeMachine);
 
@@ -1008,56 +981,37 @@ function NewSessionScreen() {
         { key: '__none__', label: picksWorkspaces ? 'Main' : 'no worktree' },
     ], [canCreateWorktree, picksWorkspaces]);
 
-    // Filter available agents based on the daemon that actually runs each harness on this
-    // computer, rather than the machine id that happened to be stored in the draft.
-    const availableAgents = React.useMemo(() => {
-        return ALL_AGENTS.filter((agent) => machineChoiceAgentAvailable(selectedChoice, agent.key));
-    }, [selectedChoice]);
-
-    // If current agent not available on this machine, switch to first available
-    React.useEffect(() => {
-        if (availableAgents.length > 0 && !availableAgents.find(a => a.key === selectedAgent)) {
-            setSelectedAgent(availableAgents[0].key);
-        }
-    }, [availableAgents, draftAgent, selectedAgent, setSelectedAgent]);
-
     // Derive options from agent type. The CLI daemon on the picked computer is
     // what will parse the mode; older CLIs drop the whole prompt on modes they
     // do not know (`auto`), so those are not offered.
     const permissionModes = React.useMemo<PermissionMode[]>(
-        () => rigCreation?.permissionModes ?? filterPermissionModesForCli(
+        () => filterPermissionModesForCli(
             getHardcodedPermissionModes(selectedAgent, t),
             happyCliVersion,
         ),
-        [happyCliVersion, selectedAgent, rigCreation],
+        [happyCliVersion, selectedAgent],
     );
-    const effectiveAgentDefaults = React.useMemo(() => rigCreation
-        ? {
-            permissionMode: rigCreation.defaultPermissionMode ?? '',
-            modelMode: rigCreation.defaultModelKey ?? '',
-            effortLevel: rigCreation.defaultEffortForModel(rigCreation.defaultModelKey),
-        }
-        : resolveAgentDefaultConfig(agentDefaultOverrides, selectedAgent, happyCliVersion), [agentDefaultOverrides, happyCliVersion, selectedAgent, rigCreation]);
+    const effectiveAgentDefaults = React.useMemo(
+        () => resolveAgentDefaultConfig(agentDefaultOverrides, selectedAgent, happyCliVersion),
+        [agentDefaultOverrides, happyCliVersion, selectedAgent],
+    );
     const modelModes = React.useMemo<ModelMode[]>(
-        () => rigCreation?.models ?? includeConfiguredModel(
+        () => includeConfiguredModel(
             selectedAgent,
             getHardcodedModelModes(selectedAgent, t),
             effectiveAgentDefaults.modelMode,
         ),
-        [selectedAgent, effectiveAgentDefaults.modelMode, rigCreation],
+        [selectedAgent, effectiveAgentDefaults.modelMode],
     );
 
     const currentModel = resolveSelectedOption(modelModes, modelIndex);
     const currentModelKey = currentModel?.key ?? 'default';
 
     const effortLevels = React.useMemo<EffortLevel[]>(
-        () => rigCreation
-            ? rigCreation.effortsForModel(currentModelKey).map((key) => ({ key, name: key }))
-            : getEffortLevelsForModel(selectedAgent, currentModelKey),
-        [selectedAgent, currentModelKey, rigCreation],
+        () => getEffortLevelsForModel(selectedAgent, currentModelKey),
+        [selectedAgent, currentModelKey],
     );
-    const effectiveEffortDefault = rigCreation?.defaultEffortForModel(currentModelKey)
-        ?? effectiveAgentDefaults.effortLevel;
+    const effectiveEffortDefault = effectiveAgentDefaults.effortLevel;
     const showModel = modelModes.length > 1;
     const showEffort = effortLevels.length > 0;
     const showPermission = permissionModes.length > 1;
@@ -1070,7 +1024,7 @@ function NewSessionScreen() {
             // When the saved and default modes were both filtered out for an
             // old CLI, land on the flavor's code default rather than whichever
             // mode happens to lead the list.
-            rigCreation ? null : getCodeAgentDefaults(selectedAgent, happyCliVersion).permissionMode,
+            getCodeAgentDefaults(selectedAgent, happyCliVersion).permissionMode,
         ]));
 
         setModelIndex(findPreferredModeIndex(modelModes, [
@@ -1088,7 +1042,6 @@ function NewSessionScreen() {
         draft.modelMode,
         effectiveAgentDefaults.permissionMode,
         effectiveAgentDefaults.modelMode,
-        rigCreation,
         happyCliVersion,
         selectedAgent,
     ]);
@@ -1171,12 +1124,10 @@ function NewSessionScreen() {
     }, [activePicker, cancelPendingPickerOpen, closePicker, isDesktop, refreshWorktrees]);
 
     const isOffline = selectedMachine ? !isMachineOnline(selectedMachine) : false;
-    const offlineHelp = selectedAgent === 'rig'
+    const offlineHelp = false
         ? 'Happy Agent is offline on this computer'
         : t('machine.offlineHelp');
-    const agent = availableAgents.find(a => a.key === selectedAgent)
-        ?? ALL_AGENTS.find((candidate) => candidate.key === selectedAgent)
-        ?? ALL_AGENTS[0];
+    const agent = ALL_AGENTS.find((candidate) => candidate.key === selectedAgent) ?? ALL_AGENTS[0];
     // A Rig machine can publish an empty catalog, so every current pick is
     // nullable — the composer hides the picker instead of rendering a pick.
     const currentPermission = resolveSelectedOption(permissionModes, permissionIndex);
@@ -1193,9 +1144,7 @@ function NewSessionScreen() {
         if (showPermission && currentPermission) {
             items.push({
                 key: 'permission',
-                label: selectedAgent === 'codex'
-                    ? t('agentInput.codexPermissionMode.title')
-                    : t('agentInput.permissionMode.title'),
+                label: t('agentInput.permissionMode.title'),
                 value: currentPermission.name,
                 icon: permissionStyle?.icon ?? 'shield-outline',
             });
@@ -1239,8 +1188,6 @@ function NewSessionScreen() {
                 return { title: 'Machine', items: machineItems, selectedKey: selectedMachineKey, searchPlaceholder: 'search machines...' };
             case 'worktree':
                 return { title: picksWorkspaces ? 'Workspace' : 'Worktree', fixedItems: worktreeFixedItems, items: worktreeItems, selectedKey: worktreeKey, searchPlaceholder: picksWorkspaces ? 'search workspaces...' : 'search worktrees...' };
-            case 'agent':
-                return { title: 'Agent', items: getAgentPickerItems(availableAgents), selectedKey: selectedAgent, searchPlaceholder: 'search agents...' };
             case 'model':
                 return { title: 'Model', items: getModePickerItems(modelModes), selectedKey: currentModelKey, searchPlaceholder: 'search models...' };
             case 'effort':
@@ -1252,7 +1199,6 @@ function NewSessionScreen() {
         }
     }, [
         activePicker,
-        availableAgents,
         currentEffort?.key,
         currentModelKey,
         currentPermission?.key,
@@ -1285,9 +1231,7 @@ function NewSessionScreen() {
                 };
             case 'permission':
                 return {
-                    title: selectedAgent === 'codex'
-                        ? t('agentInput.codexPermissionMode.title')
-                        : t('agentInput.permissionMode.title'),
+                    title: t('agentInput.permissionMode.title'),
                     items: getModePickerItems(permissionModes),
                     selectedKey: currentPermission?.key ?? null,
                 };
@@ -1303,11 +1247,6 @@ function NewSessionScreen() {
                 break;
             case 'worktree':
                 setWorktreeKey(key);
-                break;
-            case 'agent':
-                if (availableAgents.some((candidate) => candidate.key === key)) {
-                    setSelectedAgent(key as NewSessionAgentType);
-                }
                 break;
             case 'model': {
                 const next = modelModes.findIndex((mode) => mode.key === key);
@@ -1337,7 +1276,6 @@ function NewSessionScreen() {
         closePicker();
     }, [
         activePicker,
-        availableAgents,
         closePicker,
         draft.setEffortLevel,
         draft.setModelMode,
@@ -1397,57 +1335,25 @@ function NewSessionScreen() {
         if (!machine) {
             Modal.alert(
                 t('common.error'),
-                agentType === 'rig'
-                    ? 'Happy Agent is not running on this computer'
-                    : 'Happy CLI is not available on your computer. Run `happy daemon start` on your computer, then try again.',
+                'Happy CLI is not available on your computer. Run `happy daemon start` on your computer, then try again.',
             );
             return;
         }
         if (!isMachineOnline(machine)) {
             Modal.alert(
                 t('common.error'),
-                agentType === 'rig'
-                    ? 'Machine is offline'
-                    : 'Happy CLI is offline on your computer. Run `happy daemon start` on your computer, then try again.',
+                'Happy CLI is offline on your computer. Run `happy daemon start` on your computer, then try again.',
             );
             return;
         }
-        const spawnRigCreation = agentType === 'rig'
-            ? getRigMachineSessionCreation(machine.metadata)
-            : null;
-        if (agentType === 'rig' && !spawnRigCreation) {
-            Modal.alert(t('common.error'), 'This machine cannot start Happy agent sessions');
-            return;
-        }
-        const agentSupportsWorktree = spawnRigCreation?.supportsWorktrees
-            ?? (agentType === 'rig' ? false : getSupportsWorktree(agentType));
+        const agentSupportsWorktree = getSupportsWorktree(agentType);
         const requestedWorktree = canPickWorktree ? worktreeKey : '__none__';
-        let happyAgentTarget: ReturnType<typeof resolveHappyAgentSpawnTarget>;
-        try {
-            happyAgentTarget = spawnRigCreation
-                ? resolveHappyAgentSpawnTarget({
-                    projectId: selectedProjectId,
-                    workspaceSelection: requestedWorktree,
-                    workspaces: agentWorkspaces,
-                })
-                : null;
-        } catch (error) {
-            Modal.alert(
-                t('common.error'),
-                error instanceof Error ? error.message : 'The selected workspace is unavailable',
-            );
-            return;
-        }
-        const creationMachine = happyAgentTarget
-            ? null
-            : resolveWorktreeCreationMachine(
-                choice,
-                agentType,
-                agentSupportsWorktree,
-            );
-        const canCreateSelectedWorktree = happyAgentTarget?.kind === 'newWorkspace'
-            || creationMachine !== null;
-        const worktreeSelection = !canCreateSelectedWorktree && requestedWorktree === '__new__'
+        const creationMachine = resolveWorktreeCreationMachine(
+            choice,
+            agentType,
+            agentSupportsWorktree,
+        );
+        const worktreeSelection = creationMachine === null && requestedWorktree === '__new__'
             ? '__none__'
             : requestedWorktree;
 
@@ -1473,7 +1379,7 @@ function NewSessionScreen() {
 
             // Handle worktree selection
             let spawnDirectory = absolutePath;
-            if (worktreeSelection === '__new__' && !happyAgentTarget) {
+            if (worktreeSelection === '__new__') {
                 if (!creationMachine) {
                     Modal.alert(t('common.error'), picksWorkspaces
                         ? 'This computer cannot create a new workspace'
@@ -1491,41 +1397,21 @@ function NewSessionScreen() {
                 spawnDirectory = worktreeSelection;
             }
 
-            const spawnOptions = spawnRigCreation
-                ? {
-                    machineId: machine.id,
-                    ...buildRigSpawnConfiguration(machine.metadata, {
-                        directory: spawnDirectory,
-                        clientRequestId,
-                        approvedNewDirectoryCreation,
-                        modelKey: currentModelKey,
-                        permissionMode: permissionKey,
-                        effort: currentEffort?.key,
-                    }),
-                    ...(happyAgentTarget ? { happyAgentTarget } : {}),
-                }
-                : {
-                    machineId: machine.id,
-                    directory: spawnDirectory,
-                    approvedNewDirectoryCreation,
-                    agent: agentType,
-                    // For codex, 'default' is a concrete ask-first mode (the codex
-                    // launch default is yolo) — it must be forwarded. For other
-                    // agents 'default' is the ambient no-override value.
-                    permissionMode: permissionKey && (agentType === 'codex' || permissionKey !== 'default')
-                        ? permissionKey
-                        : undefined,
-                    modelMode: currentModelKey !== 'default' ? currentModelKey : undefined,
-                    effortLevel: currentEffort?.key,
-                };
+            const spawnOptions = {
+                machineId: machine.id,
+                directory: spawnDirectory,
+                approvedNewDirectoryCreation,
+                agent: agentType,
+                clientRequestId,
+                permissionMode: permissionKey && permissionKey !== 'default' ? permissionKey : undefined,
+                modelMode: currentModelKey !== 'default' ? currentModelKey : undefined,
+                effortLevel: currentEffort?.key,
+            };
             let result = await machineSpawnNewSession(spawnOptions);
             let pendingResults = 0;
             while (result.type === 'pending' && pendingResults < MAX_RIG_PENDING_RESULTS) {
                 pendingResults += 1;
-                await delay(resolveRigPendingRetryDelayMs(
-                    result.retryAfterMs,
-                    spawnRigCreation?.pendingRetryAfterMs,
-                ));
+                await delay(resolveRigPendingRetryDelayMs(result.retryAfterMs, undefined));
                 if (!isMountedRef.current) return;
                 result = await machineSpawnNewSession(spawnOptions);
             }
@@ -1541,13 +1427,11 @@ function NewSessionScreen() {
                     // Pin the actual launch selection to this session. A
                     // later settings/default change must not silently rewrite
                     // an existing session's permission, model, or effort.
-                    if (!spawnRigCreation) {
-                        sessionSetAgentModes(result.sessionId, {
-                            permissionMode: permissionKey,
-                            modelMode: currentModelKey,
-                            effortLevel: currentEffortKey,
-                        });
-                    }
+                    sessionSetAgentModes(result.sessionId, {
+                        permissionMode: permissionKey,
+                        modelMode: currentModelKey,
+                        effortLevel: currentEffortKey,
+                    });
 
                     // Pull live prompt and clear it. We read via getState() so this
                     // callback doesn't have to subscribe to `input` (which would
@@ -1753,8 +1637,7 @@ function NewSessionScreen() {
             );
         }
         if (
-            activePicker === 'agent'
-            || activePicker === 'model'
+            activePicker === 'model'
             || activePicker === 'effort'
             || activePicker === 'permission'
         ) {
@@ -1776,7 +1659,6 @@ function NewSessionScreen() {
         const composerTop = windowHeight - safeArea.bottom - mobileComposerHeight;
         if (
             activePicker === 'settings'
-            || activePicker === 'agent'
             || activePicker === 'model'
             || activePicker === 'effort'
             || activePicker === 'permission'
@@ -1871,25 +1753,8 @@ function NewSessionScreen() {
                             {!isNativeMobile && (
                                 <>
                                     <View style={styles.configRow}>
-                                        <BubblePressable
-                                            scaleFeedback={false}
-                                            onPress={() => togglePicker('agent')}
-                                            style={(p) => [styles.configInlineField, p.pressed && styles.configRowPressed]}
-                                        >
-                                            <RNImage
-                                                source={agentIcons[agent.key]}
-                                                style={[styles.agentIcon, { tintColor: theme.colors.textSecondary }]}
-                                                resizeMode="contain"
-                                            />
-                                            <Text style={[styles.configLabel, styles.configInlineText]} numberOfLines={1}>
-                                                {agent.label}
-                                            </Text>
-                                            <Ionicons name="chevron-down" size={12} color={theme.colors.textSecondary} />
-                                        </BubblePressable>
-
                                         {showModel && (
                                             <>
-                                                <Text style={[styles.configLabel, { color: theme.colors.textSecondary }]}>·</Text>
                                                 <BubblePressable scaleFeedback={false} onPress={() => togglePicker('model')} style={(p) => [styles.configInlineField, p.pressed && styles.configRowPressed]}>
                                                     <Text style={[styles.configLabel, styles.configInlineText, { color: theme.colors.textSecondary }]} numberOfLines={1}>
                                                         {currentModel?.name}
@@ -1911,7 +1776,6 @@ function NewSessionScreen() {
                                             </>
                                         )}
                                     </View>
-                                    {renderActivePickerPopover('agent')}
                                     {renderActivePickerPopover('model')}
                                     {renderActivePickerPopover('effort')}
 
@@ -1988,18 +1852,6 @@ function NewSessionScreen() {
 
                             {!isNativeMobile && (
                                 <>
-                                    <BubblePressable
-                                        onPress={() => togglePicker('agent')}
-                                        hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                                        style={(p) => [styles.collapsedIconButton, p.pressed && styles.configRowPressed]}
-                                    >
-                                        <RNImage
-                                            source={agentIcons[agent.key]}
-                                            style={[styles.collapsedAgentIcon, { tintColor: theme.colors.textSecondary }]}
-                                            resizeMode="contain"
-                                        />
-                                    </BubblePressable>
-
                                     {showPermission && (
                                         <BubblePressable
                                             onPress={() => togglePicker('permission')}
@@ -2027,7 +1879,6 @@ function NewSessionScreen() {
                             )}
                         </View>
                         {renderActivePickerPopover('machine')}
-                        {!isNativeMobile && renderActivePickerPopover('agent')}
                         {!isNativeMobile && renderActivePickerPopover('permission')}
                         {renderActivePickerPopover('worktree')}
 
@@ -2051,7 +1902,7 @@ function NewSessionScreen() {
         </>
     );
 
-    const composerPlaceholder = selectedAgent === 'codex' ? 'Ask Codex' : `Ask ${agent.label}`;
+    const composerPlaceholder = `Ask ${agent.label}`;
     const sendButtonIconColor = isNativeMobile
         ? theme.colors.text
         : theme.colors.button.primary.tint;
@@ -2127,27 +1978,6 @@ function NewSessionScreen() {
                 {!isNativeMobile && <View style={styles.actionButtonsLeft} />}
                 {isNativeMobile && (
                     <View style={styles.mobileComposerLeftControls}>
-                        <BubblePressable
-                            scaleFeedback={false}
-                            onPress={() => togglePicker('agent')}
-                            style={(pressedState) => [
-                                styles.composerAgentButton,
-                                activePicker === 'agent' && styles.composerControlActive,
-                                pressedState.pressed && styles.configRowPressed,
-                            ]}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Agent: ${agent.label}`}
-                        >
-                            <RNImage
-                                source={agentIcons[agent.key]}
-                                style={[styles.collapsedAgentIcon, { tintColor: theme.colors.textSecondary }]}
-                                resizeMode="contain"
-                            />
-                            <Text style={styles.composerAgentLabel} numberOfLines={1}>
-                                {agent.label}
-                            </Text>
-                            <Ionicons name="chevron-down" size={12} color={theme.colors.textSecondary} />
-                        </BubblePressable>
                         {composerSettingsItems.length > 0 && (
                             <BubblePressable
                                 onPress={() => {

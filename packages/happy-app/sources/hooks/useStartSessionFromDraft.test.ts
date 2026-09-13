@@ -25,7 +25,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 // Counts up so a test can tell a reused idempotency key from a fresh one.
-vi.mock('expo-crypto', () => ({ randomUUID: () => `rig-request-${++mocks.uuidCount}` }));
+vi.mock('expo-crypto', () => ({ randomUUID: () => `spawn-request-${++mocks.uuidCount}` }));
 
 vi.mock('react', () => ({
     useState: <T,>(value: T) => [value, vi.fn()] as const,
@@ -118,11 +118,10 @@ vi.mock('@/components/modelModeOptions', () => ({
     ],
     getSupportsWorktree: (agentType: string) => agentType !== 'openclaw',
     includeConfiguredModel: (
-        flavor: string,
+        _flavor: string,
         models: Array<{ key: string; name: string }>,
         configuredModelKey?: string | null,
-    ) => flavor === 'codex'
-        && configuredModelKey
+    ) => configuredModelKey
         && configuredModelKey !== 'default'
         && !models.some((model) => model.key === configuredModelKey)
         ? [...models, { key: configuredModelKey, name: configuredModelKey }]
@@ -181,7 +180,7 @@ function createDraft(overrides: Record<string, unknown> = {}) {
         attachments: [{ uri: 'file:///image.jpg' }],
         selectedMachineId: 'machine-1',
         selectedPath: '~/project',
-        agentType: 'codex',
+        agentType: 'opencode',
         permissionMode: null,
         modelMode: null,
         effortLevel: null,
@@ -220,7 +219,8 @@ describe('useStartSessionFromDraft', () => {
             machineId: 'machine-1',
             directory: '/absolute/project',
             approvedNewDirectoryCreation: false,
-            agent: 'codex',
+            agent: 'opencode',
+            clientRequestId: 'spawn-request-1',
             permissionMode: 'auto',
             modelMode: undefined,
             effortLevel: 'medium',
@@ -249,36 +249,16 @@ describe('useStartSessionFromDraft', () => {
             online: true,
             metadata: { homeDir: '/Users/dev', happyCliVersion: '1.2.0' },
         }];
-        mocks.draft = createDraft({ agentType: 'claude' });
 
         const { startSession } = useStartSessionFromDraft();
 
         await expect(startSession()).resolves.toBe(true);
 
-        // Claude Default is expressed as no override on the wire: the old
-        // CLI runs its own configured mode instead of receiving `auto`.
+        // Default is expressed as no override on the wire: the old CLI runs its
+        // own configured mode instead of receiving `auto`.
         expect(mocks.machineSpawnNewSession).toHaveBeenCalledWith(expect.objectContaining({
-            agent: 'claude',
+            agent: 'opencode',
             permissionMode: undefined,
-        }));
-    });
-
-    it('sends Default explicitly for codex when the CLI is too old for Auto', async () => {
-        mocks.machines = [{
-            id: 'machine-1',
-            online: true,
-            metadata: { homeDir: '/Users/dev', happyCliVersion: '1.2.0' },
-        }];
-        mocks.draft = createDraft({ agentType: 'codex' });
-
-        const { startSession } = useStartSessionFromDraft();
-
-        await expect(startSession()).resolves.toBe(true);
-
-        // Codex Default is a concrete ask-first policy, so it rides the wire.
-        expect(mocks.machineSpawnNewSession).toHaveBeenCalledWith(expect.objectContaining({
-            agent: 'codex',
-            permissionMode: 'default',
         }));
     });
 
@@ -289,27 +269,26 @@ describe('useStartSessionFromDraft', () => {
             metadata: { homeDir: '/Users/dev', happyCliVersion: '1.2.0' },
         }];
         mocks.defaultOverrides = {
-            claude: {
+            opencode: {
                 permissionMode: 'bypassPermissions',
                 modelMode: 'default',
                 effortLevel: null,
             },
         };
-        mocks.draft = createDraft({ agentType: 'claude' });
 
         const { startSession } = useStartSessionFromDraft();
 
         await expect(startSession()).resolves.toBe(true);
 
         expect(mocks.machineSpawnNewSession).toHaveBeenCalledWith(expect.objectContaining({
-            agent: 'claude',
+            agent: 'opencode',
             permissionMode: 'bypassPermissions',
         }));
     });
 
-    it('starts codex with a custom model saved in agent settings', async () => {
+    it('starts with a custom model saved in agent settings', async () => {
         mocks.defaultOverrides = {
-            codex: {
+            opencode: {
                 permissionMode: 'default',
                 modelMode: 'my-workspace-model',
                 effortLevel: 'medium',
@@ -320,7 +299,7 @@ describe('useStartSessionFromDraft', () => {
 
         await expect(startSession()).resolves.toBe(true);
         expect(mocks.machineSpawnNewSession).toHaveBeenCalledWith(expect.objectContaining({
-            agent: 'codex',
+            agent: 'opencode',
             modelMode: 'my-workspace-model',
         }));
         expect(mocks.sessionSetAgentModes).toHaveBeenCalledWith('session-1', {
@@ -328,45 +307,6 @@ describe('useStartSessionFromDraft', () => {
             modelMode: 'my-workspace-model',
             effortLevel: 'medium',
         });
-    });
-
-    it('does not spawn a stale Claude draft when the machine only has Codex', async () => {
-        mocks.defaultOverrides = {
-            codex: {
-                permissionMode: 'safe-yolo',
-                modelMode: 'default',
-                effortLevel: 'medium',
-            },
-        };
-        mocks.machines = [{
-            id: 'machine-1',
-            online: true,
-            metadata: {
-                homeDir: '/Users/dev',
-                cliAvailability: {
-                    claude: false,
-                    codex: true,
-                    gemini: false,
-                    openclaw: false,
-                },
-            },
-        }];
-        mocks.draft = createDraft({
-            agentType: 'claude',
-            permissionMode: 'yolo',
-            modelMode: 'opus',
-        });
-
-        const { startSession } = useStartSessionFromDraft();
-
-        await expect(startSession()).resolves.toBe(true);
-
-        expect(mocks.machineSpawnNewSession).toHaveBeenCalledWith(expect.objectContaining({
-            agent: 'codex',
-            permissionMode: 'safe-yolo',
-            modelMode: undefined,
-            effortLevel: 'medium',
-        }));
     });
 
     it('explains how to restart an offline legacy daemon when its paired Happy Agent is online', async () => {
@@ -400,21 +340,17 @@ describe('useStartSessionFromDraft', () => {
         expect(mocks.machineSpawnNewSession).not.toHaveBeenCalled();
     });
 
-    it('uses an online Happy Agent when the selected computer has no legacy daemon', async () => {
+    it('refuses when the selected computer registers no daemon', async () => {
         mocks.machines = [createRigMachine()];
-        mocks.draft = createDraft({ agentType: 'claude' });
 
         const { startSession } = useStartSessionFromDraft();
 
-        await expect(startSession()).resolves.toBe(true);
+        await expect(startSession()).resolves.toBe(false);
 
-        expect(mocks.machineSpawnNewSession).toHaveBeenCalledWith(expect.objectContaining({
-            machineId: 'machine-1',
-            agent: 'rig',
-        }));
-        expect(mocks.alert).not.toHaveBeenCalledWith(
+        expect(mocks.machineSpawnNewSession).not.toHaveBeenCalled();
+        expect(mocks.alert).toHaveBeenCalledWith(
             'common.error',
-            expect.stringContaining('happy daemon start'),
+            'Happy CLI is not available on your computer. Run `happy daemon start` on your computer, then try again.',
         );
     });
 
@@ -434,7 +370,7 @@ describe('useStartSessionFromDraft', () => {
 
         expect(mocks.machineSpawnNewSession).toHaveBeenCalledWith(expect.objectContaining({
             machineId: 'machine-1',
-            agent: 'codex',
+            agent: 'opencode',
         }));
         expect(mocks.alert).not.toHaveBeenCalled();
     });
@@ -458,194 +394,26 @@ describe('useStartSessionFromDraft', () => {
         expect(mocks.navigateToSession).toHaveBeenCalledWith('session-2');
     });
 
-    it('creates a Rig session from its machine catalog and retries pending idempotently', async () => {
-        mocks.machines = [{
-            id: 'machine-1',
-            online: true,
-            metadata: {
-                homeDir: '/Users/dev',
-                machineKind: 'rig',
-                rigOnly: true,
-                cliAvailability: {
-                    rig: true,
-                    claude: false,
-                    codex: false,
-                    gemini: false,
-                    openclaw: false,
-                    detectedAt: 1,
-                },
-                capabilities: { newSession: true, resume: false, worktrees: false },
-                defaults: {
-                    providerId: 'codex',
-                    modelId: 'gpt-5.6-sol',
-                    permissionMode: 'auto',
-                    effort: 'high',
-                },
-                models: [{
-                    providerId: 'codex',
-                    id: 'gpt-5.6-sol',
-                    name: 'GPT-5.6 Sol',
-                    providerName: 'OpenAI Codex',
-                    thinkingLevels: ['low', 'high'],
-                    defaultThinkingLevel: 'high',
-                }],
-                operatingModes: [{
-                    code: 'auto',
-                    value: 'Auto',
-                    description: 'Reviews elevated actions.',
-                    kind: 'safe-yolo',
-                }],
-            },
-        }];
-        mocks.draft = createDraft({
-            agentType: 'claude',
-            sessionType: 'worktree',
-            worktreeKey: null,
-        });
-        mocks.machineSpawnNewSession
-            .mockResolvedValueOnce({ type: 'pending', clientRequestId: 'rig-request-1', retryAfterMs: 0 })
-            .mockResolvedValueOnce({ type: 'success', sessionId: 'rig-session-1' });
-
-        const { startSession } = useStartSessionFromDraft();
-
-        await expect(startSession()).resolves.toBe(true);
-
-        const expected = expect.objectContaining({
-            machineId: 'machine-1',
-            agent: 'rig',
-            clientRequestId: 'rig-request-1',
-            directory: '/absolute/project',
-            providerId: 'codex',
-            modelId: 'gpt-5.6-sol',
-            permissionMode: 'auto',
-            effort: 'high',
-        });
-        expect(mocks.machineSpawnNewSession).toHaveBeenNthCalledWith(1, expected);
-        expect(mocks.machineSpawnNewSession).toHaveBeenNthCalledWith(2, expected);
-        expect(mocks.delay).toHaveBeenCalledWith(250);
-        expect(mocks.createWorktree).not.toHaveBeenCalled();
-        expect(mocks.sessionSetAgentModes).not.toHaveBeenCalled();
-        expect(mocks.navigateToSession).toHaveBeenCalledWith('rig-session-1');
-    });
-
-    it('creates a native Happy Agent workspace and starts the session there', async () => {
-        mocks.machines = [createRigMachine()];
-        mocks.sessions = [{
-            id: 'project-session',
-            metadata: {
-                machineId: 'machine-1',
-                path: '~/project',
-                client: { id: 'rig', name: 'Happy Agent', version: 'test' },
-                project: { id: 'project-1', kind: 'regular', name: 'happy' },
-            },
-        }];
-        mocks.draft = createDraft({
-            agentType: 'rig',
-            sessionType: 'worktree',
-            worktreeKey: null,
-        });
-        mocks.machineSpawnNewSession
-            .mockResolvedValueOnce({ type: 'pending', clientRequestId: 'rig-request-1', retryAfterMs: 250 })
-            .mockResolvedValueOnce({ type: 'success', sessionId: 'session-1' });
-
-        const { startSession } = useStartSessionFromDraft();
-
-        await expect(startSession()).resolves.toBe(true);
-
-        expect(mocks.createWorktree).not.toHaveBeenCalled();
-        expect(mocks.machineSpawnNewSession).toHaveBeenCalledTimes(2);
-        const expected = expect.objectContaining({
-            machineId: 'machine-1',
-            agent: 'rig',
-            directory: '/absolute/project',
-            happyAgentTarget: { kind: 'newWorkspace', projectId: 'project-1' },
-        });
-        expect(mocks.machineSpawnNewSession).toHaveBeenNthCalledWith(1, expected);
-        expect(mocks.machineSpawnNewSession).toHaveBeenNthCalledWith(2, expected);
-    });
-
-    it('stops polling when a created Rig session remains pending', async () => {
-        mocks.machines = [{
-            id: 'machine-1',
-            online: true,
-            metadata: {
-                homeDir: '/Users/dev',
-                machineKind: 'rig',
-                rigOnly: true,
-                cliAvailability: {
-                    rig: true,
-                    claude: false,
-                    codex: false,
-                    gemini: false,
-                    openclaw: false,
-                    detectedAt: 1,
-                },
-                capabilities: { newSession: true, resume: false, worktrees: false },
-                defaults: {
-                    providerId: 'codex', modelId: 'model', permissionMode: 'auto', effort: 'high',
-                },
-                models: [{
-                    providerId: 'codex', id: 'model', name: 'Model', providerName: 'Codex',
-                    thinkingLevels: ['high'], defaultThinkingLevel: 'high',
-                }],
-                operatingModes: [{
-                    code: 'auto', value: 'Auto', description: 'Automatic review', kind: 'safe-yolo',
-                }],
-            },
-        }];
-        mocks.draft = createDraft({ agentType: 'rig' });
-        mocks.machineSpawnNewSession.mockResolvedValue({
-            type: 'pending', clientRequestId: 'rig-request-1', retryAfterMs: 2_000,
-        });
-
-        const { startSession } = useStartSessionFromDraft();
-
-        await expect(startSession()).resolves.toBe(false);
-        expect(mocks.machineSpawnNewSession).toHaveBeenCalledTimes(4);
-        expect(mocks.delay).toHaveBeenCalledTimes(3);
-        expect(mocks.alert).toHaveBeenCalledWith(
-            'common.error',
-            'The session was created, but it is still syncing. It should appear shortly.',
-        );
-        expect(mocks.navigateToSession).not.toHaveBeenCalled();
-    });
-
-    it('degrades instead of crashing when a Rig machine publishes no operating modes', async () => {
-        mocks.machines = [createRigMachine({ operatingModes: [] })];
-        mocks.draft = createDraft({ agentType: 'rig' });
-
-        const { startSession } = useStartSessionFromDraft();
-
-        await expect(startSession()).resolves.toBe(false);
-        expect(mocks.alert).toHaveBeenCalledWith(
-            'common.error',
-            'The selected agent configuration is unavailable',
-        );
-        expect(mocks.machineSpawnNewSession).not.toHaveBeenCalled();
-    });
-
     it('reuses the idempotency key when the user retries the same spawn', async () => {
-        mocks.machines = [createRigMachine()];
-        mocks.draft = createDraft({ agentType: 'rig' });
         mocks.machineSpawnNewSession.mockResolvedValue({
-            type: 'pending', clientRequestId: 'rig-request-1', retryAfterMs: 250,
+            type: 'pending', clientRequestId: 'spawn-request-1', retryAfterMs: 250,
         });
 
         const { startSession } = useStartSessionFromDraft();
 
         // Rig stayed pending past the retry budget, so the user presses Start again.
         await expect(startSession()).resolves.toBe(false);
-        mocks.machineSpawnNewSession.mockResolvedValue({ type: 'success', sessionId: 'rig-session-1' });
+        mocks.machineSpawnNewSession.mockResolvedValue({ type: 'success', sessionId: 'session-1' });
         await expect(startSession()).resolves.toBe(true);
 
         const requestIds = mocks.machineSpawnNewSession.mock.calls
             .map(([options]) => options.clientRequestId);
-        expect(new Set(requestIds)).toEqual(new Set(['rig-request-1']));
+        expect(new Set(requestIds)).toEqual(new Set(['spawn-request-1']));
 
         // The spawn succeeded, so the next one is a genuinely new session.
         await expect(startSession()).resolves.toBe(true);
         expect(mocks.machineSpawnNewSession).toHaveBeenLastCalledWith(expect.objectContaining({
-            clientRequestId: 'rig-request-2',
+            clientRequestId: 'spawn-request-2',
         }));
     });
 
@@ -759,8 +527,6 @@ describe('useStartSessionFromDraft', () => {
     });
 
     it('gives the next Start a fresh key after a Stop', async () => {
-        mocks.machines = [createRigMachine()];
-        mocks.draft = createDraft({ agentType: 'rig' });
         mocks.machineSpawnNewSession.mockReturnValue(new Promise(() => { }));
 
         const { startSession, cancelStart } = useStartSessionFromDraft();
@@ -771,10 +537,10 @@ describe('useStartSessionFromDraft', () => {
 
         // The stopped session's key is spent — reusing it would dedupe the
         // retry straight back onto the session just killed.
-        mocks.machineSpawnNewSession.mockResolvedValue({ type: 'success', sessionId: 'rig-session-2' });
+        mocks.machineSpawnNewSession.mockResolvedValue({ type: 'success', sessionId: 'session-2' });
         await expect(startSession()).resolves.toBe(true);
         expect(mocks.machineSpawnNewSession).toHaveBeenLastCalledWith(expect.objectContaining({
-            clientRequestId: 'rig-request-2',
+            clientRequestId: 'spawn-request-2',
         }));
     });
 
@@ -783,8 +549,6 @@ describe('useStartSessionFromDraft', () => {
     // pending at that moment the machine would dedupe the retry straight onto
     // the session the cancel is busy killing.
     it('does not hand the canceled key to a Start pressed on the same tick', async () => {
-        mocks.machines = [createRigMachine()];
-        mocks.draft = createDraft({ agentType: 'rig' });
         let landFirstSpawn!: (result: unknown) => void;
         mocks.machineSpawnNewSession.mockReturnValueOnce(new Promise((resolve) => {
             landFirstSpawn = resolve;
@@ -796,41 +560,33 @@ describe('useStartSessionFromDraft', () => {
         cancelStart();
 
         // No await in between: the canceled attempt has not resumed yet.
-        mocks.machineSpawnNewSession.mockResolvedValue({ type: 'success', sessionId: 'rig-session-2' });
+        mocks.machineSpawnNewSession.mockResolvedValue({ type: 'success', sessionId: 'session-2' });
         const retry = startSession();
 
         await expect(abandoned).resolves.toBe(false);
         await expect(retry).resolves.toBe(true);
         expect(mocks.machineSpawnNewSession).toHaveBeenLastCalledWith(expect.objectContaining({
-            clientRequestId: 'rig-request-2',
+            clientRequestId: 'spawn-request-2',
         }));
 
         // The first attempt's session still gets put down, and the retry's is
         // left alone.
-        landFirstSpawn({ type: 'success', sessionId: 'rig-session-1' });
+        landFirstSpawn({ type: 'success', sessionId: 'session-1' });
         await vi.waitFor(() => {
-            expect(mocks.machineStopSession).toHaveBeenCalledWith('machine-1', 'rig-session-1');
+            expect(mocks.machineStopSession).toHaveBeenCalledWith('machine-1', 'session-1');
         });
-        expect(mocks.machineStopSession).not.toHaveBeenCalledWith('machine-1', 'rig-session-2');
+        expect(mocks.machineStopSession).not.toHaveBeenCalledWith('machine-1', 'session-2');
     });
 
-    it('backs off with the published delay when a pending result omits one', async () => {
-        mocks.machines = [createRigMachine({
-            sessionCreation: {
-                idempotencyKey: 'clientRequestId',
-                pendingRetryAfterMs: 4_000,
-                resultKinds: ['success', 'pending'],
-            },
-        })];
-        mocks.draft = createDraft({ agentType: 'rig' });
+    it('backs off with the default delay when a pending result omits one', async () => {
         mocks.machineSpawnNewSession
-            .mockResolvedValueOnce({ type: 'pending', clientRequestId: 'rig-request-1' })
-            .mockResolvedValueOnce({ type: 'success', sessionId: 'rig-session-1' });
+            .mockResolvedValueOnce({ type: 'pending', clientRequestId: 'spawn-request-1' })
+            .mockResolvedValueOnce({ type: 'success', sessionId: 'session-1' });
 
         const { startSession } = useStartSessionFromDraft();
 
         await expect(startSession()).resolves.toBe(true);
-        expect(mocks.delay).toHaveBeenCalledWith(4_000);
+        expect(mocks.delay).toHaveBeenCalledWith(1_000);
     });
 
     it('keeps the draft in place when creation fails', async () => {

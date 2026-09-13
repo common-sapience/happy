@@ -11,13 +11,10 @@ import { TaskView } from './TaskView';
 import { BashViewFull } from './BashViewFull';
 import { EditViewFull } from './EditViewFull';
 import { MultiEditViewFull } from './MultiEditViewFull';
-import { CodexBashView } from './CodexBashView';
 import { CodexPatchView, CodexPatchViewFull } from './CodexPatchView';
 import { CodexDiffView, CodexDiffViewFull } from './CodexDiffView';
 import { AskUserQuestionView } from './AskUserQuestionView';
 import { RequestUserInputView } from './RequestUserInputView';
-import { GeminiEditView } from './GeminiEditView';
-import { GeminiExecuteView } from './GeminiExecuteView';
 import { FileView } from './FileView';
 import { isTerminalToolName } from '@/utils/toolDisplay';
 
@@ -38,9 +35,6 @@ export type ToolViewComponent = React.ComponentType<ToolViewProps>;
 export const toolViewRegistry: Record<string, ToolViewComponent> = {
     Edit: EditView,
     Bash: BashView,
-    CodexBash: CodexBashView,
-    CodexPatch: CodexPatchView,
-    CodexDiff: CodexDiffView,
     Write: WriteView,
     write: WriteView,
     search_replace: EditView,
@@ -52,28 +46,18 @@ export const toolViewRegistry: Record<string, ToolViewComponent> = {
     Agent: TaskView,
     AskUserQuestion: AskUserQuestionView,
     request_user_input: RequestUserInputView,
-    // Gemini tools (lowercase)
-    edit: GeminiEditView,
-    execute: GeminiExecuteView,
-    // Gemini emits the same payloads as Codex — `unified_diff` for diffs and an
-    // add/modify/delete change map for patches — so the Codex views handle both.
-    GeminiDiff: CodexDiffView,
-    GeminiPatch: CodexPatchView,
-    // Rig sessions forward the model-native tool name with the raw envelope,
-    // which getPatchChanges parses into the same change map.
+    // The engine forwards the model-native tool name with the raw envelope,
+    // which getPatchChanges parses into a change map.
     apply_patch: CodexPatchView,
+    unified_diff: CodexDiffView,
     // File attachment events
     file: FileView,
 };
 
 export const toolFullViewRegistry: Record<string, ToolViewComponent> = {
     Bash: BashViewFull,
-    CodexBash: BashViewFull,
-    CodexPatch: CodexPatchViewFull,
-    CodexDiff: CodexDiffViewFull,
-    GeminiPatch: CodexPatchViewFull,
-    GeminiDiff: CodexDiffViewFull,
     apply_patch: CodexPatchViewFull,
+    unified_diff: CodexDiffViewFull,
     Edit: EditViewFull,
     search_replace: EditViewFull,
     Write: WriteView,
@@ -96,7 +80,6 @@ export function getToolFullViewComponent(toolName: string): ToolViewComponent | 
 // Export individual components
 export { EditView } from './EditView';
 export { BashView } from './BashView';
-export { CodexBashView } from './CodexBashView';
 export { CodexPatchView } from './CodexPatchView';
 export { CodexDiffView } from './CodexDiffView';
 export { BashViewFull } from './BashViewFull';
@@ -107,6 +90,4 @@ export { MultiEditView } from './MultiEditView';
 export { TaskView } from './TaskView';
 export { AskUserQuestionView } from './AskUserQuestionView';
 export { RequestUserInputView } from './RequestUserInputView';
-export { GeminiEditView } from './GeminiEditView';
-export { GeminiExecuteView } from './GeminiExecuteView';
 export { FileView } from './FileView';

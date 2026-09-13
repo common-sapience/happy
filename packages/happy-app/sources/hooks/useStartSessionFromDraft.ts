@@ -160,39 +160,22 @@ export function useStartSessionFromDraft() {
         if (!machine) {
             Modal.alert(
                 t('common.error'),
-                agentType === 'rig'
-                    ? 'Happy Agent is not running on this computer'
-                    : 'Happy CLI is not available on your computer. Run `happy daemon start` on your computer, then try again.',
+                'Happy CLI is not available on your computer. Run `happy daemon start` on your computer, then try again.',
             );
             return false;
         }
         if (!isMachineOnline(machine)) {
             Modal.alert(
                 t('common.error'),
-                agentType === 'rig'
-                    ? 'Machine is offline'
-                    : 'Happy CLI is offline on your computer. Run `happy daemon start` on your computer, then try again.',
+                'Happy CLI is offline on your computer. Run `happy daemon start` on your computer, then try again.',
             );
             return false;
         }
-        const rigCreation = agentType === 'rig'
-            ? getRigMachineSessionCreation(machine.metadata)
-            : null;
-        if (agentType === 'rig' && !rigCreation) {
-            Modal.alert(t('common.error'), 'This machine cannot start Happy agent sessions');
-            return false;
-        }
-        const defaults = rigCreation
-            ? {
-                permissionMode: rigCreation.defaultPermissionMode ?? '',
-                modelMode: rigCreation.defaultModelKey ?? '',
-                effortLevel: rigCreation.defaultEffortForModel(rigCreation.defaultModelKey),
-            }
-            : resolveAgentDefaultConfig(defaultOverrides, agentType, machine.metadata?.happyCliVersion);
+        const defaults = resolveAgentDefaultConfig(defaultOverrides, agentType, machine.metadata?.happyCliVersion);
         const permission = resolveOption<{ key: string }>(
             // The daemon machine's CLI is what will parse the mode; older CLIs
             // drop the whole prompt on modes they do not know (e.g. `auto`).
-            rigCreation?.permissionModes ?? filterPermissionModesForCli(
+            filterPermissionModesForCli(
                 getHardcodedPermissionModes(agentType, t),
                 machine.metadata?.happyCliVersion,
             ),
@@ -200,11 +183,11 @@ export function useStartSessionFromDraft() {
             // both filtered out for an old CLI, land there rather than on
             // whichever mode happens to lead the list.
             agentChanged
-                ? [defaults.permissionMode, rigCreation ? null : getCodeAgentDefaults(agentType, machine.metadata?.happyCliVersion).permissionMode]
-                : [draft.permissionMode, defaults.permissionMode, rigCreation ? null : getCodeAgentDefaults(agentType, machine.metadata?.happyCliVersion).permissionMode],
+                ? [defaults.permissionMode, getCodeAgentDefaults(agentType, machine.metadata?.happyCliVersion).permissionMode]
+                : [draft.permissionMode, defaults.permissionMode, getCodeAgentDefaults(agentType, machine.metadata?.happyCliVersion).permissionMode],
         );
         const model = resolveOption<{ key: string }>(
-            rigCreation?.models ?? includeConfiguredModel(
+            includeConfiguredModel(
                 agentType,
                 getHardcodedModelModes(agentType, t),
                 defaults.modelMode,
@@ -213,15 +196,11 @@ export function useStartSessionFromDraft() {
                 ? [defaults.modelMode]
                 : [draft.modelMode, defaults.modelMode],
         );
-        const effortDefault = rigCreation?.defaultEffortForModel(model?.key)
-            ?? defaults.effortLevel;
         const effort = resolveOption<{ key: string }>(
-            rigCreation
-                ? rigCreation.effortsForModel(model?.key).map((key) => ({ key, name: key }))
-                : getEffortLevelsForModel(agentType, model?.key ?? 'default'),
+            getEffortLevelsForModel(agentType, model?.key ?? 'default'),
             agentChanged
-                ? [effortDefault]
-                : [draft.effortLevel, effortDefault],
+                ? [defaults.effortLevel]
+                : [draft.effortLevel, defaults.effortLevel],
         );
         if (!permission || !model) {
             Modal.alert(t('common.error'), 'The selected agent configuration is unavailable');
@@ -247,35 +226,13 @@ export function useStartSessionFromDraft() {
         const requestedWorktree = draft.sessionType === 'worktree'
             ? draft.worktreeKey ?? '__new__'
             : '__none__';
-        let happyAgentTarget: ReturnType<typeof resolveHappyAgentSpawnTarget>;
-        try {
-            happyAgentTarget = rigCreation
-                ? resolveHappyAgentSpawnTarget({
-                    projectId: selectedProjectId,
-                    workspaceSelection: requestedWorktree,
-                    workspaces: projectWorkspaces,
-                })
-                : null;
-        } catch (error) {
-            Modal.alert(
-                t('common.error'),
-                error instanceof Error ? error.message : 'The selected workspace is unavailable',
-            );
-            return false;
-        }
-        const worktreeCreationMachine = happyAgentTarget
-            ? null
-            : resolveWorktreeCreationMachine(
-                choice,
-                agentType,
-                rigCreation?.supportsWorktrees
-                    ?? (agentType === 'rig' ? false : getSupportsWorktree(agentType)),
-            );
-        // Happy Agent creates and selects catalog workspaces by durable identity. The Git RPC is
-        // only for ordinary code-agent worktrees; without either route, a stale draft safely falls
-        // back to the main tree.
-        const worktreeSelection = !happyAgentTarget
-            && !worktreeCreationMachine
+        const worktreeCreationMachine = resolveWorktreeCreationMachine(
+            choice,
+            agentType,
+            getSupportsWorktree(agentType),
+        );
+        // Without the Git RPC a stale draft safely falls back to the main tree.
+        const worktreeSelection = !worktreeCreationMachine
             && requestedWorktree === '__new__'
             ? '__none__'
             : requestedWorktree;
@@ -323,7 +280,7 @@ export function useStartSessionFromDraft() {
         };
         try {
             let spawnDirectory = absolutePath;
-            if (worktreeSelection === '__new__' && !happyAgentTarget) {
+            if (worktreeSelection === '__new__') {
                 // `worktreeSelection` can only remain `__new__` when a creation
                 // machine was resolved above.
                 const worktreeResult = await untilCanceled(createWorktree(worktreeCreationMachine!.id, absolutePath));
@@ -341,40 +298,21 @@ export function useStartSessionFromDraft() {
             }
 
             const spawn = async (approvedNewDirectoryCreation = false): Promise<string | null> => {
-                const spawnOptions = rigCreation
-                    ? {
-                        machineId: machine.id,
-                        ...buildRigSpawnConfiguration(machine.metadata, {
-                            directory: spawnDirectory,
-                            clientRequestId,
-                            approvedNewDirectoryCreation,
-                            modelKey: model.key,
-                            permissionMode: permission.key,
-                            effort: effort?.key,
-                        }),
-                        ...(happyAgentTarget ? { happyAgentTarget } : {}),
-                    }
-                    : {
-                        machineId: machine.id,
-                        directory: spawnDirectory,
-                        approvedNewDirectoryCreation,
-                        agent: agentType,
-                        // Codex Default is a concrete ask-first policy, not an
-                        // ambient absence of an override.
-                        permissionMode: agentType === 'codex' || permission.key !== 'default'
-                            ? permission.key
-                            : undefined,
-                        modelMode: model.key !== 'default' ? model.key : undefined,
-                        effortLevel: effort?.key,
-                    };
+                const spawnOptions = {
+                    machineId: machine.id,
+                    directory: spawnDirectory,
+                    approvedNewDirectoryCreation,
+                    agent: agentType,
+                    clientRequestId,
+                    permissionMode: permission.key !== 'default' ? permission.key : undefined,
+                    modelMode: model.key !== 'default' ? model.key : undefined,
+                    effortLevel: effort?.key,
+                };
                 let result = await machineSpawnNewSession(spawnOptions);
                 let pendingResults = 0;
                 while (result.type === 'pending' && pendingResults < MAX_RIG_PENDING_RESULTS) {
                     pendingResults += 1;
-                    await delay(resolveRigPendingRetryDelayMs(
-                        result.retryAfterMs,
-                        rigCreation?.pendingRetryAfterMs,
-                    ));
+                    await delay(resolveRigPendingRetryDelayMs(result.retryAfterMs, undefined));
                     if (!isMountedRef.current || run.canceled) return null;
                     result = await machineSpawnNewSession(spawnOptions);
                 }
@@ -427,7 +365,7 @@ export function useStartSessionFromDraft() {
                 return false;
             }
 
-            if (!rigCreation) {
+            {
                 // Pin the actual launch selection to this session. Keeping
                 // defaults as null lets a later settings change rewrite an
                 // existing session's displayed and transmitted mode/model.

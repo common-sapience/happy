@@ -11,13 +11,6 @@ const bundleId = {
     preview: "com.slopus.happy.preview",
     production: "com.ex3ndr.happy"
 }[variant];
-// const stagingElevenLabsAgentId = 'agent_7801k2c0r5hjfraa1kdbytpvs6yt';
-const productionElevenLabsAgentId = 'agent_6701k211syvvegba4kt7m68nxjmw';
-const elevenLabsAgentId = {
-    development: productionElevenLabsAgentId,
-    preview: productionElevenLabsAgentId,
-    production: productionElevenLabsAgentId,
-}[variant];
 const consoleLoggingDefault = {
     development: true,
     preview: true,
@@ -72,7 +65,6 @@ export default {
                 usesNonExemptEncryption: false
             },
             infoPlist: {
-                NSMicrophoneUsageDescription: "Allow $(PRODUCT_NAME) to access your microphone for voice conversations with AI.",
                 NSLocalNetworkUsageDescription: "Allow $(PRODUCT_NAME) to find and connect to local devices on your network.",
                 NSBonjourServices: ["_http._tcp", "_https._tcp"],
                 // ATS:
@@ -98,8 +90,6 @@ export default {
                 backgroundColor: "#000000"
             },
             permissions: [
-                "android.permission.RECORD_AUDIO",
-                "android.permission.MODIFY_AUDIO_SETTINGS",
                 "android.permission.ACCESS_NETWORK_STATE",
                 "android.permission.POST_NOTIFICATIONS",
             ],
@@ -149,15 +139,6 @@ export default {
             "expo-web-browser",
             "react-native-vision-camera",
             "@more-tech/react-native-libsodium",
-            "react-native-audio-api",
-            "@livekit/react-native-expo-plugin",
-            "@config-plugins/react-native-webrtc",
-            [
-                "expo-audio",
-                {
-                    microphonePermission: "Allow $(PRODUCT_NAME) to access your microphone for voice conversations."
-                }
-            ],
             [
                 "expo-location",
                 {
@@ -175,9 +156,7 @@ export default {
             [
                 "expo-camera",
                 {
-                    cameraPermission: "Allow $(PRODUCT_NAME) to access your camera to scan QR codes and share photos with AI.",
-                    microphonePermission: "Allow $(PRODUCT_NAME) to access your microphone for voice conversations.",
-                    recordAudioAndroid: true
+                    cameraPermission: "Allow $(PRODUCT_NAME) to access your camera to scan QR codes and share photos with AI."
                 }
             ],
             [
@@ -224,11 +203,6 @@ export default {
                 projectId: "4558dd3d-cd5a-47cd-bad9-e591a241cc06"
             },
             app: {
-                postHogKey: process.env.EXPO_PUBLIC_POSTHOG_API_KEY,
-                revenueCatAppleKey: process.env.EXPO_PUBLIC_REVENUE_CAT_APPLE,
-                revenueCatGoogleKey: process.env.EXPO_PUBLIC_REVENUE_CAT_GOOGLE,
-                revenueCatStripeKey: process.env.EXPO_PUBLIC_REVENUE_CAT_STRIPE,
-                elevenLabsAgentId,
                 consoleLoggingDefault,
                 buildCommitSha: buildMetadata.commitSha,
                 buildCommitTimestamp: buildMetadata.commitTimestamp,

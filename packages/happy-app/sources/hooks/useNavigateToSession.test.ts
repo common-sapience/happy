@@ -9,7 +9,6 @@ const mocks = vi.hoisted(() => ({
     state: { sessions: {} as Record<string, { id: string }>, currentViewingSessionId: null as string | null },
     router: { push: vi.fn(), prefetch: vi.fn() },
     preloadSession: vi.fn(),
-    trackSessionSwitched: vi.fn(),
     perfMark: vi.fn(),
 }));
 
@@ -18,7 +17,6 @@ vi.mock('@/utils/platform', () => ({ isRunningOnMac: () => mocks.mac }));
 vi.mock('expo-router', () => ({ useRouter: () => mocks.router }));
 vi.mock('@/sync/storage', () => ({ storage: { getState: () => mocks.state } }));
 vi.mock('@/sync/sync', () => ({ sync: { preloadSession: mocks.preloadSession } }));
-vi.mock('@/track', () => ({ trackSessionSwitched: mocks.trackSessionSwitched }));
 vi.mock('@/utils/perfLog', () => ({ perfMark: mocks.perfMark }));
 
 import { useSessionPressHandlers } from './useNavigateToSession';
@@ -48,7 +46,6 @@ describe('session row press contract', () => {
         expect(mocks.preloadSession).toHaveBeenCalledWith('a');
         expect(mocks.router.prefetch).toHaveBeenCalledWith('/session/a');
         expect(mocks.router.push).not.toHaveBeenCalled();
-        expect(mocks.trackSessionSwitched).not.toHaveBeenCalled();
         expect(mocks.perfMark).not.toHaveBeenCalledWith('session-open:a');
         expect(handlers).not.toHaveProperty('onPressOut');
     });
@@ -58,7 +55,6 @@ describe('session row press contract', () => {
         handlers.onPressIn();
         handlers.onPress();
         expect(mocks.router.push).toHaveBeenCalledExactlyOnceWith('/session/a');
-        expect(mocks.trackSessionSwitched).toHaveBeenCalledExactlyOnceWith({ id: 'a' });
         expect(mocks.perfMark).toHaveBeenCalledWith('session-open:a');
     });
 

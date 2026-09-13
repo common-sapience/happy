@@ -17,7 +17,7 @@ import {
     rigCanWriteFiles,
     rigHasRpcMethod,
 } from './rig';
-import type { HappyAgentSpawnTarget } from './happyAgentSpawn';
+import type { NewSessionAgentType } from './persistence';
 
 export type { SessionAgentModesPatch };
 
@@ -172,29 +172,12 @@ export interface SpawnSessionOptions {
     directory: string;
     approvedNewDirectoryCreation?: boolean;
     token?: string;
-    agent?: 'codex' | 'claude' | 'gemini' | 'openclaw' | 'agy' | 'rig';
+    agent?: NewSessionAgentType;
     permissionMode?: string;
     modelMode?: string;
     effortLevel?: string;
-    /** Stable idempotency key required by Rig's machine RPC. */
+    /** Idempotency key so a retried spawn cannot create a second session. */
     clientRequestId?: string;
-    /** Rig-native provider/model selection. */
-    providerId?: string;
-    modelId?: string;
-    effort?: string;
-    /** Catalog destination for Happy Agent's native project/workspace spawn. */
-    happyAgentTarget?: HappyAgentSpawnTarget;
-    /**
-     * If set, the daemon spawns the agent with `--resume <id>` so the new
-     * Happy session attaches to a pre-existing on-disk Claude conversation
-     * file. Used by the session fork / duplicate flow.
-     */
-    resumeClaudeSessionId?: string;
-    /**
-     * If set, the daemon spawns Codex with `--resume <id>` so the new Happy
-     * session attaches to an app-server thread created by fork / duplicate.
-     */
-    resumeCodexThreadId?: string;
     /** Happy session id this fork was branched from (lineage). */
     parentSessionId?: string;
     /** Happy message id used as the rewind point (only set for "duplicate"). */
@@ -202,51 +185,6 @@ export interface SpawnSessionOptions {
     /** Marks the spawned session as a hidden side chat of `parentSessionId`. */
     isSideChat?: boolean;
 }
-
-// Options for forking a Claude session on a machine
-export interface ClaudeForkSessionOptions {
-    machineId: string;
-    /** Working directory of the source session — used to derive the Claude project dir. */
-    directory: string;
-    /** Source Claude session UUID (Session.metadata.claudeSessionId on the parent). */
-    claudeSessionId: string;
-}
-
-export type ClaudeForkSessionResult =
-    | { type: 'success'; newClaudeSessionId: string }
-    | { type: 'error'; errorMessage: string };
-
-export interface ClaudeRewindPoint {
-    uuid: string;
-    text: string;
-    timestamp: number;
-}
-
-export type ClaudeListRewindPointsResult =
-    | { type: 'success'; points: ClaudeRewindPoint[] }
-    | { type: 'error'; errorMessage: string };
-
-export interface CodexForkThreadOptions {
-    machineId: string;
-    /** Working directory of the source session, passed to Codex thread/fork. */
-    directory: string;
-    /** Source Codex app-server thread id (Session.metadata.codexThreadId). */
-    codexThreadId: string;
-}
-
-export type CodexForkThreadResult =
-    | { type: 'success'; newCodexThreadId: string }
-    | { type: 'error'; errorMessage: string };
-
-export interface CodexRewindPoint {
-    itemId: string;
-    text: string;
-    timestamp: number;
-}
-
-export type CodexListRewindPointsResult =
-    | { type: 'success'; points: CodexRewindPoint[] }
-    | { type: 'error'; errorMessage: string };
 
 export interface ResumeSessionOptions {
     machineId: string;
@@ -260,73 +198,25 @@ export interface ResumeSessionOptions {
  */
 export async function machineSpawnNewSession(options: SpawnSessionOptions): Promise<SpawnSessionResult> {
 
-    const { machineId, directory, approvedNewDirectoryCreation = false, token, agent, permissionMode, modelMode, effortLevel, clientRequestId, providerId, modelId, effort, happyAgentTarget, resumeClaudeSessionId, resumeCodexThreadId, parentSessionId, forkedFromMessageId, isSideChat } = options;
+    const { machineId, directory, approvedNewDirectoryCreation = false, token, agent, permissionMode, modelMode, effortLevel, clientRequestId, parentSessionId, forkedFromMessageId, isSideChat } = options;
 
     try {
-        if (agent === 'rig' && !clientRequestId) {
-            throw new Error('Rig session creation requires a client request ID');
-        }
-        if (happyAgentTarget && agent !== 'rig') {
-            throw new Error('Happy Agent catalog targets require the Happy Agent harness');
-        }
         type DirectorySpawnRequest = {
             type: 'spawn-in-directory'
             directory: string
             approvedNewDirectoryCreation?: boolean,
             token?: string,
-            agent?: 'codex' | 'claude' | 'gemini' | 'openclaw' | 'agy' | 'rig',
+            agent?: NewSessionAgentType,
             permissionMode?: string,
             modelMode?: string,
             effortLevel?: string,
             clientRequestId?: string,
-            providerId?: string,
-            modelId?: string,
-            effort?: string,
-            resumeClaudeSessionId?: string,
-            resumeCodexThreadId?: string,
             parentSessionId?: string,
             forkedFromMessageId?: string,
             isSideChat?: boolean,
         };
-        type HappyAgentSpawnRequest = {
-            type: 'happy-agent-spawn';
-            clientRequestId: string;
-            target: HappyAgentSpawnTarget;
-            agentConfiguration: {
-                type: 'happy-agent';
-                permissionMode?: string;
-                providerId?: string;
-                modelId?: string;
-                effort?: string;
-            };
-        };
-        type SpawnRequest = DirectorySpawnRequest | HappyAgentSpawnRequest;
-        const request: SpawnRequest = agent === 'rig' && happyAgentTarget
-            ? {
-                type: 'happy-agent-spawn',
-                clientRequestId: clientRequestId!,
-                target: happyAgentTarget,
-                agentConfiguration: {
-                    type: 'happy-agent',
-                    ...(permissionMode ? { permissionMode } : {}),
-                    ...(providerId ? { providerId } : {}),
-                    ...(modelId ? { modelId } : {}),
-                    ...((effort ?? effortLevel) ? { effort: effort ?? effortLevel } : {}),
-                },
-            }
-            : agent === 'rig'
-            ? {
-                type: 'spawn-in-directory',
-                agent: 'rig',
-                directory,
-                approvedNewDirectoryCreation,
-                ...(clientRequestId ? { clientRequestId } : {}),
-                ...(permissionMode ? { permissionMode } : {}),
-                ...(providerId ? { providerId } : {}),
-                ...(modelId ? { modelId } : {}),
-                ...((effort ?? effortLevel) ? { effort: effort ?? effortLevel } : {}),
-            }
-            : { type: 'spawn-in-directory', directory, approvedNewDirectoryCreation, token, agent, permissionMode, modelMode, effortLevel, resumeClaudeSessionId, resumeCodexThreadId, parentSessionId, forkedFromMessageId, isSideChat };
+        type SpawnRequest = DirectorySpawnRequest;
+        const request: SpawnRequest = { type: 'spawn-in-directory', directory, approvedNewDirectoryCreation, token, agent, permissionMode, modelMode, effortLevel, clientRequestId, parentSessionId, forkedFromMessageId, isSideChat };
         const result = await apiSocket.machineRPC<SpawnSessionResult, SpawnRequest>(
             machineId,
             'spawn-happy-session',
@@ -338,157 +228,6 @@ export async function machineSpawnNewSession(options: SpawnSessionOptions): Prom
         return {
             type: 'error',
             errorMessage: error instanceof Error ? error.message : 'Failed to spawn session'
-        };
-    }
-}
-
-/**
- * Copy the source session's Claude JSONL on the daemon machine and return
- * the new Claude session UUID. Caller then spawns a fresh Happy session
- * with `resumeClaudeSessionId` set to that UUID to attach a new Happy
- * session row to the copied conversation.
- */
-export async function claudeForkSession(options: ClaudeForkSessionOptions): Promise<ClaudeForkSessionResult> {
-    const { machineId, directory, claudeSessionId } = options;
-    try {
-        const result = await apiSocket.machineRPC<ClaudeForkSessionResult, {
-            directory: string;
-            claudeSessionId: string;
-        }>(
-            machineId,
-            'claude-fork-session',
-            { directory, claudeSessionId },
-        );
-        return result;
-    } catch (error) {
-        return {
-            type: 'error',
-            errorMessage: error instanceof Error ? error.message : 'Failed to fork session',
-        };
-    }
-}
-
-/**
- * Read the on-disk Claude JSONL on the daemon machine and return user-text
- * messages with their underlying claudeUuid + timestamp. Disk is the
- * source of truth for the rewind picker — server-side envelopes miss
- * claudeUuid for any user message that travelled via the legacy
- * `sentFrom: 'web'` path.
- */
-export async function claudeListRewindPoints(
-    options: ClaudeForkSessionOptions,
-): Promise<ClaudeListRewindPointsResult> {
-    const { machineId, directory, claudeSessionId } = options;
-    try {
-        const result = await apiSocket.machineRPC<ClaudeListRewindPointsResult, {
-            directory: string;
-            claudeSessionId: string;
-        }>(
-            machineId,
-            'claude-list-rewind-points',
-            { directory, claudeSessionId },
-        );
-        return result;
-    } catch (error) {
-        return {
-            type: 'error',
-            errorMessage: error instanceof Error ? error.message : 'Failed to list rewind points',
-        };
-    }
-}
-
-/**
- * Same as claudeForkSession, but truncates the copied JSONL right after the
- * line with `cutAfterUuid` (keeping the chosen message as the last entry,
- * dropping every line after — including the agent's response). Use this
- * for "rewind to message N and try again" flows. Daemon hard-fails if the
- * UUID isn't present in the source — never silently produces a
- * non-truncated copy.
- */
-export async function claudeDuplicateSession(
-    options: ClaudeForkSessionOptions & { cutAfterUuid: string },
-): Promise<ClaudeForkSessionResult> {
-    const { machineId, directory, claudeSessionId, cutAfterUuid } = options;
-    try {
-        const result = await apiSocket.machineRPC<ClaudeForkSessionResult, {
-            directory: string;
-            claudeSessionId: string;
-            cutAfterUuid: string;
-        }>(
-            machineId,
-            'claude-duplicate-session',
-            { directory, claudeSessionId, cutAfterUuid },
-        );
-        return result;
-    } catch (error) {
-        return {
-            type: 'error',
-            errorMessage: error instanceof Error ? error.message : 'Failed to duplicate session',
-        };
-    }
-}
-
-export async function codexForkThread(options: CodexForkThreadOptions): Promise<CodexForkThreadResult> {
-    const { machineId, directory, codexThreadId } = options;
-    try {
-        const result = await apiSocket.machineRPC<CodexForkThreadResult, {
-            directory: string;
-            codexThreadId: string;
-        }>(
-            machineId,
-            'codex-fork-thread',
-            { directory, codexThreadId },
-        );
-        return result;
-    } catch (error) {
-        return {
-            type: 'error',
-            errorMessage: error instanceof Error ? error.message : 'Failed to fork Codex thread',
-        };
-    }
-}
-
-export async function codexDuplicateThread(
-    options: CodexForkThreadOptions & { cutAfterItemId: string },
-): Promise<CodexForkThreadResult> {
-    const { machineId, directory, codexThreadId, cutAfterItemId } = options;
-    try {
-        const result = await apiSocket.machineRPC<CodexForkThreadResult, {
-            directory: string;
-            codexThreadId: string;
-            cutAfterItemId: string;
-        }>(
-            machineId,
-            'codex-duplicate-thread',
-            { directory, codexThreadId, cutAfterItemId },
-        );
-        return result;
-    } catch (error) {
-        return {
-            type: 'error',
-            errorMessage: error instanceof Error ? error.message : 'Failed to duplicate Codex thread',
-        };
-    }
-}
-
-export async function codexListRewindPoints(
-    options: CodexForkThreadOptions,
-): Promise<CodexListRewindPointsResult> {
-    const { machineId, directory, codexThreadId } = options;
-    try {
-        const result = await apiSocket.machineRPC<CodexListRewindPointsResult, {
-            directory: string;
-            codexThreadId: string;
-        }>(
-            machineId,
-            'codex-list-rewind-points',
-            { directory, codexThreadId },
-        );
-        return result;
-    } catch (error) {
-        return {
-            type: 'error',
-            errorMessage: error instanceof Error ? error.message : 'Failed to list Codex rewind points',
         };
     }
 }
@@ -1107,145 +846,6 @@ export async function sessionDelete(sessionId: string): Promise<{ success: boole
             message: error instanceof Error ? error.message : 'Unknown error'
         };
     }
-}
-
-type ClaudeForkSource = {
-    kind?: 'claude';
-    sessionId: string;
-    machineId: string;
-    directory: string;
-    claudeSessionId: string;
-};
-
-type CodexForkSource = {
-    kind: 'codex';
-    sessionId: string;
-    machineId: string;
-    directory: string;
-    codexThreadId: string;
-};
-
-// Forking source description used by forkAndSpawn.
-export type ForkSource = ClaudeForkSource | CodexForkSource;
-
-type ForkOptions = {
-    cutAfterUuid?: string;
-    cutAfterItemId?: string;
-    forkedFromMessageId?: string;
-    /** Marks the forked child as a hidden side chat (kept out of the session list). */
-    isSideChat?: boolean;
-};
-
-/**
- * Two-step orchestrator for the session fork / duplicate flow:
- *   1. Ask the daemon to copy (and optionally truncate) the source Claude
- *      JSONL — returns a fresh Claude session UUID.
- *   2. Spawn a new Happy session on the same machine with
- *      `resumeClaudeSessionId` set to that UUID so `claude --resume` picks
- *      up the copied conversation.
- *
- * Lineage (parentSessionId, forkedFromMessageId) rides through the spawn
- * RPC into env vars, then into the new Happy session's metadata at start
- * — so the parent link survives without any server-side schema change.
- */
-export async function forkAndSpawn(
-    source: ForkSource,
-    opts: ForkOptions = {},
-): Promise<SpawnSessionResult> {
-    if (source.kind === 'codex') {
-        const forkResult = opts.cutAfterItemId
-            ? await codexDuplicateThread({
-                machineId: source.machineId,
-                directory: source.directory,
-                codexThreadId: source.codexThreadId,
-                cutAfterItemId: opts.cutAfterItemId,
-            })
-            : await codexForkThread({
-                machineId: source.machineId,
-                directory: source.directory,
-                codexThreadId: source.codexThreadId,
-            });
-
-        if (forkResult.type !== 'success') {
-            return { type: 'error', errorMessage: forkResult.errorMessage };
-        }
-
-        const spawnResult = await machineSpawnNewSession({
-            machineId: source.machineId,
-            directory: source.directory,
-            agent: 'codex',
-            approvedNewDirectoryCreation: false,
-            resumeCodexThreadId: forkResult.newCodexThreadId,
-            parentSessionId: source.sessionId,
-            forkedFromMessageId: opts.forkedFromMessageId,
-            isSideChat: opts.isSideChat,
-        });
-
-        if (spawnResult.type === 'success') {
-            try {
-                await sync.refreshSessions();
-            } catch {
-                // Refresh is best-effort; broadcast sync will still hydrate.
-            }
-        }
-
-        return spawnResult;
-    }
-
-    const forkResult = opts.cutAfterUuid
-        ? await claudeDuplicateSession({
-            machineId: source.machineId,
-            directory: source.directory,
-            claudeSessionId: source.claudeSessionId,
-            cutAfterUuid: opts.cutAfterUuid,
-        })
-        : await claudeForkSession({
-            machineId: source.machineId,
-            directory: source.directory,
-            claudeSessionId: source.claudeSessionId,
-        });
-
-    if (forkResult.type !== 'success') {
-        return { type: 'error', errorMessage: forkResult.errorMessage };
-    }
-
-    const spawnResult = await machineSpawnNewSession({
-        machineId: source.machineId,
-        directory: source.directory,
-        agent: 'claude',
-        approvedNewDirectoryCreation: false,
-        resumeClaudeSessionId: forkResult.newClaudeSessionId,
-        parentSessionId: source.sessionId,
-        forkedFromMessageId: opts.forkedFromMessageId,
-        isSideChat: opts.isSideChat,
-    });
-
-    // Pull the newly-created session row into local sync state before we
-    // hand control back to the caller — otherwise router.replace into the
-    // new session id races the broadcast and the app screams
-    // "Session X not found" until the next sync tick lands.
-    if (spawnResult.type === 'success') {
-        try {
-            await sync.refreshSessions();
-        } catch {
-            // Refresh is best-effort; the broadcast will still hydrate the
-            // session shortly even if this fetch flaked.
-        }
-    }
-
-    return spawnResult;
-}
-
-/**
- * Create a "side chat" for a session: a forked child that inherits the
- * parent's full context but is provably isolated (writes only to its own
- * transcript, never back into the parent) and is flagged `isSideChat` so it
- * stays out of the top-level session list. Rendered only inside the parent's
- * sidebar panel. Reuses the fork/spawn machinery; the only difference from a
- * normal fork is the `isSideChat` marker.
- */
-export async function spawnSideChat(source: ForkSource): Promise<SpawnSessionResult> {
-    return forkAndSpawn(source, { isSideChat: true });
 }
 
 // Export types for external use

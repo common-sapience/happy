@@ -13,6 +13,7 @@ import {
 } from '@/sync/persistence';
 import type { PermissionModeKey } from '@/components/PermissionModeSelector';
 import type { AttachmentPreview } from '@/sync/attachmentTypes';
+import { ENGINE_AGENT } from '@/utils/harnessCatalog';
 
 interface NewSessionDraftState {
     input: string;
@@ -70,7 +71,7 @@ export const useNewSessionDraft = create<NewSessionDraftState>()((set, get) => (
     attachments: [],
     selectedMachineId: initial?.selectedMachineId ?? null,
     selectedPath: initial?.selectedPath ?? null,
-    agentType: initial?.agentType ?? 'claude',
+    agentType: initial?.agentType ?? ENGINE_AGENT,
     permissionMode: initial?.permissionMode ?? null,
     modelMode: initial?.modelMode ?? null,
     effortLevel: initial?.effortLevel ?? null,
