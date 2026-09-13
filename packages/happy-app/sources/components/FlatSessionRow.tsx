@@ -18,14 +18,12 @@ import type { FlatSessionRowData } from '@/utils/flatSessionList';
 import { formatSessionListTimestamp } from '@/utils/sessionListTimestamp';
 import type { Theme } from '@/theme';
 import { t } from '@/text';
-import { ShimmerText } from './ShimmerText';
+import { AgentListRow } from './kit';
 import { resolveFlatSessionRowPresentation } from '@/utils/flatSessionRowPresentation';
 import { agentListStateColor, agentListStateLabel, resolveAgentListState } from './agentListState';
 
-// Roughly three quarters of the row, the proportion a chat list uses: the row
-// is 10 + 61 + 10, so 60 leaves an even 10 either side of the avatar.
-const AVATAR_SIZE = 60;
-const ROW_PADDING_LEFT = 16;
+const AVATAR_SIZE = 44;
+const ROW_PADDING = 16;
 const AVATAR_GAP = 12;
 const TOP_RIGHT_DOT_SIZE = 20;
 const TOP_RIGHT_SLOT_WIDTH = 56;
@@ -42,10 +40,9 @@ export function flatListBackgroundColor(theme: Theme): string {
 }
 
 /**
- * One agent in the list: avatar, title, the folder and worktree it runs in, and
- * one of the four states DESK-11 allows. The row spans the full width on the
- * page background with a hairline under it, so the list reads as one continuous
- * column.
+ * One agent in the list. The row's shape is the kit's `AgentListRow` (DESK-19);
+ * this adds what only a session has: the avatar, the time of its last activity
+ * or an unread mark, and swipe-to-archive.
  *
  * There is no vendor mark anywhere on it: the product has one kind of agent, so
  * naming its engine on every row would be noise (DESK-11).
@@ -93,7 +90,6 @@ export const FlatSessionRow = React.memo(({ row, selected, showBorder, archived 
         hasUnread: showUnreadDot,
         faded,
     });
-    // Colour and word together, never colour alone (design.md §5).
     const listState = resolveAgentListState({ state: session.state, archived: !!archived });
     const listStateLabel = agentListStateLabel(listState);
     const topRightAccessibilityLabel = presentation.topRight.type === 'dot'
@@ -138,44 +134,32 @@ export const FlatSessionRow = React.memo(({ row, selected, showBorder, archived 
         onLongPress: showActionAlert,
     };
 
-    const content = (
-        <Pressable
-            style={[styles.row, selected && styles.rowSelected]}
-            {...sessionPressHandlers}
-            {...menuProps}
-        >
-            <View style={[styles.avatar, faded && styles.avatarFaded]}>
-                <Avatar
-                    id={session.avatarId}
-                    size={AVATAR_SIZE}
-                    monochrome={faded}
-                    imageUrl={session.projectAvatarUri}
-                    thumbhash={session.projectAvatarThumbhash}
-                />
-            </View>
+    const subtitle = [projectName, workspaceName].filter(Boolean).join(' · ');
 
-            <View style={[styles.content, faded && styles.contentFaded]}>
-                <View style={styles.titleRow}>
-                    <View style={styles.titleContainer}>
-                        {presentation.shimmerTitle ? (
-                            <ShimmerText
-                                text={session.name}
-                                style={styles.title}
-                                baseColor={theme.colors.textSecondary}
-                                highlightColor={theme.colors.text}
-                            />
-                        ) : (
-                            <Text
-                                style={[
-                                    styles.title,
-                                    faded ? styles.titleDisconnected : styles.titleConnected,
-                                ]}
-                                numberOfLines={1}
-                            >
-                                {session.name}
-                            </Text>
-                        )}
-                    </View>
+    const content = (
+        <AgentListRow
+            title={session.name}
+            subtitle={subtitle || undefined}
+            status={listState}
+            statusLabel={listStateLabel}
+            statusColor={agentListStateColor(listState, theme)}
+            selected={selected}
+            showDivider={showBorder}
+            dividerInset={ROW_PADDING + AVATAR_SIZE + AVATAR_GAP}
+            style={styles.row}
+            leading={(
+                <View style={[styles.avatar, faded && styles.faded]}>
+                    <Avatar
+                        id={session.avatarId}
+                        size={AVATAR_SIZE}
+                        monochrome={faded}
+                        imageUrl={session.projectAvatarUri}
+                        thumbhash={session.projectAvatarThumbhash}
+                    />
+                </View>
+            )}
+            trailing={(
+                <>
                     <SessionShortcutHintBadge sessionId={session.id} style={styles.shortcutBadge} />
                     <View
                         style={styles.topRightStatus}
@@ -184,61 +168,16 @@ export const FlatSessionRow = React.memo(({ row, selected, showBorder, archived 
                         accessibilityLabel={topRightAccessibilityLabel}
                     >
                         {presentation.topRight.type === 'dot' ? (
-                            <StatusDot
-                                color={presentation.topRight.color}
-                                size={TOP_RIGHT_DOT_SIZE}
-                            />
+                            <StatusDot color={presentation.topRight.color} size={TOP_RIGHT_DOT_SIZE} />
                         ) : (
-                            <Text style={styles.timestamp} numberOfLines={1}>
-                                {timestamp}
-                            </Text>
+                            <Text style={styles.timestamp} numberOfLines={1}>{timestamp}</Text>
                         )}
                     </View>
-                </View>
-
-                <Text style={styles.project} numberOfLines={1}>
-                    {projectName}
-                </Text>
-
-                <View style={styles.workspaceRow}>
-                    <View style={styles.workspaceLocation}>
-                        {workspaceName && (
-                            <>
-                                <Text style={styles.workspace} numberOfLines={1}>
-                                    {workspaceName}
-                                </Text>
-                                <Ionicons
-                                    name="git-branch-outline"
-                                    size={13}
-                                    color={theme.colors.textSecondary}
-                                />
-                            </>
-                        )}
-                    </View>
-                    <View style={styles.workspaceMeta}>
-                        {session.hasDraft && (
-                            <Ionicons
-                                name="create-outline"
-                                size={13}
-                                color={theme.colors.textSecondary}
-                            />
-                        )}
-                        <StatusDot
-                            color={agentListStateColor(listState, theme)}
-                            isPulsing={listState === 'running'}
-                        />
-                        <Text
-                            style={[styles.state, { color: agentListStateColor(listState, theme) }]}
-                            numberOfLines={1}
-                        >
-                            {listStateLabel}
-                        </Text>
-                    </View>
-                </View>
-            </View>
-
-            {showBorder && <View style={styles.divider} />}
-        </Pressable>
+                </>
+            )}
+            {...sessionPressHandlers}
+            {...menuProps}
+        />
     );
 
     if (!swipeEnabled) {
@@ -278,128 +217,36 @@ export const FlatSessionRow = React.memo(({ row, selected, showBorder, archived 
 
 const stylesheet = StyleSheet.create((theme) => ({
     row: {
-        flexDirection: 'row',
-        // Centred, not top-aligned: the avatar sits in the middle of the three
-        // text lines the way a chat list draws it, rather than hanging off the
-        // title.
-        alignItems: 'center',
-        paddingLeft: ROW_PADDING_LEFT,
-        paddingRight: 16,
-        paddingVertical: 10,
         backgroundColor: flatListBackgroundColor(theme),
-    },
-    rowSelected: {
-        backgroundColor: theme.colors.surfaceSelected,
     },
     avatar: {
         width: AVATAR_SIZE,
         height: AVATAR_SIZE,
-        marginRight: AVATAR_GAP,
     },
     // Faded rows keep the exact geometry of live ones and differ only by being
     // pulled back, so the list stays one column rather than two designs.
-    avatarFaded: {
+    faded: {
         opacity: 0.5,
-    },
-    contentFaded: {
-        opacity: 0.6,
-    },
-    content: {
-        flex: 1,
-        minWidth: 0,
-    },
-    titleRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    titleContainer: {
-        flex: 1,
-        minWidth: 0,
-    },
-    title: {
-        fontSize: 17,
-        lineHeight: 22,
-        ...Typography.default('semiBold'),
-    },
-    titleConnected: {
-        color: theme.colors.text,
-    },
-    titleDisconnected: {
-        color: theme.colors.textSecondary,
     },
     shortcutBadge: {
         flexShrink: 0,
-        marginLeft: 8,
     },
-    // The dot and time share a Telegram-like right column, so changing status
-    // never makes the title jump horizontally. It is only as wide as the
-    // longest timestamp; the dot occupies that same slot instead of reserving
-    // a second lane.
+    // The dot and time share a right column, so changing status never makes the
+    // title jump horizontally. It is only as wide as the longest timestamp; the
+    // dot occupies that same slot instead of reserving a second lane.
     topRightStatus: {
         width: TOP_RIGHT_SLOT_WIDTH,
-        height: 22,
         flexShrink: 0,
-        marginLeft: 8,
         alignItems: 'flex-end',
         justifyContent: 'center',
     },
     timestamp: {
-        fontSize: 13,
-        lineHeight: 22,
+        fontSize: theme.typography.caption.fontSize,
+        lineHeight: theme.typography.caption.lineHeight,
         color: theme.colors.textSecondary,
         fontVariant: ['tabular-nums'],
         textAlign: 'right',
         ...Typography.default('regular'),
-    },
-    project: {
-        fontSize: 15,
-        lineHeight: 20,
-        color: theme.colors.textSecondary,
-        ...Typography.default('regular'),
-    },
-    workspaceRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 1,
-        minHeight: 18,
-    },
-    workspaceLocation: {
-        flex: 1,
-        minWidth: 0,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    workspace: {
-        flexShrink: 1,
-        fontSize: 13,
-        lineHeight: 18,
-        color: theme.colors.textSecondary,
-        ...Typography.default('regular'),
-    },
-    workspaceMeta: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flexShrink: 0,
-        gap: 4,
-        marginLeft: 'auto',
-    },
-    state: {
-        fontSize: 13,
-        lineHeight: 18,
-        ...Typography.default('regular'),
-    },
-    // Sits on the row itself rather than the text column, so centring the
-    // avatar cannot drag it up off the row's bottom edge. Starts where the text
-    // does and runs to the screen edge, the way a chat list separates rows
-    // without cutting under the avatar.
-    divider: {
-        position: 'absolute',
-        left: ROW_PADDING_LEFT + AVATAR_SIZE + AVATAR_GAP,
-        right: 0,
-        bottom: 0,
-        height: StyleSheet.hairlineWidth,
-        backgroundColor: theme.colors.divider,
     },
     swipeAction: {
         width: 112,

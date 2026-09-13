@@ -36,7 +36,7 @@ export const ru: TranslationStructure = {
     tabs: {
         // Tab navigation labels
         inbox: 'Входящие',
-        sessions: 'Сессии',
+        agents: 'Агенты',
         settings: 'Аккаунт',
     },
 
@@ -275,7 +275,7 @@ export const ru: TranslationStructure = {
     },
 
     newSession: {
-        title: 'Начать новую сессию',
+        title: 'Новый agent',
         machineOffline: 'Машина недоступна',
         switchMachinesHint: '• Переключите машину, нажав на неё выше',
     },
@@ -382,14 +382,6 @@ export const ru: TranslationStructure = {
     },
 
     components: {
-        emptyMainScreen: {
-            // Used by EmptyMainScreen component
-            readyToCode: 'Готовы к программированию?',
-            installCli: 'Установите Happy CLI',
-            runIt: 'Запустите его',
-            scanQrCode: 'Отсканируйте QR-код',
-            openCamera: 'Открыть камеру',
-        },
         agentGoalBar: {
             currentGoal: 'Текущая цель',
             accessibilityLabel: ({ goal }: { goal: string }) => `Текущая цель: ${goal}`,
@@ -563,10 +555,10 @@ export const ru: TranslationStructure = {
     },
 
     sidebar: {
-        sessionsTitle: 'Happy',
+        agentsTitle: 'Агенты',
         showArchived: 'Показать архив',
         hideArchived: 'Скрыть архив',
-        newSession: 'Новая сессия',
+        newAgent: 'Новый agent',
         projects: "Проекты",
     },
 
@@ -933,24 +925,6 @@ export const ru: TranslationStructure = {
         unknownTime: 'неизвестное время',
     },
 
-    codex: {
-        // Codex permission dialog buttons
-        permissions: {
-            yesForSession: 'Да, и не спрашивать для этой сессии',
-            stopAndExplain: 'Остановить и объяснить, что делать',
-        }
-    },
-
-    claude: {
-        // Claude permission dialog buttons
-        permissions: {
-            yesAllowAllEdits: 'Да, разрешить все правки в этой сессии',
-            yesAllowEverything: 'Да, разрешить всё в этой сессии',
-            yesForTool: 'Да, больше не спрашивать для этого инструмента',
-            noTellClaude: 'Нет, дать обратную связь',
-        }
-    },
-
     settingsLanguage: {
         // Language settings screen
         title: 'Язык',
@@ -1125,6 +1099,37 @@ export const ru: TranslationStructure = {
         extraInstructions: 'Дополнительные указания',
         extraInstructionsPlaceholder: 'То, что агент должен помнить всегда',
         noAgentsTitle: 'Агентов пока нет',
+        searchAgents: "Поиск агентов",
+        clearSearch: "Очистить поиск",
+        noAgentsDescription: "Запустите его на подключённом компьютере.",
+        noComputersTitle: "Нет подключённых компьютеров",
+        noComputersDescription: "Установите приложение на компьютер, где agent будет работать.",
+        computerUnreachableTitle: "Ни один компьютер не доступен",
+        computerUnreachableDescription: "Включите компьютер, чтобы запустить agent.",
+        troubleshoot: "Диагностика",
+        emptyTranscriptTitle: "Здесь пока ничего нет",
+        emptyTranscriptDescription: "Опишите задачу, и agent возьмётся за работу.",
+    },
+
+    permissionRequest: {
+        allowOnce: "Разрешить один раз",
+        allowAlways: "Разрешать всегда",
+        deny: "Не разрешать",
+        runCommand: "Выполнить команду",
+        readFile: "Прочитать файл",
+        createFile: "Создать файл",
+        changeFile: "Изменить файл",
+        searchFiles: "Поискать по файлам",
+        fetchWeb: "Открыть страницу в интернете",
+        searchWeb: "Поискать в интернете",
+        startHelper: "Запустить вспомогательный agent",
+        startChanges: "Начать вносить изменения",
+        useTool: "Использовать инструмент",
+        scopeFolder: "Внутри рабочей папки",
+        scopeComputer: "На этом компьютере",
+        scopeWeb: "За пределами этого компьютера",
+        answeredAllowed: "Вы разрешили это.",
+        answeredDenied: "Вы это не разрешили.",
     },
 
 } as const;

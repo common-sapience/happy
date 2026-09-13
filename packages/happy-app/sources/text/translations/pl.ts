@@ -36,7 +36,7 @@ export const pl: TranslationStructure = {
     tabs: {
         // Tab navigation labels
         inbox: 'Skrzynka',
-        sessions: 'Sesje',
+        agents: 'Agenty',
         settings: 'Konto',
     },
 
@@ -307,7 +307,7 @@ export const pl: TranslationStructure = {
     },
 
     newSession: {
-        title: 'Rozpocznij nową sesję',
+        title: 'Nowy agent',
         machineOffline: 'Maszyna jest offline',
         switchMachinesHint: '• Przełącz maszynę, klikając na nią powyżej',
     },
@@ -444,14 +444,6 @@ export const pl: TranslationStructure = {
     },
 
     components: {
-        emptyMainScreen: {
-            // Used by EmptyMainScreen component
-            readyToCode: 'Gotowy do kodowania?',
-            installCli: 'Zainstaluj Happy CLI',
-            runIt: 'Uruchom je',
-            scanQrCode: 'Zeskanuj kod QR',
-            openCamera: 'Otwórz kamerę',
-        },
         agentGoalBar: {
             currentGoal: 'Bieżący cel',
             accessibilityLabel: ({ goal }: { goal: string }) => `Bieżący cel: ${goal}`,
@@ -563,10 +555,10 @@ export const pl: TranslationStructure = {
     },
 
     sidebar: {
-        sessionsTitle: 'Happy',
+        agentsTitle: 'Agenty',
         showArchived: 'Pokaż zarchiwizowane',
         hideArchived: 'Ukryj zarchiwizowane',
-        newSession: 'Nowa sesja',
+        newAgent: 'Nowy agent',
         projects: "Projekty",
     },
 
@@ -943,24 +935,6 @@ export const pl: TranslationStructure = {
         unknownTime: 'nieznany czas',
     },
 
-    codex: {
-        // Codex permission dialog buttons
-        permissions: {
-            yesForSession: 'Tak, i nie pytaj dla tej sesji',
-            stopAndExplain: 'Zatrzymaj i wyjaśnij, co zrobić',
-        }
-    },
-
-    claude: {
-        // Claude permission dialog buttons
-        permissions: {
-            yesAllowAllEdits: 'Tak, zezwól na wszystkie edycje podczas tej sesji',
-            yesAllowEverything: 'Tak, zezwól na wszystko podczas tej sesji',
-            yesForTool: 'Tak, nie pytaj ponownie dla tego narzędzia',
-            noTellClaude: 'Nie, przekaż opinię',
-        }
-    },
-
     textSelection: {
         // Text selection screen
         selectText: 'Wybierz zakres tekstu',
@@ -1124,6 +1098,37 @@ export const pl: TranslationStructure = {
         extraInstructions: 'Dodatkowe wskazówki',
         extraInstructionsPlaceholder: 'To, o czym agent ma zawsze pamiętać',
         noAgentsTitle: 'Brak agentów',
+        searchAgents: "Szukaj agentów",
+        clearSearch: "Wyczyść wyszukiwanie",
+        noAgentsDescription: "Uruchom go na podłączonym komputerze.",
+        noComputersTitle: "Brak podłączonych komputerów",
+        noComputersDescription: "Zainstaluj aplikację na komputerze, na którym agent ma pracować.",
+        computerUnreachableTitle: "Żaden komputer nie jest dostępny",
+        computerUnreachableDescription: "Włącz komputer, aby uruchomić agent.",
+        troubleshoot: "Diagnostyka",
+        emptyTranscriptTitle: "Jeszcze nic tu nie ma",
+        emptyTranscriptDescription: "Opisz zadanie, a agent zabierze się do pracy.",
+    },
+
+    permissionRequest: {
+        allowOnce: "Pozwól raz",
+        allowAlways: "Pozwalaj zawsze",
+        deny: "Nie pozwalaj",
+        runCommand: "Uruchomić polecenie",
+        readFile: "Przeczytać plik",
+        createFile: "Utworzyć plik",
+        changeFile: "Zmienić plik",
+        searchFiles: "Przeszukać pliki",
+        fetchWeb: "Otworzyć stronę w internecie",
+        searchWeb: "Poszukać w internecie",
+        startHelper: "Uruchomić pomocniczy agent",
+        startChanges: "Zacząć wprowadzać zmiany",
+        useTool: "Użyć narzędzia",
+        scopeFolder: "W folderze, w którym pracuje",
+        scopeComputer: "Na tym komputerze",
+        scopeWeb: "Poza tym komputerem",
+        answeredAllowed: "Pozwoliłeś na to.",
+        answeredDenied: "Nie pozwoliłeś na to.",
     },
 
 } as const;

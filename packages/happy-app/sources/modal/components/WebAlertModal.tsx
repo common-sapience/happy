@@ -1,11 +1,7 @@
 import React from 'react';
-import { Platform, View, Text, Pressable } from 'react-native';
 import { BaseModal } from './BaseModal';
 import { AlertModalConfig, ConfirmModalConfig } from '../types';
-import { Typography } from '@/constants/Typography';
-import { StyleSheet } from 'react-native';
-import { useUnistyles } from 'react-native-unistyles';
-import { MobileGlassSurface } from '@/components/MobileGlass';
+import { DestructiveButton, PrimaryButton, SecondaryButton, Sheet } from '@/components/kit';
 
 interface WebAlertModalProps {
     config: AlertModalConfig | ConfirmModalConfig;
@@ -13,10 +9,11 @@ interface WebAlertModalProps {
     onConfirm?: (value: boolean) => void;
 }
 
+type AlertButton = { text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void };
+
 export function WebAlertModal({ config, onClose, onConfirm }: WebAlertModalProps) {
-    const { theme } = useUnistyles();
     const isConfirm = config.type === 'confirm';
-    
+
     const handleButtonPress = (buttonIndex: number) => {
         if (isConfirm && onConfirm) {
             onConfirm(buttonIndex === 1);
@@ -26,129 +23,37 @@ export function WebAlertModal({ config, onClose, onConfirm }: WebAlertModalProps
         onClose();
     };
 
-    const buttons = isConfirm
+    const buttons: AlertButton[] = isConfirm
         ? [
-            { text: config.cancelText || 'Cancel', style: 'cancel' as const },
-            { text: config.confirmText || 'OK', style: config.destructive ? 'destructive' as const : 'default' as const }
+            { text: config.cancelText || 'Cancel', style: 'cancel' },
+            { text: config.confirmText || 'OK', style: config.destructive ? 'destructive' : 'default' },
         ]
-        : config.buttons || [{ text: 'OK', style: 'default' as const }];
+        : config.buttons ?? [{ text: 'OK', style: 'default' }];
 
-    const styles = StyleSheet.create({
-        container: {
-            backgroundColor: Platform.select({
-                web: theme.colors.surface,
-                ios: theme.colors.glass.overlay,
-                android: theme.colors.glass.backgroundStrong,
-                default: theme.colors.surface,
-            }),
-            borderRadius: 14,
-            width: 270,
-            overflow: 'hidden',
-            borderWidth: Platform.OS === 'web' ? 0 : StyleSheet.hairlineWidth,
-            borderColor: theme.colors.glass.border,
-            shadowColor: theme.colors.shadow.color,
-            shadowOffset: {
-                width: 0,
-                height: 2
-            },
-            shadowOpacity: 0.25,
-            shadowRadius: 4,
-            elevation: 5
-        },
-        content: {
-            paddingHorizontal: 16,
-            paddingTop: 20,
-            paddingBottom: 16,
-            alignItems: 'center'
-        },
-        title: {
-            fontSize: 17,
-            textAlign: 'center',
-            color: theme.colors.text,
-            marginBottom: 4
-        },
-        message: {
-            fontSize: 13,
-            textAlign: 'center',
-            color: theme.colors.text,
-            marginTop: 4,
-            lineHeight: 18
-        },
-        buttonContainer: {
-            borderTopWidth: 1,
-            borderTopColor: theme.colors.divider,
-            flexDirection: 'row'
-        },
-        button: {
-            flex: 1,
-            paddingVertical: 11,
-            alignItems: 'center',
-            justifyContent: 'center'
-        },
-        buttonPressed: {
-            backgroundColor: theme.colors.divider
-        },
-        buttonSeparator: {
-            width: 1,
-            backgroundColor: theme.colors.divider
-        },
-        buttonText: {
-            fontSize: 17,
-            color: theme.colors.textLink
-        },
-        cancelText: {
-            fontWeight: '400'
-        },
-        destructiveText: {
-            color: theme.colors.textDestructive
+    // Actions stack with the dismissal last, the way an iOS sheet ends on
+    // Cancel, and only the first action that is not a dismissal takes the fill.
+    let filledTaken = false;
+    const ordered = buttons
+        .map((button, index) => ({ button, index }))
+        .sort((a, b) => Number(a.button.style === 'cancel') - Number(b.button.style === 'cancel'));
+    const actions = ordered.map(({ button, index }) => {
+        const onPress = () => handleButtonPress(index);
+        if (button.style === 'cancel') {
+            return <SecondaryButton key={index} title={button.text} onPress={onPress} />;
         }
+        const confirming = !filledTaken;
+        filledTaken = true;
+        if (button.style === 'destructive') {
+            return <DestructiveButton key={index} title={button.text} onPress={onPress} confirming={confirming} />;
+        }
+        return confirming
+            ? <PrimaryButton key={index} title={button.text} onPress={onPress} />
+            : <SecondaryButton key={index} title={button.text} onPress={onPress} />;
     });
 
     return (
         <BaseModal visible={true} onClose={onClose} closeOnBackdrop={false}>
-            <MobileGlassSurface
-                enabled={Platform.OS !== 'web'}
-                nativeEffect
-                glassEffectStyle="regular"
-                intensity={88}
-                tintColor={theme.colors.glass.overlayTint}
-                style={styles.container}
-            >
-                <View style={styles.content}>
-                    <Text style={[styles.title, Typography.default('semiBold')]}>
-                        {config.title}
-                    </Text>
-                    {config.message && (
-                        <Text style={[styles.message, Typography.default()]}>
-                            {config.message}
-                        </Text>
-                    )}
-                </View>
-                
-                <View style={styles.buttonContainer}>
-                    {buttons.map((button, index) => (
-                        <React.Fragment key={index}>
-                            {index > 0 && <View style={styles.buttonSeparator} />}
-                            <Pressable
-                                style={({ pressed }) => [
-                                    styles.button,
-                                    pressed && styles.buttonPressed
-                                ]}
-                                onPress={() => handleButtonPress(index)}
-                            >
-                                <Text style={[
-                                    styles.buttonText,
-                                    button.style === 'cancel' && styles.cancelText,
-                                    button.style === 'destructive' && styles.destructiveText,
-                                    Typography.default(button.style === 'cancel' ? undefined : 'semiBold')
-                                ]}>
-                                    {button.text}
-                                </Text>
-                            </Pressable>
-                        </React.Fragment>
-                    ))}
-                </View>
-            </MobileGlassSurface>
+            <Sheet title={config.title} message={config.message} actions={actions} />
         </BaseModal>
     );
 }

@@ -393,7 +393,7 @@ export default function MachineDetailScreen() {
 
                 {/* Recent sessions */}
                 {previousSessions.length > 0 && (
-                    <ItemGroup title={t('tabs.sessions')}>
+                    <ItemGroup title={t('tabs.agents')}>
                         {previousSessions.map(session => (
                             <Item
                                 key={session.id}

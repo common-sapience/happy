@@ -15,7 +15,7 @@ import { getSuggestions } from '@/components/autocomplete/suggestions';
 import { ChatHeaderView } from '@/components/ChatHeaderView';
 import { ChatList } from '@/components/ChatList';
 import { Deferred } from '@/components/Deferred';
-import { EmptyMessages } from '@/components/EmptyMessages';
+import { EmptyState } from '@/components/kit';
 import { Avatar } from '@/components/Avatar';
 import { useDraft } from '@/hooks/useDraft';
 import { useSessionVisibility } from '@/hooks/useSessionVisibility';
@@ -786,7 +786,10 @@ export function SessionViewLoaded({
     const placeholder = messages.length === 0 ? (
         <>
             {isLoaded ? (
-                <EmptyMessages session={session} />
+                <EmptyState
+                    title={t('harness.emptyTranscriptTitle')}
+                    description={t('harness.emptyTranscriptDescription')}
+                />
             ) : (
                 <ActivityIndicator size="small" color={theme.colors.textSecondary} />
             )}

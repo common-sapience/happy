@@ -28,7 +28,7 @@ export const ja: TranslationStructure = {
     tabs: {
         // Tab navigation labels
         inbox: '受信トレイ',
-        sessions: 'セッション',
+        agents: 'Agent',
         settings: 'アカウント',
     },
 
@@ -291,7 +291,7 @@ export const ja: TranslationStructure = {
     },
 
     newSession: {
-        title: '新しいセッションを開始',
+        title: '新しい agent',
         machineOffline: 'マシンがオフラインです',
         switchMachinesHint: '• 上のマシンをクリックしてマシンを切り替えてください',
     },
@@ -429,14 +429,6 @@ export const ja: TranslationStructure = {
     },
 
     components: {
-        emptyMainScreen: {
-            // Used by EmptyMainScreen component
-            readyToCode: 'コーディングを始めますか？',
-            installCli: 'Happy CLIをインストール',
-            runIt: '実行する',
-            scanQrCode: 'QRコードをスキャン',
-            openCamera: 'カメラを開く',
-        },
         agentGoalBar: {
             currentGoal: '現在の目標',
             accessibilityLabel: ({ goal }: { goal: string }) => `現在の目標: ${goal}`,
@@ -548,10 +540,10 @@ export const ja: TranslationStructure = {
     },
 
     sidebar: {
-        sessionsTitle: 'Happy',
+        agentsTitle: 'Agent',
         showArchived: 'アーカイブを表示',
         hideArchived: 'アーカイブを非表示',
-        newSession: '新しいセッション',
+        newAgent: '新しい agent',
         projects: "プロジェクト",
     },
 
@@ -928,24 +920,6 @@ export const ja: TranslationStructure = {
         unknownTime: '不明な時間',
     },
 
-    codex: {
-        // Codex permission dialog buttons
-        permissions: {
-            yesForSession: "はい、このセッションでは確認しない",
-            stopAndExplain: '停止して、何をすべきか説明',
-        }
-    },
-
-    claude: {
-        // Claude permission dialog buttons
-        permissions: {
-            yesAllowAllEdits: 'はい、このセッション中のすべての編集を許可',
-            yesAllowEverything: 'はい、このセッション中のすべてを許可',
-            yesForTool: "はい、このツールについては確認しない",
-            noTellClaude: 'いいえ、フィードバックを提供',
-        }
-    },
-
     textSelection: {
         // Text selection screen
         selectText: 'テキスト範囲を選択',
@@ -1095,6 +1069,37 @@ export const ja: TranslationStructure = {
         extraInstructions: '追加の指示',
         extraInstructionsPlaceholder: 'このエージェントが常に覚えておくこと',
         noAgentsTitle: 'エージェントはまだありません',
+        searchAgents: "agent を検索",
+        clearSearch: "検索を消す",
+        noAgentsDescription: "接続済みのコンピュータで 1 つ始めましょう。",
+        noComputersTitle: "接続済みのコンピュータがありません",
+        noComputersDescription: "agent を動かしたいコンピュータにこのアプリを入れてください。",
+        computerUnreachableTitle: "使えるコンピュータがありません",
+        computerUnreachableDescription: "コンピュータをオンラインにすると agent を始められます。",
+        troubleshoot: "診断",
+        emptyTranscriptTitle: "まだ何もありません",
+        emptyTranscriptDescription: "やることを書けば、この agent が動き出します。",
+    },
+
+    permissionRequest: {
+        allowOnce: "1回だけ許可",
+        allowAlways: "常に許可",
+        deny: "許可しない",
+        runCommand: "コマンドを実行",
+        readFile: "ファイルを読む",
+        createFile: "ファイルを作成",
+        changeFile: "ファイルを変更",
+        searchFiles: "ファイルを検索",
+        fetchWeb: "ウェブページを開く",
+        searchWeb: "ウェブを検索",
+        startHelper: "補助 agent を起動",
+        startChanges: "変更を始める",
+        useTool: "ツールを使う",
+        scopeFolder: "作業フォルダの中だけ",
+        scopeComputer: "このコンピュータ上",
+        scopeWeb: "このコンピュータの外",
+        answeredAllowed: "許可しました。",
+        answeredDenied: "許可しませんでした。",
     },
 
 } as const;

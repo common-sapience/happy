@@ -1,16 +1,18 @@
 import * as React from 'react';
-import { Text, View, Pressable } from 'react-native';
+import { Text, TextInput, View, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useHeaderHeight } from '@/utils/responsive';
 import { useSettingMutable } from '@/sync/storage';
 import { MainView } from './MainView';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { t } from '@/text';
 import { Ionicons } from '@expo/vector-icons';
 import { Typography } from '@/constants/Typography';
 import { ShortcutHintBadge, useShortcutHints } from './ShortcutHints';
 import { useHasArchivedSessions } from '@/hooks/useVisibleSessionListViewData';
+import { NewAgentButton } from './kit';
+import { useAgentListSearch } from './agentListSearch';
 
 const stylesheet = StyleSheet.create((theme) => ({
     // The shell around this view is the glass layer (SidebarNavigator), so the
@@ -22,32 +24,25 @@ const stylesheet = StyleSheet.create((theme) => ({
     topControls: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginHorizontal: 16,
-        marginTop: 8,
-        marginBottom: 4,
-        gap: 8,
+        marginHorizontal: theme.margins.lg,
+        marginTop: theme.margins.sm,
+        marginBottom: theme.margins.xs,
+        gap: theme.margins.sm,
     },
-    newSessionButton: {
+    newAgentButton: {
         flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 10,
-        paddingHorizontal: 14,
-        borderRadius: 10,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: theme.colors.divider,
-        backgroundColor: theme.colors.surface,
-        gap: 8,
     },
-    newSessionButtonPressed: {
-        backgroundColor: theme.colors.surfacePressed,
+    shortcutBadgeOverlay: {
+        position: 'absolute',
+        top: -6,
+        right: -6,
     },
     archiveButton: {
         width: 40,
         height: 40,
         alignItems: 'center',
         justifyContent: 'center',
-        borderRadius: 10,
+        borderRadius: theme.borderRadius.md,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: theme.colors.divider,
         backgroundColor: theme.colors.surface,
@@ -55,37 +50,55 @@ const stylesheet = StyleSheet.create((theme) => ({
     archiveButtonActive: {
         backgroundColor: theme.colors.surfaceSelected,
     },
-    shortcutTargetActive: {
+    archiveButtonPressed: {
         backgroundColor: theme.colors.surfacePressed,
     },
-    newSessionText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: theme.colors.text,
-        ...Typography.default('semiBold'),
+    shortcutTargetActive: {
+        backgroundColor: theme.colors.surfacePressed,
     },
     settingsRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 14,
+        paddingHorizontal: theme.margins.lg,
+        paddingVertical: theme.margins.md,
         borderTopWidth: StyleSheet.hairlineWidth,
         borderTopColor: theme.colors.divider,
-        gap: 10,
+        gap: theme.margins.sm,
     },
     settingsText: {
-        fontSize: 14,
-        fontWeight: '500',
+        fontSize: theme.typography.body.fontSize,
+        lineHeight: theme.typography.body.lineHeight,
         color: theme.colors.text,
         ...Typography.default(),
     },
     shortcutBadgeInline: {
         marginLeft: 'auto',
     },
+    search: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.margins.sm,
+        marginHorizontal: theme.margins.lg,
+        marginBottom: theme.margins.sm,
+        paddingHorizontal: theme.margins.md,
+        height: 36,
+        borderRadius: theme.borderRadius.lg,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: theme.colors.divider,
+        backgroundColor: theme.colors.surface,
+    },
+    searchInput: {
+        flex: 1,
+        minWidth: 0,
+        color: theme.colors.text,
+        fontSize: theme.typography.body.fontSize,
+        ...Typography.default(),
+    },
 }));
 
 export const SidebarView = React.memo(() => {
     const styles = stylesheet;
+    const { theme } = useUnistyles();
     const safeArea = useSafeAreaInsets();
     const router = useRouter();
     const headerHeight = useHeaderHeight();
@@ -94,28 +107,23 @@ export const SidebarView = React.memo(() => {
     // have no rename migration — but it hides archived sessions only.
     const [hideArchivedSessions, setHideArchivedSessions] = useSettingMutable('hideInactiveSessions');
     const { visible: shortcutHintsVisible } = useShortcutHints();
+    const searchQuery = useAgentListSearch((state) => state.query);
+    const setSearchQuery = useAgentListSearch((state) => state.setQuery);
 
-    const handleNewSession = React.useCallback(() => {
+    const handleNewAgent = React.useCallback(() => {
         router.navigate('/new');
     }, [router]);
     const handleArchiveVisibility = React.useCallback(() => {
         setHideArchivedSessions(!hideArchivedSessions);
     }, [hideArchivedSessions, setHideArchivedSessions]);
+
     return (
         <View style={[styles.container, { paddingTop: safeArea.top + headerHeight }]}>
             <View style={styles.topControls}>
-                <Pressable
-                    onPress={handleNewSession}
-                    style={({ pressed }) => [
-                        styles.newSessionButton,
-                        shortcutHintsVisible && styles.shortcutTargetActive,
-                        pressed && styles.newSessionButtonPressed,
-                    ]}
-                >
-                    <Ionicons name="create-outline" size={16} color={stylesheet.newSessionText.color} />
-                    <Text style={styles.newSessionText}>{t('sidebar.newSession')}</Text>
-                    <ShortcutHintBadge shortcutKey="N" style={styles.shortcutBadgeInline} />
-                </Pressable>
+                <View style={styles.newAgentButton}>
+                    <NewAgentButton title={t('sidebar.newAgent')} onPress={handleNewAgent} />
+                    <ShortcutHintBadge shortcutKey="N" style={styles.shortcutBadgeOverlay} />
+                </View>
                 {hasArchivedSessions && (
                     <Pressable
                         onPress={handleArchiveVisibility}
@@ -127,22 +135,48 @@ export const SidebarView = React.memo(() => {
                         style={({ pressed }) => [
                             styles.archiveButton,
                             !hideArchivedSessions && styles.archiveButtonActive,
-                            pressed && styles.newSessionButtonPressed,
+                            pressed && styles.archiveButtonPressed,
                         ]}
                     >
                         <Ionicons
                             name={hideArchivedSessions ? 'archive-outline' : 'archive'}
-                            size={18}
-                            color={stylesheet.newSessionText.color}
+                            size={theme.iconSize.large}
+                            color={theme.colors.text}
                         />
                     </Pressable>
                 )}
             </View>
 
-            {/* Sessions list */}
+            <View style={styles.search}>
+                <Ionicons name="search" size={theme.iconSize.medium} color={theme.colors.textSecondary} />
+                <TextInput
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholder={t('harness.searchAgents')}
+                    placeholderTextColor={theme.colors.textSecondary}
+                    accessibilityLabel={t('harness.searchAgents')}
+                    style={styles.searchInput}
+                    autoCorrect={false}
+                    returnKeyType="search"
+                />
+                {searchQuery.length > 0 && (
+                    <Pressable
+                        onPress={() => setSearchQuery('')}
+                        hitSlop={10}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('harness.clearSearch')}
+                    >
+                        <Ionicons
+                            name="close-circle"
+                            size={theme.iconSize.large}
+                            color={theme.colors.textSecondary}
+                        />
+                    </Pressable>
+                )}
+            </View>
+
             <MainView variant="sidebar" />
 
-            {/* Settings at bottom */}
             <Pressable
                 onPress={() => router.push('/settings')}
                 style={[
@@ -150,7 +184,7 @@ export const SidebarView = React.memo(() => {
                     shortcutHintsVisible && styles.shortcutTargetActive,
                 ]}
             >
-                <Ionicons name="settings-outline" size={18} color={stylesheet.settingsText.color} />
+                <Ionicons name="settings-outline" size={theme.iconSize.large} color={theme.colors.text} />
                 <Text style={styles.settingsText}>{t('settings.title')}</Text>
                 <ShortcutHintBadge shortcutKey="," style={styles.shortcutBadgeInline} />
             </Pressable>

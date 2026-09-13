@@ -350,7 +350,7 @@ export const TabBar = React.memo(({ activeTab, onTabPress }: TabBarProps) => {
     const insets = useSafeAreaInsets();
 
     const nativeTabs: TabDefinition[] = React.useMemo(() => [
-        { key: 'sessions', icon: require('@/assets/images/brutalist/Brutalism-15.png'), iconName: 'code-slash-outline', activeIconName: 'code-slash', label: t('tabs.sessions') },
+        { key: 'sessions', icon: require('@/assets/images/brutalist/Brutalism-15.png'), iconName: 'code-slash-outline', activeIconName: 'code-slash', label: t('tabs.agents') },
         { key: 'settings', icon: require('@/assets/images/brutalist/Brutalism-9.png'), iconName: 'settings-outline', activeIconName: 'settings', label: t('tabs.settings') },
     ], []);
     const tabs = nativeTabs;

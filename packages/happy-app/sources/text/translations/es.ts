@@ -25,7 +25,7 @@ export const es: TranslationStructure = {
     tabs: {
         // Tab navigation labels
         inbox: 'Bandeja',
-        sessions: 'Sesiones',
+        agents: 'Agents',
         settings: 'Cuenta',
     },
 
@@ -290,7 +290,7 @@ export const es: TranslationStructure = {
     },
 
     newSession: {
-        title: 'Iniciar nueva sesión',
+        title: 'Nuevo agent',
         machineOffline: 'La máquina está desconectada',
         switchMachinesHint: '• Cambia de máquina haciendo clic en la máquina de arriba',
     },
@@ -428,14 +428,6 @@ export const es: TranslationStructure = {
     },
 
     components: {
-        emptyMainScreen: {
-            // Used by EmptyMainScreen component
-            readyToCode: '¿Listo para programar?',
-            installCli: 'Instale el Happy CLI',
-            runIt: 'Ejecútelo',
-            scanQrCode: 'Escanee el código QR',
-            openCamera: 'Abrir cámara',
-        },
         agentGoalBar: {
             currentGoal: 'Objetivo actual',
             accessibilityLabel: ({ goal }: { goal: string }) => `Objetivo actual: ${goal}`,
@@ -547,10 +539,10 @@ export const es: TranslationStructure = {
     },
 
     sidebar: {
-        sessionsTitle: 'Happy',
+        agentsTitle: 'Agents',
         showArchived: 'Mostrar archivadas',
         hideArchived: 'Ocultar archivadas',
-        newSession: 'Nueva sesión',
+        newAgent: 'Nuevo agent',
         projects: "Proyectos",
     },
 
@@ -927,24 +919,6 @@ export const es: TranslationStructure = {
         unknownTime: 'tiempo desconocido',
     },
 
-    codex: {
-        // Codex permission dialog buttons
-        permissions: {
-            yesForSession: 'Sí, y no preguntar por esta sesión',
-            stopAndExplain: 'Detener, y explicar qué hacer',
-        }
-    },
-
-    claude: {
-        // Claude permission dialog buttons
-        permissions: {
-            yesAllowAllEdits: 'Sí, permitir todas las ediciones durante esta sesión',
-            yesAllowEverything: 'Sí, permitir todo durante esta sesión',
-            yesForTool: 'Sí, no volver a preguntar para esta herramienta',
-            noTellClaude: 'No, proporcionar comentarios',
-        }
-    },
-
     textSelection: {
         // Text selection screen
         selectText: 'Seleccionar rango de texto',
@@ -1095,6 +1069,37 @@ export const es: TranslationStructure = {
         extraInstructions: 'Instrucciones adicionales',
         extraInstructionsPlaceholder: 'Lo que este agente debe recordar siempre',
         noAgentsTitle: 'Aún no hay agentes',
+        searchAgents: "Buscar agents",
+        clearSearch: "Borrar la búsqueda",
+        noAgentsDescription: "Inicia uno en un ordenador que tengas conectado.",
+        noComputersTitle: "No hay ordenadores conectados",
+        noComputersDescription: "Instala la app en el ordenador donde quieres que trabajen tus agents.",
+        computerUnreachableTitle: "Ningún ordenador está accesible",
+        computerUnreachableDescription: "Enciende un ordenador para iniciar un agent.",
+        troubleshoot: "Diagnosticar",
+        emptyTranscriptTitle: "Aún no hay nada aquí",
+        emptyTranscriptDescription: "Describe la tarea y este agent se pone a trabajar.",
+    },
+
+    permissionRequest: {
+        allowOnce: "Permitir una vez",
+        allowAlways: "Permitir siempre",
+        deny: "No permitir",
+        runCommand: "Ejecutar un comando",
+        readFile: "Leer un archivo",
+        createFile: "Crear un archivo",
+        changeFile: "Cambiar un archivo",
+        searchFiles: "Buscar entre los archivos",
+        fetchWeb: "Abrir una página en la web",
+        searchWeb: "Buscar en la web",
+        startHelper: "Iniciar un agent auxiliar",
+        startChanges: "Empezar a hacer cambios",
+        useTool: "Usar una herramienta",
+        scopeFolder: "Dentro de la carpeta en la que trabaja",
+        scopeComputer: "En este ordenador",
+        scopeWeb: "Fuera de este ordenador",
+        answeredAllowed: "Lo permitiste.",
+        answeredDenied: "No lo permitiste.",
     },
 
 } as const;

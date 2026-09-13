@@ -222,7 +222,7 @@ describe('session details', () => {
         expect(texts(renderer)).toEqual(['Long session title']);
     });
 
-    it.each(['ios', 'android', 'web', 'ipad'])('centers the detail title between symmetric insets on %s', (platform) => {
+    it.each(['ios', 'android', 'ipad'])('centers the detail title between symmetric insets on %s', (platform) => {
         state.platform = platform === 'ipad' ? 'ios' : platform;
         state.tablet = platform === 'ipad';
         const renderer = render(createPlainHeader({
@@ -239,6 +239,19 @@ describe('session details', () => {
         const title = renderer.root.findByType('Text');
         expect(flattenStyle(title.props.style).textAlign).toBe('center');
         expect(title.props.numberOfLines).toBe(1);
+    });
+
+    it('leads with the title on desktop, where the bar has one shape', () => {
+        state.platform = 'web';
+        state.tablet = false;
+        const renderer = render(createPlainHeader({
+            options: { headerTitle: 'Long session title', headerTitleAlign: 'center' },
+            route: { name: 'session/[id]/info' }, back: { title: 'Chat' },
+            navigation: { goBack: vi.fn() },
+        } as any)!);
+        expect(renderer.root.findAllByType('View').map((node: any) => flattenStyle(node.props.style))
+            .some((style: any) => style.position === 'absolute' && style.alignItems === 'center')).toBe(false);
+        expect(texts(renderer)).toEqual(['Long session title']);
     });
 
     it('keeps Changes available for a legacy session without cached statistics', () => {

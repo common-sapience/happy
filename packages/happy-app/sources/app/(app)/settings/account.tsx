@@ -4,7 +4,7 @@ import { useAuth } from '@/auth/AuthContext';
 import * as Clipboard from 'expo-clipboard';
 import { Typography } from '@/constants/Typography';
 import { formatSecretKeyForBackup } from '@/auth/secretKeyBackup';
-import { Item } from '@/components/Item';
+import { SettingsRow } from '@/components/kit';
 import { ItemGroup } from '@/components/ItemGroup';
 import { ItemList } from '@/components/ItemList';
 import { Modal } from '@/modal';
@@ -59,25 +59,25 @@ export default React.memo(() => {
     return (
         <ItemList>
             <ItemGroup title="Account">
-                <Item
+                <SettingsRow
                     title="Signed in"
                     detail={auth.isAuthenticated ? 'Yes' : 'No'}
                     showChevron={false}
                 />
                 {displayName && (
-                    <Item
+                    <SettingsRow
                         title="Name"
                         detail={displayName}
                         showChevron={false}
                     />
                 )}
-                <Item
+                <SettingsRow
                     title="Account id"
                     detail={sync.serverID || 'Not available'}
                     copy={!!sync.serverID}
                     showChevron={false}
                 />
-                <Item
+                <SettingsRow
                     title="Platform API key"
                     subtitle="Entered on each computer and kept in that computer's credential store. This app never holds it."
                     subtitleLines={0}
@@ -89,7 +89,7 @@ export default React.memo(() => {
                 title="Recovery key"
                 footer="This key is the account. Keep a copy somewhere safe: anyone who has it can read your agents, and without it a lost account cannot be recovered."
             >
-                <Item
+                <SettingsRow
                     title={showSecret ? 'Hide the key' : 'Show the key'}
                     onPress={() => setShowSecret(!showSecret)}
                     showChevron={false}
@@ -132,10 +132,10 @@ export default React.memo(() => {
             )}
 
             <ItemGroup title="Signing out">
-                <Item
+                <SettingsRow
                     title="Sign out"
                     subtitle="Removes this account from this app on this device"
-                    destructive
+                    tone="destructive"
                     onPress={handleLogout}
                     showChevron={false}
                 />

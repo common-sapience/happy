@@ -8,9 +8,9 @@ export type FlatSessionRowTopRight =
     | { type: 'timestamp' };
 
 /**
- * Keeps the flat row's two progress signals mutually exclusive: active work is
- * carried by the title shimmer, while only something the user should notice
- * replaces the ordinary timestamp with a Telegram-sized dot.
+ * What the row's trailing slot shows. The agent's state is already a word and a
+ * dot next to its name, so this slot stays the time of last activity unless
+ * something wants the user's attention.
  */
 export function resolveFlatSessionRowPresentation({
     state,
@@ -20,31 +20,22 @@ export function resolveFlatSessionRowPresentation({
     state: SessionState;
     hasUnread: boolean;
     faded: boolean;
-}): {
-    shimmerTitle: boolean;
-    topRight: FlatSessionRowTopRight;
-} {
+}): { topRight: FlatSessionRowTopRight } {
     if (faded) {
-        return { shimmerTitle: false, topRight: { type: 'timestamp' } };
+        return { topRight: { type: 'timestamp' } };
     }
 
     if (state === 'permission_required' || state === 'input_required') {
-        return {
-            shimmerTitle: false,
-            topRight: { type: 'dot', color: SESSION_BLOCKED_DOT_COLOR },
-        };
+        return { topRight: { type: 'dot', color: SESSION_BLOCKED_DOT_COLOR } };
     }
 
     if (state === 'thinking') {
-        return { shimmerTitle: true, topRight: { type: 'timestamp' } };
+        return { topRight: { type: 'timestamp' } };
     }
 
     if (hasUnread) {
-        return {
-            shimmerTitle: false,
-            topRight: { type: 'dot', color: SESSION_READY_DOT_COLOR },
-        };
+        return { topRight: { type: 'dot', color: SESSION_READY_DOT_COLOR } };
     }
 
-    return { shimmerTitle: false, topRight: { type: 'timestamp' } };
+    return { topRight: { type: 'timestamp' } };
 }

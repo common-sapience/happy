@@ -2,7 +2,7 @@ import * as React from 'react';
 import { View, ActivityIndicator, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SessionsList } from './SessionsList';
-import { EmptyMainScreen } from './EmptyMainScreen';
+import { EmptyAgentList } from './EmptyAgentList';
 import { useHasArchivedSessions, useVisibleSessionListViewData } from '@/hooks/useVisibleSessionListViewData';
 import { useAllMachines, useSettingMutable } from '@/sync/storage';
 import { collectMachineChoices } from '@/sync/machineChoices';
@@ -77,8 +77,8 @@ export const SessionsListWrapper = React.memo(({
             <View style={styles.container}>
                 <View style={styles.emptyStateContainer}>
                     <View style={[styles.emptyStateContentContainer, { paddingTop: topContentInset }]}>
-                        <EmptyMainScreen
-                            hasArchivedSessions={hasArchivedSessions}
+                        <EmptyAgentList
+                            hasArchivedAgents={hasArchivedSessions}
                             onShowArchived={() => setHideArchivedSessions(false)}
                         />
                     </View>

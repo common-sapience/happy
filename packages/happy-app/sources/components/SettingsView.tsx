@@ -3,8 +3,8 @@ import * as React from 'react';
 import { Text } from '@/components/StyledText';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/auth/AuthContext';
-import { Item } from '@/components/Item';
 import { ItemGroup } from '@/components/ItemGroup';
+import { SettingsRow } from '@/components/kit';
 import { ItemList } from '@/components/ItemList';
 import { useAllMachines, useAllSessions } from '@/sync/storage';
 import { sync } from '@/sync/sync';
@@ -89,23 +89,23 @@ export const SettingsView = React.memo(function SettingsView({
             {/* Account information (DESK-12). The platform API key is not held here: it is entered on
                 each computer and kept in that computer's credential store (DESK-08, P-02). */}
             <ItemGroup title="Account">
-                <Item
+                <SettingsRow
                     title="Signed in"
                     detail={auth.isAuthenticated ? 'Yes' : 'No'}
                     showChevron={false}
                 />
-                <Item
+                <SettingsRow
                     title="Account id"
                     detail={sync.serverID || 'Not available'}
                     copy={!!sync.serverID}
                     showChevron={false}
                 />
-                <Item
+                <SettingsRow
                     title="Platform API key"
                     subtitle="Entered on each computer and kept in that computer's credential store. This app never holds it."
                     showChevron={false}
                 />
-                <Item
+                <SettingsRow
                     title="Account details"
                     subtitle="Backup key and sign out"
                     onPress={() => router.push('/settings/account')}
@@ -115,7 +115,7 @@ export const SettingsView = React.memo(function SettingsView({
             <UsageSection />
 
             <ItemGroup title="Agents">
-                <Item
+                <SettingsRow
                     title="Archived agents"
                     subtitle="Read their history, or bring one back"
                     detail={archivedAgents.length > 0 ? String(archivedAgents.length) : undefined}
@@ -127,7 +127,7 @@ export const SettingsView = React.memo(function SettingsView({
                 title="Connectors"
                 footer="A connector is set up on the computer that will use it, so its sign-in never passes through this app."
             >
-                <Item
+                <SettingsRow
                     title="Connected services"
                     subtitle="Mail and other services your agents may use"
                     onPress={() => router.push('/settings/connectors')}
@@ -139,20 +139,20 @@ export const SettingsView = React.memo(function SettingsView({
                 footer="Open a computer to rename it, ask for confirmation before risky steps, or remove it."
             >
                 {computers.length === 0 ? (
-                    <Item
+                    <SettingsRow
                         title="No computers yet"
                         subtitle="Add the computer you want your agents to work on"
                         showChevron={false}
                     />
                 ) : computers.map((computer) => (
-                    <Item
+                    <SettingsRow
                         key={computer.machineId}
                         title={computer.name}
                         subtitle={computer.description}
                         onPress={() => router.push(`/machine/${computer.machineId}`)}
                     />
                 ))}
-                <Item
+                <SettingsRow
                     title="Add a computer"
                     subtitle="Approve a computer that asked to join this account"
                     onPress={() => router.push('/settings/add-computer')}
@@ -161,7 +161,7 @@ export const SettingsView = React.memo(function SettingsView({
 
             {/* Appearance carries the language choice, so the account page has one entry for both. */}
             <ItemGroup title="Preferences">
-                <Item
+                <SettingsRow
                     title={t('settings.appearance')}
                     subtitle={t('settings.appearanceSubtitle')}
                     onPress={() => router.push('/settings/appearance')}

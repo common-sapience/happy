@@ -95,7 +95,7 @@ const stylesheet = StyleSheet.create((theme) => ({
 
 const shortcutLabels: Record<GlobalShortcutId, () => string> = {
     commandPalette: () => t('settingsFeatures.commandPalette'),
-    newSession: () => t('sidebar.newSession'),
+    newSession: () => t('sidebar.newAgent'),
     settings: () => t('settings.title'),
 };
 

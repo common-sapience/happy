@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Item } from '@/components/Item';
+import { SettingsRow } from '@/components/kit';
 import { ItemGroup } from '@/components/ItemGroup';
 import { ItemList } from '@/components/ItemList';
 import { useSettingMutable, useLocalSettingMutable } from '@/sync/storage';
@@ -14,12 +15,10 @@ import { t, getLanguageNativeName, SUPPORTED_LANGUAGES } from '@/text';
 import {
     normalizeUserMessageBubbleColor,
     resolveUserMessageBubbleColor,
-    resolveUserMessageBubbleGlassColor,
     USER_MESSAGE_BUBBLE_COLORS,
     type UserMessageBubbleColor,
 } from '@/utils/userMessageBubbleColor';
 import * as React from 'react';
-import { MobileGlassSurface } from '@/components/MobileGlass';
 import { AnimatedCollapsible } from '@/components/AnimatedOverlay';
 import { AvatarBrutalist } from '@/components/AvatarBrutalist';
 import { AvatarSkia } from '@/components/AvatarSkia';
@@ -124,26 +123,29 @@ function AvatarStyleOption(props: {
     );
 }
 
+/**
+ * The same opaque fill and edge `MessageBubble` paints in the transcript, from
+ * the same resolver — a preview that previewed something else would be worse
+ * than none.
+ */
 function BubbleColorPreview({ color }: { color: UserMessageBubbleColor }) {
     const { theme } = useUnistyles();
     const styles = stylesheet;
     const palette = resolveUserMessageBubbleColor(color, theme.dark);
-    const glassPalette = resolveUserMessageBubbleGlassColor(color, theme.dark);
 
     return (
-        <MobileGlassSurface
-            tintColor={glassPalette.tint}
+        <View
             style={[
                 styles.bubblePreview,
                 {
-                    backgroundColor: glassPalette.background,
-                    borderColor: glassPalette.border,
+                    backgroundColor: palette.background,
+                    borderColor: palette.border,
                 },
             ]}
         >
             <View style={[styles.bubblePreviewLine, { backgroundColor: palette.indicator, width: 18 }]} />
             <View style={[styles.bubblePreviewLine, { backgroundColor: palette.indicator, width: 26 }]} />
-        </MobileGlassSurface>
+        </View>
     );
 }
 
@@ -245,16 +247,17 @@ export default function AppearanceSettingsScreen() {
 
             {/* Theme Settings */}
             <ItemGroup title={t('settingsAppearance.theme')} footer={t('settingsAppearance.themeDescription')}>
-                <Item
+                <SettingsRow
                     title={t('settings.appearance')}
                     subtitle={themePreference === 'adaptive' ? t('settingsAppearance.themeDescriptions.adaptive') : themePreference === 'light' ? t('settingsAppearance.themeDescriptions.light') : t('settingsAppearance.themeDescriptions.dark')}
-                    icon={<Ionicons name="contrast-outline" size={29} color={theme.colors.status.connecting} />}
                     detail={themePreference === 'adaptive' ? t('settingsAppearance.themeOptions.adaptive') : themePreference === 'light' ? t('settingsAppearance.themeOptions.light') : t('settingsAppearance.themeOptions.dark')}
+                    icon="contrast-outline"
+                    tone="accent"
                     onPress={() => {
                         const currentIndex = themePreference === 'adaptive' ? 0 : themePreference === 'light' ? 1 : 2;
                         const nextIndex = (currentIndex + 1) % 3;
                         const nextTheme = nextIndex === 0 ? 'adaptive' : nextIndex === 1 ? 'light' : 'dark';
-                        
+
                         // Update the setting
                         setThemePreference(nextTheme);
 
@@ -264,7 +267,7 @@ export default function AppearanceSettingsScreen() {
                         if (Platform.OS !== 'web') {
                             Appearance.setColorScheme(nextTheme === 'adaptive' ? 'unspecified' : nextTheme);
                         }
-                        
+
                         // Apply the theme change immediately
                         if (nextTheme === 'adaptive') {
                             // Enable adaptive themes and set to system theme
@@ -287,25 +290,23 @@ export default function AppearanceSettingsScreen() {
 
             {/* Language Settings */}
             <ItemGroup title={t('settingsLanguage.title')} footer={t('settingsLanguage.description')}>
-                <Item
+                <SettingsRow
                     title={t('settingsLanguage.currentLanguage')}
-                    icon={<Ionicons name="language-outline" size={29} color="#007AFF" />}
                     detail={getLanguageDisplayText()}
+                    icon="language-outline"
+                    tone="accent"
                     onPress={() => router.push('/settings/language')}
                 />
             </ItemGroup>
 
             <ItemGroup title={t('settingsAppearance.chat')} footer={t('settingsAppearance.chatDescription')}>
-                <Item
+                <SettingsRow
                     title={t('settingsAppearance.usageLimitShowRemaining')}
                     subtitle={t('settingsAppearance.usageLimitShowRemainingDescription')}
-                    icon={<Ionicons name="speedometer-outline" size={29} color={theme.colors.status.connecting} />}
-                    rightElement={
-                        <Switch
-                            value={usageLimitShowRemaining}
-                            onValueChange={setUsageLimitShowRemaining}
-                        />
-                    }
+                    icon="speedometer-outline"
+                    tone="accent"
+                    value={usageLimitShowRemaining}
+                    onValueChange={setUsageLimitShowRemaining}
                 />
                 <Item
                     title={t('settingsAppearance.userMessageBubbleColor')}
@@ -343,20 +344,21 @@ export default function AppearanceSettingsScreen() {
 
             {/* Avatar Settings */}
             <ItemGroup title={t('settingsAppearance.avatars')} footer={t('settingsAppearance.avatarsDescription')}>
-                <Item
+                <SettingsRow
                     title={t('settingsAppearance.avatarStyle')}
-                    icon={<Ionicons name="person-circle-outline" size={29} color={theme.colors.status.connecting} />}
-                    rightElement={
+                    icon="person-circle-outline"
+                    tone="accent"
+                    onPress={() => {
+                        setBubbleColorDropdownOpen(false);
+                        setAvatarStyleDropdownOpen((open) => !open);
+                    }}
+                    trailing={
                         <AvatarStyleDropdownValue
                             style={avatarStyle}
                             monochrome={avatarMonochrome}
                             expanded={avatarStyleDropdownOpen}
                         />
                     }
-                    onPress={() => {
-                        setBubbleColorDropdownOpen(false);
-                        setAvatarStyleDropdownOpen((open) => !open);
-                    }}
                     showDivider={avatarStyleDropdownOpen}
                 />
                 {avatarStyleDropdownOpen && (
@@ -375,80 +377,68 @@ export default function AppearanceSettingsScreen() {
                         ))}
                     </AnimatedCollapsible>
                 )}
-                <Item
+                <SettingsRow
                     title={t('settingsAppearance.avatarMonochrome')}
                     subtitle={t('settingsAppearance.avatarMonochromeDescription')}
-                    icon={<Ionicons name="contrast-outline" size={29} color={theme.colors.status.connecting} />}
-                    rightElement={
-                        <Switch
-                            value={avatarMonochrome}
-                            onValueChange={setAvatarMonochrome}
-                        />
-                    }
+                    icon="contrast-outline"
+                    tone="accent"
+                    value={avatarMonochrome}
+                    onValueChange={setAvatarMonochrome}
                 />
             </ItemGroup>
 
             {/* Text Settings */}
             {/* <ItemGroup title="Text" footer="Adjust text size and font preferences">
-                <Item
+                <SettingsRow
                     title="Text Size"
                     subtitle="Make text larger or smaller"
-                    icon={<Ionicons name="text-outline" size={29} color="#FF9500" />}
                     detail="Default"
+                    icon="text-outline"
+                    tone="warning"
                     onPress={() => { }}
-                    disabled
                 />
-                <Item
+                <SettingsRow
                     title="Font"
                     subtitle="Choose your preferred font"
-                    icon={<Ionicons name="text-outline" size={29} color="#FF9500" />}
                     detail="System"
+                    icon="text-outline"
+                    tone="warning"
                     onPress={() => { }}
-                    disabled
                 />
             </ItemGroup> */}
 
             {/* Display Settings */}
             <ItemGroup title={t('settingsAppearance.input')} footer={t('settingsAppearance.inputDescription')}>
-                <Item
+                <SettingsRow
                     title={t('settingsAppearance.alwaysShowContextSize')}
                     subtitle={t('settingsAppearance.alwaysShowContextSizeDescription')}
-                    icon={<Ionicons name="analytics-outline" size={29} color="#5856D6" />}
-                    rightElement={
-                        <Switch
-                            value={alwaysShowContextSize}
-                            onValueChange={setAlwaysShowContextSize}
-                        />
-                    }
+                    icon="analytics-outline"
+                    tone="accent"
+                    value={alwaysShowContextSize}
+                    onValueChange={setAlwaysShowContextSize}
                 />
                 {Platform.OS === 'web' && (
                     <>
-                        <Item
+                        <SettingsRow
                             title={t('settingsFeatures.enterToSend')}
                             subtitle={agentInputEnterToSend
-                                ? t('settingsFeatures.enterToSendEnabled')
-                                : t('settingsFeatures.enterToSendDisabled')}
-                            icon={<Ionicons name="return-down-forward-outline" size={29} color="#007AFF" />}
-                            rightElement={
-                                <Switch
-                                    value={agentInputEnterToSend}
-                                    onValueChange={setAgentInputEnterToSend}
-                                />
-                            }
+                            ? t('settingsFeatures.enterToSendEnabled')
+                            : t('settingsFeatures.enterToSendDisabled')}
+                            icon="return-down-forward-outline"
+                            tone="accent"
+                            value={agentInputEnterToSend}
+                            onValueChange={setAgentInputEnterToSend}
                             showChevron={false}
                         />
-                        <Item
+                        <SettingsRow
                             title={t('settingsFeatures.commandPalette')}
                             subtitle={commandPaletteEnabled
-                                ? t('settingsFeatures.commandPaletteEnabled')
-                                : t('settingsFeatures.commandPaletteDisabled')}
-                            icon={<Ionicons name="keypad-outline" size={29} color="#007AFF" />}
-                            rightElement={
-                                <Switch
-                                    value={commandPaletteEnabled}
-                                    onValueChange={setCommandPaletteEnabled}
-                                />
-                            }
+                            ? t('settingsFeatures.commandPaletteEnabled')
+                            : t('settingsFeatures.commandPaletteDisabled')}
+                            icon="keypad-outline"
+                            tone="accent"
+                            value={commandPaletteEnabled}
+                            onValueChange={setCommandPaletteEnabled}
                             showChevron={false}
                         />
                     </>
@@ -456,80 +446,62 @@ export default function AppearanceSettingsScreen() {
             </ItemGroup>
 
             <ItemGroup title={t('settingsAppearance.display')} footer={t('settingsAppearance.displayDescription')}>
-                <Item
+                <SettingsRow
                     title={t('settingsAppearance.compactToolCalls')}
                     subtitle={t('settingsAppearance.compactToolCallsDescription')}
-                    icon={<Ionicons name="contract-outline" size={29} color="#5856D6" />}
-                    rightElement={
-                        <Switch
-                            value={compactToolCalls}
-                            onValueChange={setCompactToolCalls}
-                        />
-                    }
+                    icon="contract-outline"
+                    tone="accent"
+                    value={compactToolCalls}
+                    onValueChange={setCompactToolCalls}
                 />
-                <Item
+                <SettingsRow
                     title="File Diffs Sidebar"
                     subtitle="Show git changes next to the chat on desktop"
-                    icon={<Ionicons name="git-branch-outline" size={29} color="#5AC8FA" />}
-                    rightElement={
-                        <Switch
-                            value={fileDiffsSidebar}
-                            onValueChange={setFileDiffsSidebar}
-                        />
-                    }
+                    icon="git-branch-outline"
+                    tone="accent"
+                    value={fileDiffsSidebar}
+                    onValueChange={setFileDiffsSidebar}
                     showChevron={false}
                 />
-                <Item
+                <SettingsRow
                     title={t('settingsFeatures.groupToolCalls')}
                     subtitle={t('settingsFeatures.groupToolCallsSubtitle')}
-                    icon={<Ionicons name="layers-outline" size={29} color="#AF52DE" />}
-                    rightElement={
-                        <Switch
-                            value={groupToolCalls}
-                            onValueChange={setGroupToolCalls}
-                        />
-                    }
+                    icon="layers-outline"
+                    tone="accent"
+                    value={groupToolCalls}
+                    onValueChange={setGroupToolCalls}
                     showChevron={false}
                 />
-                <Item
+                <SettingsRow
                     title={t('settingsAppearance.showLineNumbersInToolViews')}
                     subtitle={t('settingsAppearance.showLineNumbersInToolViewsDescription')}
-                    icon={<Ionicons name="code-working-outline" size={29} color="#5856D6" />}
-                    rightElement={
-                        <Switch
-                            value={showLineNumbersInToolViews}
-                            onValueChange={setShowLineNumbersInToolViews}
-                        />
-                    }
+                    icon="code-working-outline"
+                    tone="accent"
+                    value={showLineNumbersInToolViews}
+                    onValueChange={setShowLineNumbersInToolViews}
                 />
-                <Item
+                <SettingsRow
                     title={t('settingsAppearance.showHarnessIconInSessionHeader')}
                     subtitle={t('settingsAppearance.showHarnessIconInSessionHeaderDescription')}
-                    icon={<Ionicons name="apps-outline" size={29} color="#5856D6" />}
-                    rightElement={
-                        <Switch
-                            value={showHarnessIconInSessionHeader}
-                            onValueChange={setShowHarnessIconInSessionHeader}
-                        />
-                    }
+                    icon="apps-outline"
+                    tone="accent"
+                    value={showHarnessIconInSessionHeader}
+                    onValueChange={setShowHarnessIconInSessionHeader}
                 />
-                <Item
+                <SettingsRow
                     title={t('settingsAppearance.showHarnessIconsInSessionList')}
                     subtitle={t('settingsAppearance.showHarnessIconsInSessionListDescription')}
-                    icon={<Ionicons name="apps-outline" size={29} color="#5856D6" />}
-                    rightElement={
-                        <Switch
-                            value={showFlavorIcons}
-                            onValueChange={setShowFlavorIcons}
-                        />
-                    }
+                    icon="apps-outline"
+                    tone="accent"
+                    value={showFlavorIcons}
+                    onValueChange={setShowFlavorIcons}
                 />
-                {/* <Item
-                    title="Show Avatars"
-                    subtitle="Display user and assistant avatars"
-                    icon={<Ionicons name="person-circle-outline" size={29} color="#5856D6" />}
-                    disabled
-                    rightElement={
+                {/* <SettingsRow
+                            title="Show Avatars"
+                            subtitle="Display user and assistant avatars"
+                            icon="person-circle-outline"
+                            tone="accent"
+                            trailing={
                         <Switch
                             value={true}
                             disabled
@@ -540,13 +512,13 @@ export default function AppearanceSettingsScreen() {
 
             {/* Colors */}
             {/* <ItemGroup title="Colors" footer="Customize accent colors and highlights">
-                <Item
+                <SettingsRow
                     title="Accent Color"
                     subtitle="Choose your accent color"
-                    icon={<Ionicons name="color-palette-outline" size={29} color="#FF3B30" />}
                     detail="Blue"
+                    icon="color-palette-outline"
+                    tone="destructive"
                     onPress={() => { }}
-                    disabled
                 />
             </ItemGroup> */}
         </ItemList>
