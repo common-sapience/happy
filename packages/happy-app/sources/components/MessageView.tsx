@@ -16,6 +16,7 @@ import { layout } from "./layout";
 import { parseLocalCommandMessage, isUserSlashCommandEcho } from './parseLocalCommandMessage';
 import { resolveUserMessageBubbleColor } from '@/utils/userMessageBubbleColor';
 import { LongPressCopyable } from './LongPressCopyable';
+import { MessageBubble, MessageRow } from './kit';
 
 
 export const MessageView = React.memo((props: {
@@ -125,47 +126,47 @@ function UserTextBlock(props: {
   }
   if (parsed.kind === 'goal-run') {
     return (
-      <View style={styles.userMessageContainer}>
+      <MessageRow author="user">
         <LongPressCopyable style={styles.userCopyTarget} text={parsed.goal}>
-          <View style={[styles.userMessageBubble, styles.userMessageBubbleSolid, bubbleStyle, styles.goalMessageBubble]}>
+          <MessageBubble style={[styles.userMessageBubbleSolid, bubbleStyle, styles.goalMessageBubble]}>
             <MarkdownView externalCopyHandler markdown={parsed.goal} onOptionPress={handleOptionPress} sessionId={props.sessionId} />
-          </View>
+          </MessageBubble>
           <View style={styles.goalSentRow}>
             <Ionicons name="locate-outline" size={16} color={styles.goalSentText.color} />
             <Text style={styles.goalSentText}>{t('message.sentAsGoal')}</Text>
           </View>
         </LongPressCopyable>
-      </View>
+      </MessageRow>
     );
   }
   if (parsed.kind === 'command-run') {
     const commandText = parsed.args ? `/${parsed.commandName} ${parsed.args}` : `/${parsed.commandName}`;
     return (
-      <View style={styles.userMessageContainer}>
+      <MessageRow author="user">
         <LongPressCopyable style={styles.userCopyTarget} text={commandText}>
           {parsed.args ? (
-            <View style={[styles.userMessageBubble, styles.userMessageBubbleSolid, bubbleStyle, styles.commandMessageBubble]}>
+            <MessageBubble style={[styles.userMessageBubbleSolid, bubbleStyle, styles.commandMessageBubble]}>
               <MarkdownView externalCopyHandler markdown={parsed.args} onOptionPress={handleOptionPress} sessionId={props.sessionId} />
-            </View>
+            </MessageBubble>
           ) : null}
           <View style={[styles.commandChip, styles.userMessageBubbleSolid, bubbleStyle]}>
             <Text style={styles.commandChipText}>/{parsed.commandName}</Text>
           </View>
         </LongPressCopyable>
-      </View>
+      </MessageRow>
     );
   }
 
   return (
-    <View style={styles.userMessageContainer}>
+    <MessageRow author="user">
       {/* Long-press copies the whole message through our own menu rather than the
           OS selection callout. Rewind remains in session actions. */}
       <LongPressCopyable style={styles.userCopyTarget} text={parsed.text}>
-        <View style={[styles.userMessageBubble, styles.userMessageBubbleSolid, bubbleStyle]}>
+        <MessageBubble style={[styles.userMessageBubbleSolid, bubbleStyle]}>
           <MarkdownView externalCopyHandler markdown={parsed.text} onOptionPress={handleOptionPress} sessionId={props.sessionId} />
-        </View>
+        </MessageBubble>
       </LongPressCopyable>
-    </View>
+    </MessageRow>
   );
 }
 
@@ -184,10 +185,10 @@ function AgentTextBlock(props: {
   }
 
   return (
-    <View style={styles.agentMessageContainer}>
+    <MessageRow author="agent">
       <MarkdownView markdown={props.message.text} onOptionPress={handleOptionPress} sessionId={props.sessionId} />
       {props.copyText ? <MessageCopyButton text={props.copyText} /> : null}
-    </View>
+    </MessageRow>
   );
 }
 
@@ -244,16 +245,16 @@ function AgentEventBlock(props: {
 }) {
   if (props.event.type === 'switch') {
     return (
-      <View style={styles.agentEventContainer}>
+      <MessageRow author="event">
         <Text style={styles.agentEventText}>{t('message.switchedToMode', { mode: props.event.mode })}</Text>
-      </View>
+      </MessageRow>
     );
   }
   if (props.event.type === 'message') {
     return (
-      <View style={styles.agentEventContainer}>
+      <MessageRow author="event">
         <Text style={styles.agentEventText}>{props.event.message}</Text>
-      </View>
+      </MessageRow>
     );
   }
   if (props.event.type === 'limit-reached') {
@@ -267,17 +268,17 @@ function AgentEventBlock(props: {
     };
 
     return (
-      <View style={styles.agentEventContainer}>
+      <MessageRow author="event">
         <Text style={styles.agentEventText}>
           {t('message.usageLimitUntil', { time: formatTime(props.event.endsAt) })}
         </Text>
-      </View>
+      </MessageRow>
     );
   }
   return (
-    <View style={styles.agentEventContainer}>
+    <MessageRow author="event">
       <Text style={styles.agentEventText}>{t('message.unknownEvent')}</Text>
-    </View>
+    </MessageRow>
   );
 }
 
@@ -316,24 +317,10 @@ const styles = StyleSheet.create((theme) => ({
     maxWidth: layout.maxWidth,
     overflow: 'hidden',
   },
-  userMessageContainer: {
-    maxWidth: '100%',
-    flexDirection: 'column',
-    alignItems: 'flex-end',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 16,
-  },
-  userMessageBubble: {
-    backgroundColor: theme.colors.userMessageBackground,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginBottom: 4,
-    maxWidth: '100%',
-  },
   userMessageBubbleSolid: {
     borderWidth: Platform.select({ web: 0, default: StyleSheet.hairlineWidth }),
     overflow: 'hidden',
+    marginBottom: 4,
   },
   goalMessageBubble: {
     marginBottom: 6,
@@ -369,14 +356,6 @@ const styles = StyleSheet.create((theme) => ({
     fontSize: 13,
     fontFamily: 'monospace',
   },
-  agentMessageContainer: {
-    // Symmetric, so a tool row reads the same distance from the text whether
-    // it lands above or below it. Total rhythm matches the old 4 + 16.
-    marginHorizontal: 16,
-    marginVertical: 10,
-    borderRadius: 16,
-    maxWidth: '100%',
-  },
   copyAction: {
     // No width, so the box shrink-wraps the glyph and its left edge lands on the
     // same x as the markdown text above it. hitSlop carries the touch target.
@@ -393,11 +372,6 @@ const styles = StyleSheet.create((theme) => ({
   userCopyTarget: {
     alignItems: 'flex-end',
     maxWidth: '100%',
-  },
-  agentEventContainer: {
-    marginHorizontal: 8,
-    alignItems: 'center',
-    paddingVertical: 8,
   },
   agentEventText: {
     color: theme.colors.agentEventText,

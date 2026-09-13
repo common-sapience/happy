@@ -1,6 +1,6 @@
 import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Item } from '@/components/Item';
+import { SettingsRow } from '@/components/kit';
 import { ItemGroup } from '@/components/ItemGroup';
 import { ItemList } from '@/components/ItemList';
 import { useSettingMutable } from '@/sync/storage';
@@ -78,25 +78,22 @@ export default function LanguageSettingsScreen() {
                 footer={t('settingsLanguage.description')}
             >
                 {languageOptions.map((option) => (
-                    <Item
+                    <SettingsRow
                         key={option.key}
                         title={option.title}
                         subtitle={option.subtitle}
-                        icon={<Ionicons 
-                            name="language-outline" 
-                            size={29} 
-                            color="#007AFF" 
-                        />}
-                        rightElement={
+                        icon="language-outline"
+                        tone="accent"
+                        onPress={() => handleLanguageChange(option.key)}
+                        trailing={
                             currentSelection === option.key ? (
-                                <Ionicons 
-                                    name="checkmark" 
-                                    size={20} 
-                                    color="#007AFF" 
+                                <Ionicons
+                                    name="checkmark"
+                                    size={theme.iconSize.large}
+                                    color={theme.colors.button.primary.background}
                                 />
                             ) : null
                         }
-                        onPress={() => handleLanguageChange(option.key)}
                         showChevron={false}
                     />
                 ))}
