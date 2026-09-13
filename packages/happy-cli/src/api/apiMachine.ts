@@ -99,6 +99,8 @@ type MachineRpcHandlers = {
     stopSession: (sessionId: string) => boolean;
     /** RL-07: archive or restore a session of this machine on the host's authority. */
     archiveSession: (sessionId: string, archived: boolean) => Promise<void>;
+    /** ENG-19 / T-15: start the memory consolidation pass now, returning its session id. */
+    runDream: () => Promise<string>;
     requestShutdown: () => void;
 }
 
@@ -142,6 +144,7 @@ export class ApiMachineClient {
         spawnSession,
         stopSession,
         archiveSession,
+        runDream,
         requestShutdown
     }: MachineRpcHandlers) {
         // Register spawn session handler
@@ -201,6 +204,16 @@ export class ApiMachineClient {
             await archiveSession(sessionId, archived);
             logger.debug(`[API MACHINE] Session ${sessionId} archived=${archived}`);
             return { sessionId, archived };
+        });
+
+        // Register memory consolidation handler (ENG-19, T-15). The daemon runs the pass on
+        // its own thresholds; this is the on-demand door for a control end, and it takes no
+        // parameters because the pass has nothing to choose - one memory directory, one profile,
+        // one prompt. A pass already in flight is refused rather than raced.
+        this.rpcHandlerManager.registerHandler('run-dream', async () => {
+            const sessionId = await runDream();
+            logger.debug(`[API MACHINE] Memory consolidation pass started as session ${sessionId}`);
+            return { started: true, sessionId };
         });
 
         // Register stop daemon handler

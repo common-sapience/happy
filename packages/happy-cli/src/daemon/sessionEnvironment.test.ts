@@ -27,6 +27,18 @@ describe('sessionEnvironment', () => {
         }
     });
 
+    it('ENG-19: carries the consolidation pass prompt but never lets a later session inherit it', () => {
+        const prompt = 'Run the memory consolidation pass now.';
+
+        const dreamEnv = buildSessionChildEnvironment(contaminatedEnvironment(), {
+            HAPPY_INITIAL_PROMPT: prompt,
+        });
+        expect(dreamEnv.HAPPY_INITIAL_PROMPT).toBe(prompt);
+
+        const laterEnv = buildSessionChildEnvironment({ ...dreamEnv } as NodeJS.ProcessEnv, {});
+        expect(laterEnv).not.toHaveProperty('HAPPY_INITIAL_PROMPT');
+    });
+
     it('keeps explicit fork values after removing stale ambient values', () => {
         const childEnv = buildSessionChildEnvironment(contaminatedEnvironment(), {
             HAPPY_FORKED_FROM_SESSION_ID: 'new-parent-session',

@@ -19,16 +19,19 @@ import { notifyDaemonSessionStarted } from '@/daemon/controlClient';
 import { encodeBase64 } from '@/api/encryption';
 import { registerKillSessionHandler } from '@/modules/common/registerKillSessionHandler';
 import { startHappyServer } from '@/modules/common/startHappyServer';
-import {
-  buildEnginePermissionEnv,
-  readPermissionConfirmationEnabled,
-} from '@/modules/permission/permissionSwitch';
+import { readPermissionConfirmationEnabled } from '@/modules/permission/permissionSwitch';
 import {
   buildConnectorMcpServers,
-  buildEngineCredentialEnv,
   describeInjectedCredentials,
   readEngineCredentials,
 } from '@/modules/credentials/engineCredentials';
+import { ensureMemoryDirectory } from '@/modules/memory/memoryDirectory';
+import {
+  DREAM_AGENT_PROFILE,
+  INITIAL_PROMPT_ENV_VAR,
+} from '@/modules/memory/memoryConsolidation';
+import { readBrowserSettings } from '@/modules/browser/browserSettings';
+import { buildEngineProcessEnv } from './engineEnvironment';
 import { projectPath } from '@/projectPath';
 import { BasePermissionHandler, type PermissionResult } from '@/utils/BasePermissionHandler';
 import { connectionState } from '@/utils/serverConnectionErrors';
@@ -477,6 +480,8 @@ export async function runAcp(opts: {
     machineId: settings.machineId,
     startedBy: opts.startedBy,
     agentProfile: opts.agentProfile,
+    // The consolidation pass is housekeeping, not a user session (ENG-19).
+    internal: opts.agentProfile === DREAM_AGENT_PROFILE,
   });
   const response = await api.getOrCreateSession({ tag: sessionTag, metadata, state });
   if (response) {
@@ -554,15 +559,26 @@ export async function runAcp(opts: {
     ...buildConnectorMcpServers(engineCredentials),
   };
 
+  // ENG-19 / RULE-11: every engine this host starts gets the same memory
+  // directory, so one agent's memory is the next agent's memory.
+  const memoryDirectory = await ensureMemoryDirectory();
+  logger.debug(`[${opts.agentName}] Shared memory directory: ${memoryDirectory}`);
+
+  // ENG-04: browser use needs no host configuration; these only carry the two
+  // host switches when this host set them.
+  const browserSettings = await readBrowserSettings();
+
   const backend = new AcpBackend({
     agentName: opts.agentName,
     cwd: process.cwd(),
     command: opts.command,
     args: opts.args,
-    env: {
-      ...buildEngineCredentialEnv(engineCredentials),
-      ...buildEnginePermissionEnv(permissionConfirmationEnabled),
-    },
+    env: buildEngineProcessEnv({
+      credentials: engineCredentials,
+      permissionConfirmationEnabled,
+      memoryDirectory,
+      browserSettings,
+    }),
     mcpServers,
     permissionHandler: permissionConfirmationEnabled ? permissionHandler : undefined,
     transportHandler: new DefaultTransport(opts.agentName),
@@ -915,7 +931,10 @@ export async function runAcp(opts: {
   try {
     // The profile travels in the newSession call itself (HOST-12), so the session is bound to it
     // before the first prompt; an unknown profile fails startSession instead of running unprofiled.
-    const started = await backend.startSession();
+    // A background session the daemon started carries its one instruction in the
+    // environment (ENG-19's consolidation pass); a user session has none.
+    const initialPrompt = process.env[INITIAL_PROMPT_ENV_VAR]?.trim() || undefined;
+    const started = await backend.startSession(initialPrompt);
     acpSessionId = started.sessionId;
     if (opts.agentProfile) {
       logAcp('muted', `Agent profile applied: ${opts.agentProfile}`);
