@@ -20,25 +20,19 @@ import { ChatList } from '@/components/ChatList';
 import { Deferred } from '@/components/Deferred';
 import { EmptyMessages } from '@/components/EmptyMessages';
 import { Avatar } from '@/components/Avatar';
-import { VoiceAssistantStatusBar, VOICE_PILL_TOTAL_HEIGHT } from '@/components/VoiceAssistantStatusBar';
 import { useDraft } from '@/hooks/useDraft';
 import { useSessionVisibility } from '@/hooks/useSessionVisibility';
 import { useImagePicker } from '@/hooks/useImagePicker';
 import { Modal } from '@/modal';
-import { voiceHooks } from '@/realtime/hooks/voiceHooks';
-import { getCurrentVoiceConversationId, getCurrentVoiceSessionDurationSeconds, startRealtimeSession, stopRealtimeSession } from '@/realtime/RealtimeSession';
-import { sessionAbort, sessionCancelCommunication, sessionGoalAction, sessionSetAgentModes, spawnSideChat, sessionKill, sessionArchive } from '@/sync/ops';
-import { storage, useIsDataReady, useLocalSetting, useRealtimeStatus, useSessionGitStatus, useSessionMessages, useSessionPendingCommunications, useSessionProjectAvatar, useSessionUsage, useSetting, useSideChatSessions } from '@/sync/storage';
+import { sessionAbort, sessionCancelCommunication, sessionGoalAction, sessionSetAgentModes, sessionKill, sessionArchive } from '@/sync/ops';
+import { storage, useIsDataReady, useLocalSetting, useSessionGitStatus, useSessionMessages, useSessionPendingCommunications, useSessionProjectAvatar, useSessionUsage, useSetting, useSideChatSessions } from '@/sync/storage';
 import { useSession } from '@/sync/storage';
-import { getSessionForkSource } from '@/utils/sessionFork';
 import { useHappyAction } from '@/hooks/useHappyAction';
 import { HappyError } from '@/utils/errors';
 import { Session } from '@/sync/storageTypes';
 import { sync } from '@/sync/sync';
 import { supportsImageAttachmentsForFlavor } from '@/sync/attachmentSupport';
 import { t } from '@/text';
-import { tracking } from '@/track';
-import { getVoiceMessageCount, getVoiceOnboardingPromptLoadCount } from '@/sync/persistence';
 import { isRunningOnMac } from '@/utils/platform';
 import { useDeviceType, useHeaderHeight, useIsLandscape, useIsTablet } from '@/utils/responsive';
 import { resolveSessionGitPresentation } from '@/utils/sessionGitPresentation';
@@ -47,7 +41,7 @@ import { AllFilesDiffView } from '@/components/AllFilesDiffView';
 import { FileViewPanel } from '@/components/FileViewPanel';
 import { GitFileStatus } from '@/sync/gitStatusFiles';
 import { useOverlayNav } from '@/-session/sessionOverlayNav';
-import { formatPathRelativeToHome, getResumeCommandBlock, getSessionAvatarId, getSessionName, useSessionStatus } from '@/utils/sessionUtils';
+import { formatPathRelativeToHome, getSessionAvatarId, getSessionName, useSessionStatus } from '@/utils/sessionUtils';
 import { useSessionQuickActions } from '@/hooks/useSessionQuickActions';
 import { isVersionSupported, MINIMUM_CLI_VERSION } from '@/utils/versionUtils';
 import * as Clipboard from 'expo-clipboard';
@@ -103,7 +97,6 @@ export const SessionView = React.memo((props: { id: string }) => {
     const contentRunsUnderHeader = deviceType === 'phone'
         && Platform.OS !== 'web'
         && !isLandscape;
-    const realtimeStatus = useRealtimeStatus();
     const isTablet = useIsTablet();
     const { width: windowWidth } = useWindowDimensions();
     const fileDiffsSidebarEnabled = useSetting('fileDiffsSidebar');
@@ -188,7 +181,6 @@ export const SessionView = React.memo((props: { id: string }) => {
     // is no separate per-tab add button. Which side chat is focused lives here
     // (not in the panel) so the picker can create-and-focus a new one in one go.
     const rawSideChats = useSideChatSessions(sessionId);
-    const sideChatForkSource = session ? getSessionForkSource(session) : null;
     const [activeSideChatId, setActiveSideChatId] = React.useState<string | null>(null);
     // Optimistically hide a side chat the instant it's closed. The server's
     // /archive only flips active=false (not lifecycleState), so if the CLI is
@@ -227,18 +219,10 @@ export const SessionView = React.memo((props: { id: string }) => {
         })();
     }, []);
 
+    // Starting a side chat rode on the provider-specific fork RPC, which is
+    // gone with the other agents. Existing side chats still render.
     const [creatingSideChat, createSideChat] = useHappyAction(async () => {
-        if (!sideChatForkSource) {
-            throw new HappyError(t('sideChat.unavailable'), false);
-        }
-        const result = await spawnSideChat(sideChatForkSource);
-        if (result.type === 'error') {
-            throw new HappyError(result.errorMessage, true);
-        }
-        if (result.type === 'success') {
-            setActiveSideChatId(result.sessionId);
-            openSidebarPanel('sideChat');
-        }
+        throw new HappyError(t('sideChat.unavailable'), false);
     });
 
     const closeSideChat = React.useCallback((id: string) => {
@@ -413,7 +397,7 @@ export const SessionView = React.memo((props: { id: string }) => {
                     paddingTop: !(isLandscape && deviceType === 'phone' && Platform.OS !== 'web')
                         ? contentRunsUnderHeader
                             ? 0
-                            : safeArea.top + mobileHeaderHeight + (!isTablet && realtimeStatus !== 'disconnected' ? VOICE_PILL_TOTAL_HEIGHT : 0)
+                            : safeArea.top + mobileHeaderHeight
                         : 0,
                 }}
             >
@@ -459,10 +443,6 @@ export const SessionView = React.memo((props: { id: string }) => {
                         onTitlePress={session ? () => router.push(`/session/${sessionId}/info`) : undefined}
                         onBackPress={() => router.back()}
                     />
-                    {/* Voice status bar below header - not on tablet (shown in sidebar) */}
-                    {!isTablet && realtimeStatus !== 'disconnected' && (
-                        <VoiceAssistantStatusBar variant="full" />
-                    )}
                 </View>
             )}
         </>
@@ -545,7 +525,7 @@ export const SessionView = React.memo((props: { id: string }) => {
                         onSelectSideChat={setActiveSideChatId}
                         onCloseSideChat={closeSideChat}
                         onCreateSideChat={createSideChat}
-                        canCreateSideChat={!!sideChatForkSource}
+                        canCreateSideChat={false}
                         creatingSideChat={creatingSideChat}
                     />
                 </View>
@@ -692,7 +672,6 @@ export function SessionViewLoaded({
         setIsChatAtBottom(true);
     }, [sessionId, usesFloatingMobileDock]);
 
-    const realtimeStatus = useRealtimeStatus();
     const { messages, isLoaded } = useSessionMessages(sessionId);
     const pendingCommunications = useSessionPendingCommunications(sessionId);
     const acknowledgedCliVersions = useLocalSetting('acknowledgedCliVersions');
@@ -703,7 +682,6 @@ export function SessionViewLoaded({
         : deviceType === 'phone' && Platform.OS !== 'web'
             ? safeArea.top
                 + MOBILE_GLASS_HEADER_HEIGHT
-                + (realtimeStatus !== 'disconnected' ? VOICE_PILL_TOTAL_HEIGHT : 0)
                 + 12
             : undefined;
 
@@ -769,9 +747,7 @@ export function SessionViewLoaded({
     const sessionUsage = useSessionUsage(sessionId);
     const alwaysShowContextSize = useSetting('alwaysShowContextSize');
     const experiments = useSetting('experiments');
-    const { canResume, resumeSession, resumingSession } = useSessionQuickActions(session);
     const isDisconnected = !sessionStatus.isConnected;
-    const resumeCommandBlock = getResumeCommandBlock(session);
 
     // Attachment availability is capability-driven by the active session.
     const { selectedImages, pickImages, removeImage, clearImages, addImages } = useImagePicker();
@@ -926,59 +902,8 @@ export function SessionViewLoaded({
         });
     }, [sessionId, visibleAgentGoal?.text]);
 
-    // Handle microphone button press - memoized to prevent button flashing
-    const handleMicrophonePress = React.useCallback(async () => {
-        if (realtimeStatus === 'connecting') {
-            return; // Prevent actions during transitions
-        }
-        if (realtimeStatus === 'disconnected' || realtimeStatus === 'error') {
-            try {
-                const initialPrompt = voiceHooks.onVoiceStarted(sessionId);
-                const conversationId = await startRealtimeSession(sessionId, initialPrompt);
-                if (conversationId) {
-                    const hasPro = storage.getState().purchases.entitlements['pro'] ?? false;
-                    tracking?.capture('voice_session_started', {
-                        session_id: sessionId,
-                        elevenlabs_conversation_id: conversationId,
-                        has_pro: hasPro,
-                        onboarding_prompt_load_count: getVoiceOnboardingPromptLoadCount(),
-                        voice_message_count: getVoiceMessageCount(),
-                    });
-                }
-            } catch (error) {
-                console.error('Failed to start realtime session:', error);
-                Modal.alert(t('common.error'), t('errors.voiceSessionFailed'));
-                tracking?.capture('voice_session_error', {
-                    session_id: sessionId,
-                    elevenlabs_conversation_id: getCurrentVoiceConversationId(),
-                    error: error instanceof Error ? error.message : 'Unknown error',
-                });
-            }
-        } else if (realtimeStatus === 'connected') {
-            const conversationId = getCurrentVoiceConversationId();
-            const durationSeconds = getCurrentVoiceSessionDurationSeconds();
-            await stopRealtimeSession();
-            tracking?.capture('voice_session_stopped', {
-                session_id: sessionId,
-                elevenlabs_conversation_id: conversationId,
-                ...(durationSeconds !== undefined ? { duration_seconds: durationSeconds } : {}),
-            });
 
-            // Notify voice assistant about voice session stop
-            voiceHooks.onVoiceStopped();
-        }
-    }, [realtimeStatus, sessionId]);
-
-    // Memoize mic button state to prevent flashing during chat transitions.
-    // While a call runs the pill under the header is the only stop control,
-    // so the composer mic disappears instead of doubling as a stop button.
-    const voiceSessionActive = realtimeStatus === 'connected' || realtimeStatus === 'connecting';
-    const micButtonState = useMemo(() => ({
-        onMicPress: voiceSessionActive ? undefined : handleMicrophonePress,
-        isMicActive: false,
-    }), [handleMicrophonePress, voiceSessionActive]);
-
-    useSessionVisibility(sessionId, active, embedded, realtimeStatus);
+    useSessionVisibility(sessionId, active, embedded);
 
     let content = (
         <>
@@ -1029,8 +954,6 @@ export function SessionViewLoaded({
                 connectionStatus={connectionStatus}
                 blockSend={isRig && session.thinking && session.metadata?.capabilities?.steering !== true}
                 onSend={handleSend}
-                onMicPress={(embedded || isDisconnected) ? undefined : micButtonState.onMicPress}
-                isMicActive={(embedded || isDisconnected) ? false : micButtonState.isMicActive}
                 onAbort={isDisconnected || !rigCanAbort(session.metadata) ? undefined : handleAbort}
                 showAbortButton={rigCanAbort(session.metadata) && (
                     sessionStatus.state === 'thinking'
@@ -1058,22 +981,12 @@ export function SessionViewLoaded({
         </View>
     );
 
-    // Disconnected sessions get the full Resume affordance regardless of
-    // whether they were explicitly archived or just lost their CLI (e.g.
-    // Ctrl-C in terminal — lifecycleState stays 'running', server flips
-    // active=false). InactiveArchivedHint handles both cases: shows the
-    // Resume button when canResume is true, falls back to the
-    // copy-this-command hint when the daemon is incompatible or the machine
-    // isn't reachable.
+    // A session whose host process is gone says so and nothing more: bringing one back belongs to
+    // the archived-agent panel (DESK-14), which asks the host rather than printing a command.
     const inactiveHint = isDisconnected && !isRig ? (
         <AnimatedFade visible={showBottomDockDetails}>
             <CenteredInputWidth horizontalPadding={sessionInputHorizontalPadding}>
-                <InactiveArchivedHint
-                    resumeCommandBlock={resumeCommandBlock}
-                    canResume={canResume}
-                    resuming={resumingSession}
-                    onResume={resumeSession}
-                />
+                <InactiveArchivedHint />
             </CenteredInputWidth>
         </AnimatedFade>
     ) : null;
@@ -1202,122 +1115,24 @@ export function SessionViewLoaded({
     )
 }
 
-function InactiveArchivedHint(props: {
-    resumeCommandBlock: NonNullable<ReturnType<typeof getResumeCommandBlock>> | null;
-    canResume: boolean;
-    resuming: boolean;
-    onResume: () => void;
-}) {
+function InactiveArchivedHint() {
     const { theme } = useUnistyles();
-    const hintTextStyle = {
-        color: theme.colors.agentEventText,
-        fontSize: 13,
-        lineHeight: 18,
-        textAlign: 'left' as const,
-    };
 
     return (
         <View style={{
             paddingTop: 12,
             paddingBottom: 10,
-            gap: 10,
-            alignItems: 'stretch',
+            paddingHorizontal: 8,
         }}>
-            <View style={{ paddingHorizontal: 8, gap: 4 }}>
-                <Text style={hintTextStyle}>
-                    {t('session.inactiveArchived')}
-                </Text>
-                {props.canResume ? null : props.resumeCommandBlock && (
-                    <Text style={hintTextStyle}>
-                        {t('session.resumeFromTerminal')}
-                    </Text>
-                )}
-            </View>
-            {props.canResume ? (
-                <Pressable
-                    onPress={props.onResume}
-                    disabled={props.resuming}
-                    style={({ pressed }) => ({
-                        height: Platform.select({ web: 40, default: 44 }),
-                        borderRadius: Platform.select({ web: 10, default: 18 }),
-                        backgroundColor: Platform.select({
-                            web: theme.colors.button.primary.background,
-                            default: pressed ? theme.colors.surfacePressed : theme.colors.surfaceHigh,
-                        }),
-                        borderWidth: Platform.select({ web: 0, default: StyleSheet.hairlineWidth }),
-                        borderColor: theme.colors.divider,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        opacity: props.resuming ? 0.6 : Platform.OS === 'web' && pressed ? 0.8 : 1,
-                        marginHorizontal: 8,
-                    })}
-                >
-                    {props.resuming ? (
-                        <ActivityIndicator size="small" color={Platform.select({ web: theme.colors.button.primary.tint, default: theme.colors.text })} />
-                    ) : (
-                        <Text style={{ color: Platform.select({ web: theme.colors.button.primary.tint, default: theme.colors.text }), fontSize: 15, fontWeight: '600' }}>
-                            {t('sessionInfo.resumeSession')}
-                        </Text>
-                    )}
-                </Pressable>
-            ) : props.resumeCommandBlock && (
-                <ResumeCommandCopyBlock resumeCommandBlock={props.resumeCommandBlock} />
-            )}
+            <Text style={{
+                color: theme.colors.agentEventText,
+                fontSize: 13,
+                lineHeight: 18,
+                textAlign: 'left',
+            }}>
+                {t('session.inactiveArchived')}
+            </Text>
         </View>
-    );
-}
-
-function ResumeCommandCopyBlock({ resumeCommandBlock }: {
-    resumeCommandBlock: NonNullable<ReturnType<typeof getResumeCommandBlock>>;
-}) {
-    const { theme } = useUnistyles();
-    const [copied, setCopied] = React.useState(false);
-
-    return (
-        <Pressable
-            onPress={async () => {
-                await Clipboard.setStringAsync(resumeCommandBlock.copyText);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-            }}
-            style={({ pressed }) => ({
-                minHeight: 48,
-                borderRadius: Platform.select({ web: 14, default: 18 }),
-                backgroundColor: Platform.select({
-                    web: theme.colors.surfaceHigh,
-                    default: pressed ? theme.colors.surfacePressed : theme.colors.surface,
-                }),
-                borderWidth: Platform.select({ web: 0, default: StyleSheet.hairlineWidth }),
-                borderColor: theme.colors.divider,
-                flexDirection: 'row',
-                gap: 8,
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                alignItems: 'flex-start',
-            })}
-        >
-            <View style={{ flex: 1 }}>
-                {resumeCommandBlock.lines.map((line, index) => (
-                    <Text
-                        key={`${line}-${index}`}
-                        style={{
-                            color: theme.colors.text,
-                            fontSize: 13,
-                            lineHeight: 18,
-                            fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-                        }}
-                    >
-                        {line}
-                    </Text>
-                ))}
-            </View>
-            <Ionicons
-                name={copied ? 'checkmark' : 'copy-outline'}
-                size={16}
-                color={copied ? '#30D158' : theme.colors.textSecondary}
-                style={{ marginTop: 1 }}
-            />
-        </Pressable>
     );
 }
 

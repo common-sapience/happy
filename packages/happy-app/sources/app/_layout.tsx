@@ -14,13 +14,9 @@ import { initialWindowMetrics, SafeAreaProvider, useSafeAreaInsets } from 'react
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SidebarNavigator } from '@/components/SidebarNavigator';
 import sodium from '@/encryption/libsodium.lib';
-import { View, Platform, AppState, LogBox } from 'react-native';
+import { View, Platform, AppState } from 'react-native';
 import { ModalProvider } from '@/modal';
-import { PostHogProvider } from 'posthog-react-native';
-import { tracking } from '@/track/tracking';
 import { syncRestore } from '@/sync/sync';
-import { useTrackScreens } from '@/track/useTrackScreens';
-import { RealtimeProvider } from '@/realtime/RealtimeProvider';
 import { FaviconPermissionIndicator } from '@/components/web/FaviconPermissionIndicator';
 import { CommandPaletteProvider } from '@/components/CommandPalette/CommandPaletteProvider';
 import { StatusBarProvider } from '@/components/StatusBarProvider';
@@ -32,16 +28,9 @@ import { useUnistyles } from 'react-native-unistyles';
 import { AsyncLock } from '@/utils/lock';
 import { getSessionRouteFromNotificationResponse } from '@/utils/notificationRouting';
 import { navigateToSession } from '@/hooks/useNavigateToSession';
-import { applyVoiceUpsellOverride } from '@/realtime/voiceExperiment';
 import { useTauriZoom } from '@/hooks/useTauriZoom';
 import { useTauriDrag } from '@/hooks/useTauriDrag';
 import { BrowserNavigationShortcuts } from '@/hooks/useBrowserNavigationShortcuts';
-
-// The RevenueCat SDK logs its failures through console.error, which LogBox
-// turns into a red error overlay. Dev builds have no App Store products, so
-// "Error fetching offerings" fires on every launch; purchases are optional
-// and the failure is already handled in syncPurchases.
-LogBox.ignoreLogs([/\[RevenueCat\]/]);
 
 // Configure notification handler — suppress push display when app is in foreground
 Notifications.setNotificationHandler({
@@ -363,26 +352,15 @@ export default function RootLayout() {
     }, [handleNotificationResponse, initState]);
 
 
-    // Track the screens
-    useTrackScreens()
-
     // Sync console output toggle from Dev screen. Same precedence as
     // initConsoleLogging: user setting OR build-variant default — otherwise
     // the untouched (false) setting silently mutes console.log in dev builds
     // the moment this layout mounts.
     const consoleLoggingEnabled = useLocalSetting('consoleLoggingEnabled');
     const devModeEnabled = __DEV__ || useLocalSetting('devModeEnabled');
-    const voiceUpsellOverride = useLocalSetting('voiceUpsellOverride');
     React.useEffect(() => {
         setConsoleOutputEnabled(consoleLoggingEnabled || (loadAppConfig().consoleLoggingDefault ?? false));
     }, [consoleLoggingEnabled]);
-
-    React.useEffect(() => {
-        if (!devModeEnabled || !voiceUpsellOverride) {
-            return;
-        }
-        applyVoiceUpsellOverride(voiceUpsellOverride);
-    }, [devModeEnabled, voiceUpsellOverride]);
 
     //
     // Not inited
@@ -396,7 +374,7 @@ export default function RootLayout() {
     // Boot
     //
 
-    let providers = (
+    const providers = (
         <SafeAreaProvider initialMetrics={initialWindowMetrics}>
             <KeyboardProvider preload={false}>
                 <GestureHandlerRootView
@@ -410,11 +388,9 @@ export default function RootLayout() {
                             <ModalProvider>
                                 <BrowserNavigationShortcuts />
                                 <CommandPaletteProvider>
-                                    <RealtimeProvider>
-                                        <HorizontalSafeAreaWrapper>
-                                            <SidebarNavigator />
-                                        </HorizontalSafeAreaWrapper>
-                                    </RealtimeProvider>
+                                    <HorizontalSafeAreaWrapper>
+                                        <SidebarNavigator />
+                                    </HorizontalSafeAreaWrapper>
                                 </CommandPaletteProvider>
                             </ModalProvider>
                         </ThemeProvider>
@@ -423,14 +399,6 @@ export default function RootLayout() {
             </KeyboardProvider>
         </SafeAreaProvider>
     );
-    if (tracking) {
-        providers = (
-            <PostHogProvider client={tracking}>
-                {providers}
-            </PostHogProvider>
-        );
-    }
-
     return (
         <>
             <FaviconPermissionIndicator />

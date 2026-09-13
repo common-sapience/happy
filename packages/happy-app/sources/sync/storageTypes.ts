@@ -392,6 +392,12 @@ export interface Session {
     createdAt: number,
     updatedAt: number,
     active: boolean,
+    /**
+     * RL-07: whether the host has archived this session. The relay keeps it in plaintext for list
+     * queries and only ever derives it from the host's metadata write, so it is the one field a
+     * control end and a host agree on. Absent on a session the relay has not reported it for.
+     */
+    archived?: boolean,
     activeAt: number,
     /** Account-scoped Project linkage supplied beside the encrypted session. */
     projectId?: string | null,
@@ -449,13 +455,11 @@ export const MachineMetadataSchema = z.object({
     daemonLastKnownPid: z.number().optional(),
     shutdownRequestedAt: z.number().optional(),
     shutdownSource: z.enum(['happy-app', 'happy-cli', 'os-signal', 'unknown']).optional(),
+    // HOST-10: the daemon starts one agent, so it reports one flag. Rig registers its own
+    // machine and reports its own, which is why that key is still read here.
     cliAvailability: z.object({
-        claude: z.boolean(),
-        codex: z.boolean(),
-        gemini: z.boolean(),
-        openclaw: z.boolean(),
-        agy: z.boolean().optional(), // optional: older CLIs don't report agy
-        rig: z.boolean().optional(), // Rig runs its own Happy-connected daemon
+        opencode: z.boolean().optional(),
+        rig: z.boolean().optional(),
         detectedAt: z.number(),
     }).optional(),
     // Rig registers as its own machine instead of being launched by happy-cli.
@@ -522,13 +526,6 @@ export const MachineMetadataSchema = z.object({
         idempotencyKey: z.string().optional(),
         pendingRetryAfterMs: z.number().optional(),
         resultKinds: z.array(z.string()).optional(),
-    }).passthrough().optional().catch(undefined),
-    resumeSupport: z.object({
-        rpcAvailable: z.boolean().optional(),
-        requiresSameMachine: z.boolean().optional(),
-        requiresHappyAgentAuth: z.boolean().optional(),
-        happyAgentAuthenticated: z.boolean().optional(),
-        detectedAt: z.number().optional(),
     }).passthrough().optional().catch(undefined),
 }).passthrough();
 

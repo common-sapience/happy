@@ -43,8 +43,8 @@ graph TB
 - Database: Postgres via Prisma.
 - Cache/bus: Redis client is initialized (currently only pinged).
 - Blob storage: S3-compatible (MinIO) for uploaded assets.
-- Crypto: privacy-kit for auth tokens and encrypted service tokens.
-- Metrics: Prometheus-style `/metrics` server + per-request HTTP metrics.
+- Crypto: privacy-kit for auth tokens.
+- Monitoring: `GET /health` only.
 
 ## Process lifecycle
 Entry point: `packages/happy-server/sources/main.ts`.
@@ -58,21 +58,18 @@ flowchart TD
 
     subgraph Crypto Initialization
         Crypto --> Encrypt[initEncrypt - KeyTree]
-        Crypto --> GitHub[initGithub - OAuth/Webhooks]
         Crypto --> S3[loadFiles - S3 Bucket]
         Crypto --> Auth[auth.init - Token Gen]
     end
 
-    Encrypt & GitHub & S3 & Auth --> Servers[Start Servers]
+    Encrypt & S3 & Auth --> Servers[Start Servers]
 
     subgraph Server Startup
         Servers --> API[API Server]
-        Servers --> Metrics[Metrics Server]
-        Servers --> DBMetrics[DB Metrics Updater]
         Servers --> Presence[Presence Timeout Loop]
     end
 
-    API & Metrics & DBMetrics & Presence --> Running([Running])
+    API & Presence --> Running([Running])
     Running --> |SIGTERM| Shutdown[Shutdown Hooks]
     Shutdown --> DBDisconnect[DB Disconnect]
     Shutdown --> FlushCache[Flush Activity Cache]
@@ -83,10 +80,9 @@ Startup sequence:
 2. Init activity cache (presence) and Redis connection check (`redis.ping()`).
 3. Initialize crypto modules:
    - `initEncrypt()` derives a KeyTree from `HANDY_MASTER_SECRET`.
-   - `initGithub()` configures GitHub App/webhooks if env vars exist.
    - `loadFiles()` verifies S3 bucket access.
    - `auth.init()` prepares token generator/verifier.
-4. Start API server (`startApi()`), metrics server, database metrics updater, and presence timeout loop.
+4. Start API server (`startApi()`) and the presence timeout loop.
 5. Remain alive until shutdown signal.
 
 Shutdown hooks are registered for DB disconnect and activity-cache flush.
@@ -110,13 +106,10 @@ graph LR
             R1[authRoutes]
             R2[sessionRoutes]
             R3[machinesRoutes]
-            R4[artifactsRoutes]
-            R5[accessKeysRoutes]
-            R6[kvRoutes]
-            R7[accountRoutes]
-            R8[userRoutes / feedRoutes]
-            R9[pushRoutes]
-            R10[connectRoutes / voiceRoutes]
+            R4[accountRoutes]
+            R5[pushRoutes]
+            R6[connectRoutes]
+            R7[projectRoutes / attachmentRoutes]
         end
     end
 
@@ -130,15 +123,11 @@ HTTP routes are organized by domain:
 - Auth (`authRoutes`)
 - Sessions + messages (`sessionRoutes`)
 - Machines (`machinesRoutes`)
-- Artifacts (`artifactsRoutes`)
-- Access keys (`accessKeysRoutes`)
-- Key-value store (`kvRoutes`)
-- Account + usage (`accountRoutes`)
-- Social + feed (`userRoutes`, `feedRoutes`)
+- Account (`accountRoutes`)
 - Push tokens (`pushRoutes`)
-- Integrations (`connectRoutes`, `voiceRoutes`)
+- Connector records (`connectRoutes`)
+- Projects and attachments (`projectRoutes`, `attachmentRoutes`)
 - Version checks (`versionRoutes`)
-- Dev-only logging (`devRoutes`)
 
 ## Authentication and tokens
 
@@ -169,8 +158,6 @@ The backend does not store passwords. Instead:
 - The server upserts the account by public key and returns a Bearer token.
 - Tokens are generated and verified by privacy-kit using `HANDY_MASTER_SECRET`.
 - Tokens are cached in-memory for fast verification.
-
-GitHub OAuth uses short-lived "ephemeral" tokens to protect the callback and is separate from normal auth.
 
 ## Realtime sync architecture
 
@@ -212,13 +199,13 @@ Socket.IO connections are tagged by scope:
 ### Event router
 `EventRouter` (`sources/app/events/eventRouter.ts`) maintains per-user connection sets and routes:
 - **Persistent `update` events**: database-backed changes with a user-level monotonic `seq`.
-- **Ephemeral events**: presence/usage signals that are not persisted.
+- **Ephemeral events**: presence signals that are not persisted.
 
 The router implements recipient filters so updates go only to interested connections (e.g., all session listeners or a specific machine).
 
 ### Update sequence numbers
 - `Account.seq` is the per-user update counter. It is incremented by `allocateUserSeq` and used as `UpdatePayload.seq`.
-- Sessions and artifacts maintain their own `seq` for per-object ordering.
+- Sessions maintain their own `seq` for per-object ordering.
 
 ## Presence and activity
 
@@ -262,16 +249,12 @@ Prisma models live in `prisma/schema.prisma`. Key tables:
 erDiagram
     Account ||--o{ Session : owns
     Account ||--o{ Machine : owns
-    Account ||--o{ Artifact : owns
-    Account ||--o{ UserKVStore : owns
-    Account ||--o{ UsageReport : tracks
-    Account ||--o{ UserRelationship : has
-    Account ||--o{ UserFeedItem : receives
+    Account ||--o{ Project : owns
+    Account ||--o{ ServiceConnection : records
 
     Session ||--o{ SessionMessage : contains
-    Session ||--o{ AccessKey : grants
-
-    Machine ||--o{ AccessKey : receives
+    Project ||--o{ Session : groups
+    Machine ||--o{ ServiceConnection : owns
 
     Account {
         string publicKey
@@ -281,6 +264,8 @@ erDiagram
 
     Session {
         string metadata
+        boolean active
+        boolean archived
         int seq
     }
 
@@ -289,21 +274,19 @@ erDiagram
         string daemonState
     }
 
-    Artifact {
-        string header
-        bytes body
-        string key
+    ServiceConnection {
+        string vendor
+        string machineId
+        string status
     }
 ```
 
 - `Account`: public key identity, profile, settings, seq counters.
-- `Session` + `SessionMessage`: encrypted session metadata and message blobs.
+- `Session` + `SessionMessage`: encrypted session metadata and message blobs. `active` is
+  liveness; `archived` is the plaintext list marker derived from the host's metadata write.
 - `Machine`: encrypted machine metadata + daemon state.
-- `Artifact`: encrypted header/body + per-artifact key.
-- `AccessKey`: encrypted per-session-per-machine access keys.
-- `UserKVStore`: encrypted values with optimistic versions.
-- `UsageReport`: usage aggregation per session/key.
-- `UserRelationship` + `UserFeedItem`: social graph and feed.
+- `Project`: encrypted project metadata that groups sessions.
+- `ServiceConnection`: connector record — service, owning machine, status. Never a credential.
 
 ### Transactions and retries
 
@@ -347,47 +330,31 @@ graph TB
         C2[Agent state]
         C3[Daemon state]
         C4[Message content]
-        C5[Artifacts]
-        C6[KV values]
+        C5[Project metadata]
     end
 
-    subgraph "Server-side Encryption"
-        S1[GitHub OAuth tokens]
-        S2[OpenAI tokens]
-        S3[Anthropic tokens]
-        S4[Gemini tokens]
-    end
-
-    C1 & C2 & C3 & C4 & C5 & C6 --> |opaque blobs| DB[(Postgres)]
-    S1 & S2 & S3 & S4 --> |KeyTree from HANDY_MASTER_SECRET| DB
+    C1 & C2 & C3 & C4 & C5 --> |opaque blobs| DB[(Postgres)]
 
     style C1 fill:#e1f5fe
     style C2 fill:#e1f5fe
     style C3 fill:#e1f5fe
     style C4 fill:#e1f5fe
     style C5 fill:#e1f5fe
-    style C6 fill:#e1f5fe
-    style S1 fill:#fff3e0
-    style S2 fill:#fff3e0
-    style S3 fill:#fff3e0
-    style S4 fill:#fff3e0
 ```
 
-- Session metadata, agent state, daemon state, and message content are stored as opaque encrypted strings or blobs.
-- Artifacts and KV values are stored encrypted and encoded as base64 on the wire.
-- The server only encrypts/decrypts **service tokens** (GitHub OAuth tokens, vendor tokens) using the KeyTree derived from `HANDY_MASTER_SECRET`.
+- Session metadata, agent state, daemon state, project metadata and message content are stored as
+  opaque encrypted strings or blobs.
+- The server holds no external-service credential to encrypt: a connector is a record only, and
+  the credential stays on the machine that authorized it. The KeyTree derived from
+  `HANDY_MASTER_SECRET` signs auth tokens.
 
 ## Integrations
-- **GitHub**: OAuth connect + webhook verification, optional if env vars are set.
-- **AI vendors**: encrypted token storage for `openai`, `anthropic`, `gemini`.
-- **Voice**: RevenueCat subscription check + ElevenLabs token minting.
+- **Connector records**: which machine is connected to which external service; no credential.
 - **Push tokens**: stored for later notification delivery.
 
 ## Observability
-- `/health` route checks DB connectivity.
-- Metrics server exposes `/metrics` for Prometheus.
-- HTTP request counters and duration histograms are captured via Fastify hooks.
-- WebSocket event counters and connection gauges are in `metrics2.ts`.
+- `/health` route checks DB connectivity. That is the whole surface: no Prometheus endpoint, no
+  request counters, no hosted log summary.
 
 ## Key implementation references
 - Entrypoint: `packages/happy-server/sources/main.ts`

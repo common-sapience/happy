@@ -204,6 +204,13 @@ export interface AcpBackendOptions {
   /** Optional callback to check if prompt has change_title instruction */
   hasChangeTitleInstruction?: (prompt: string) => boolean;
 
+  /**
+   * Engine agent profile this session runs under (HOST-12). It is named in the newSession call
+   * itself, so the session is bound to the profile before it can take a single prompt; the engine
+   * rejects a name it does not have rather than quietly falling back to its default profile.
+   */
+  agentProfile?: string;
+
   /** Log raw session updates to console */
   verbose?: boolean;
 }
@@ -246,7 +253,7 @@ function nodeToWebStreams(
   });
 
   // Convert Node readable to Web ReadableStream
-  // Filter out non-JSON debug output from gemini CLI (experiments, flags, etc.)
+  // Filter out non-JSON debug output from the agent process
   const readable = new ReadableStream<Uint8Array>({
     start(controller) {
       stdout.on('data', (chunk: Buffer) => {
@@ -406,7 +413,7 @@ export class AcpBackend implements AgentBackend {
       }
       
       // Ensure stderr doesn't leak to console - redirect to logger only
-      // This prevents gemini CLI debug output from appearing in user's console
+      // This prevents agent debug output from appearing in user's console
       if (this.process.stderr) {
         // stderr is already handled by the event listener below
         // but we ensure it doesn't go to parent's stderr
@@ -609,27 +616,29 @@ export class AcpBackend implements AgentBackend {
             paramsKeys: Object.keys(params),
           }, null, 2));
           
-          // Emit permission request event for UI/mobile handling
-          this.emit({
-            type: 'permission-request',
-            id: permissionId,
-            reason: toolName,
-            payload: {
-              ...params,
-              permissionId,
-              toolCallId,
-              toolName,
-              input,
-              options: options.map((opt) => ({
-                id: opt.optionId,
-                name: opt.name,
-                kind: opt.kind,
-              })),
-            },
-          });
-          
-          // Use permission handler if provided, otherwise auto-approve
+          // Only a session that is going to ask the user surfaces the request.
+          // With permission confirmation off (PERM-08) there is no handler, the
+          // engine already runs on an allow baseline, and a card the control end
+          // cannot answer must not appear.
           if (this.options.permissionHandler) {
+            this.emit({
+              type: 'permission-request',
+              id: permissionId,
+              reason: toolName,
+              payload: {
+                ...params,
+                permissionId,
+                toolCallId,
+                toolName,
+                input,
+                options: options.map((opt) => ({
+                  id: opt.optionId,
+                  name: opt.name,
+                  kind: opt.kind,
+                })),
+              },
+            });
+
             try {
               const result = await this.options.permissionHandler.handleToolCall(
                 toolCallId,
@@ -736,6 +745,10 @@ export class AcpBackend implements AgentBackend {
         return maybeErr.code === 'ENOENT' || maybeErr.code === 'EACCES' || maybeErr.code === 'EPIPE';
       };
 
+      // A profile the engine does not have will not appear on a retry: the engine answers an
+      // unknown `_meta.mode` with JSON-RPC invalid params, and that is a hard failure (HOST-12).
+      const isRejectedRequest = (error: Error): boolean => (error as { code?: unknown }).code === -32602;
+
       const initializeResponse = await withRetry(
         async () => {
           let timeoutHandle: NodeJS.Timeout | null = null;
@@ -792,6 +805,7 @@ export class AcpBackend implements AgentBackend {
       const newSessionRequest: NewSessionRequest = {
         cwd: this.options.cwd,
         mcpServers: mcpServers as unknown as NewSessionRequest['mcpServers'],
+        ...(this.options.agentProfile ? { _meta: { mode: this.options.agentProfile } } : {}),
       };
 
       logger.debug(`[AcpBackend] Creating new session...`);
@@ -827,7 +841,7 @@ export class AcpBackend implements AgentBackend {
           maxAttempts: RETRY_CONFIG.maxAttempts,
           baseDelayMs: RETRY_CONFIG.baseDelayMs,
           maxDelayMs: RETRY_CONFIG.maxDelayMs,
-          shouldRetry: (error) => !isNonRetryableStartupError(error),
+          shouldRetry: (error) => !isNonRetryableStartupError(error) && !isRejectedRequest(error),
         }
       );
       this.acpSessionId = sessionResponse.sessionId;
@@ -1013,7 +1027,7 @@ export class AcpBackend implements AgentBackend {
     handleThinkingUpdate(update as SessionUpdate, ctx);
 
     // Log unhandled session update types for debugging
-    // Cast to string to avoid TypeScript errors (SDK types don't include all Gemini-specific update types)
+    // Cast to string to avoid TypeScript errors (SDK types don't include every update type agents send)
     const handledTypes = [
       'agent_message_chunk',
       'tool_call_update',
@@ -1202,7 +1216,7 @@ export class AcpBackend implements AgentBackend {
 
   /**
    * Wait for the response to complete (idle status after all chunks received)
-   * Call this after sendPrompt to wait for Gemini to finish responding
+   * Call this after sendPrompt to wait for the agent to finish responding
    */
   async waitForResponseComplete(timeoutMs: number = 120000): Promise<void> {
     if (!this.waitingForResponse) {

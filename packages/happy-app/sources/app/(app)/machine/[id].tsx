@@ -17,6 +17,7 @@ import { useUnistyles } from 'react-native-unistyles';
 import { t } from '@/text';
 import { useNavigateToSession } from '@/hooks/useNavigateToSession';
 import { MOBILE_GLASS_HEADER_HEIGHT } from '@/components/navigation/headerMetrics';
+import { ENGINE_AGENT, getHarnessName, isHarnessAvailable } from '@/utils/harnessCatalog';
 
 export default function MachineDetailScreen() {
     const { theme } = useUnistyles();
@@ -172,6 +173,10 @@ export default function MachineDetailScreen() {
     }
 
     const metadata = machine.metadata;
+    const engineAvailable = isHarnessAvailable({
+        availability: metadata?.cliAvailability,
+        key: ENGINE_AGENT,
+    });
     const machineName = metadata?.displayName || metadata?.host || 'unknown machine';
     const machineOnline = isMachineOnline(machine);
 
@@ -282,52 +287,14 @@ export default function MachineDetailScreen() {
                 {metadata?.cliAvailability && (
                     <ItemGroup title={t('machine.cliAvailability')}>
                         <Item
-                            title="Claude"
+                            title={getHarnessName(ENGINE_AGENT)}
                             showChevron={false}
                             rightElement={
-                                <Text style={{ color: metadata.cliAvailability.claude ? '#34C759' : theme.colors.textSecondary, fontSize: 14 }}>
-                                    {metadata.cliAvailability.claude ? t('machine.cliInstalled') : t('machine.cliNotFound')}
+                                <Text style={{ color: engineAvailable ? '#34C759' : theme.colors.textSecondary, fontSize: 14 }}>
+                                    {engineAvailable ? t('machine.cliInstalled') : t('machine.cliNotFound')}
                                 </Text>
                             }
                         />
-                        <Item
-                            title="Codex"
-                            showChevron={false}
-                            rightElement={
-                                <Text style={{ color: metadata.cliAvailability.codex ? '#34C759' : theme.colors.textSecondary, fontSize: 14 }}>
-                                    {metadata.cliAvailability.codex ? t('machine.cliInstalled') : t('machine.cliNotFound')}
-                                </Text>
-                            }
-                        />
-                        <Item
-                            title="Gemini"
-                            showChevron={false}
-                            rightElement={
-                                <Text style={{ color: metadata.cliAvailability.gemini ? '#34C759' : theme.colors.textSecondary, fontSize: 14 }}>
-                                    {metadata.cliAvailability.gemini ? t('machine.cliInstalled') : t('machine.cliNotFound')}
-                                </Text>
-                            }
-                        />
-                        <Item
-                            title="OpenClaw"
-                            showChevron={false}
-                            rightElement={
-                                <Text style={{ color: metadata.cliAvailability.openclaw ? '#34C759' : theme.colors.textSecondary, fontSize: 14 }}>
-                                    {metadata.cliAvailability.openclaw ? t('machine.cliInstalled') : t('machine.cliNotFound')}
-                                </Text>
-                            }
-                        />
-                        {metadata.cliAvailability.rig !== undefined && (
-                            <Item
-                                title="Rig"
-                                showChevron={false}
-                                rightElement={
-                                    <Text style={{ color: metadata.cliAvailability.rig ? '#34C759' : theme.colors.textSecondary, fontSize: 14 }}>
-                                        {metadata.cliAvailability.rig ? t('machine.cliInstalled') : t('machine.cliNotFound')}
-                                    </Text>
-                                }
-                            />
-                        )}
                         <Item
                             title={t('machine.lastDetected')}
                             subtitle={new Date(metadata.cliAvailability.detectedAt).toLocaleString()}

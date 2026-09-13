@@ -2,7 +2,6 @@ import { log } from "@/utils/log";
 import { Server, Socket } from "socket.io";
 import type { RemoteSocket } from "socket.io";
 import type { DefaultEventsMap } from "socket.io/dist/typed-events";
-import { Counter, Histogram, register } from 'prom-client';
 
 // RPC routing uses Socket.IO rooms. A daemon registering method M for user U
 // joins room `rpc:U:M`. Callers look the daemon up cross-replica via
@@ -33,48 +32,8 @@ const RPC_PRESENCE_FETCH_TIMEOUT_MS = 500;
 const RPC_RECONNECT_GRACE_MS = 15_000;
 const RPC_RECONNECT_POLL_MS = 200;
 
-const rpcCallCounter = new Counter({
-    name: 'rpc_calls_total',
-    help: 'Total RPC calls by method and outcome',
-    labelNames: ['method', 'result'] as const,
-    registers: [register]
-});
-
-const rpcCallDuration = new Histogram({
-    name: 'rpc_call_duration_seconds',
-    help: 'RPC call duration from receipt to response',
-    labelNames: ['method', 'result'] as const,
-    buckets: [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 15, 30],
-    registers: [register]
-});
-
-const rpcLookupRetries = new Histogram({
-    name: 'rpc_lookup_retries',
-    help: 'Number of grace-window polls before finding daemon (0 = instant)',
-    labelNames: ['method'] as const,
-    buckets: [0, 1, 2, 3, 4, 5, 6, 7],
-    registers: [register]
-});
-
-const rpcFetchSocketsTimeouts = new Counter({
-    name: 'rpc_fetchsockets_timeouts_total',
-    help: 'Cross-replica fetchSockets timeouts by context',
-    labelNames: ['context'] as const,
-    registers: [register]
-});
-
 function rpcRoom(userId: string, method: string): string {
     return `${RPC_ROOM_PREFIX}${userId}:${method}`;
-}
-
-/**
- * Strip the scope prefix (machineId/sessionId) from a prefixed method name
- * to get the base method for metrics labels. Wire format: "cm9xyz123:bash" -> "bash".
- * Falls back to "unknown" if no colon separator found.
- */
-function baseMethodName(prefixedMethod: string): string {
-    const lastColon = prefixedMethod.lastIndexOf(':');
-    return lastColon >= 0 ? prefixedMethod.substring(lastColon + 1) : prefixedMethod;
 }
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -88,13 +47,12 @@ type RoomSockets = RemoteSocket<DefaultEventsMap, any>[];
  * + grace window) and RPC_PRESENCE_FETCH_TIMEOUT_MS for in-flight presence
  * polling.
  */
-async function fetchRoomSockets(io: Server, room: string, timeoutMs: number, context: 'lookup' | 'presence' = 'lookup'): Promise<RoomSockets> {
+async function fetchRoomSockets(io: Server, room: string, timeoutMs: number): Promise<RoomSockets> {
     try {
         return await io.in(room)
             .timeout(timeoutMs)
             .fetchSockets();
     } catch (error) {
-        rpcFetchSocketsTimeouts.inc({ context });
         log({ module: 'websocket' }, `fetchSockets failed for ${room} (timeout=${timeoutMs}ms): ${error}`);
         return [];
     }
@@ -106,18 +64,16 @@ async function fetchRoomSockets(io: Server, room: string, timeoutMs: number, con
  * reduce stream pressure when Redis is slow — fewer requests in flight
  * means less amplification of the timeout → retry → timeout spiral.
  */
-async function waitForRoomMember(io: Server, room: string, maxMs: number, metricMethod: string): Promise<RoomSockets> {
+async function waitForRoomMember(io: Server, room: string, maxMs: number): Promise<RoomSockets> {
     const deadline = Date.now() + maxMs;
     let polls = 0;
     while (true) {
         const timeoutMs = RPC_LOOKUP_FETCH_TIMEOUTS_MS[Math.min(polls, RPC_LOOKUP_FETCH_TIMEOUTS_MS.length - 1)];
         const sockets = await fetchRoomSockets(io, room, timeoutMs);
         if (sockets.length > 0) {
-            rpcLookupRetries.observe({ method: metricMethod }, polls);
             return sockets;
         }
         if (Date.now() >= deadline) {
-            rpcLookupRetries.observe({ method: metricMethod }, polls);
             return sockets;
         }
         polls++;
@@ -158,14 +114,10 @@ export function rpcHandler(userId: string, socket: Socket, io: Server) {
     });
 
     socket.on('rpc-call', async (data: any, callback: (response: any) => void) => {
-        const startTime = Date.now();
         const { method, params } = data ?? {};
 
-        const finish = (result: string) => {
-            const durationSec = (Date.now() - startTime) / 1000;
-            const m = baseMethodName(method || 'unknown');
-            rpcCallCounter.inc({ method: m, result });
-            rpcCallDuration.observe({ method: m, result }, durationSec);
+        const finish = (_result: string) => {
+            /* upstream recorded Prometheus counters here; the relay has no metrics surface */
         };
 
         try {
@@ -182,7 +134,7 @@ export function rpcHandler(userId: string, socket: Socket, io: Server) {
             const room = rpcRoom(userId, method);
             let targets = await fetchRoomSockets(io, room, RPC_LOOKUP_FETCH_TIMEOUTS_MS[0]);
             if (targets.length === 0) {
-                targets = await waitForRoomMember(io, room, RPC_RECONNECT_GRACE_MS, baseMethodName(method));
+                targets = await waitForRoomMember(io, room, RPC_RECONNECT_GRACE_MS);
             }
 
             if (targets.length === 0) {
@@ -225,7 +177,7 @@ export function rpcHandler(userId: string, socket: Socket, io: Server) {
                 while (presenceAlive) {
                     await sleep(RPC_PRESENCE_POLL_MS);
                     if (!presenceAlive) return;
-                    const stillThere = await fetchRoomSockets(io, room, RPC_PRESENCE_FETCH_TIMEOUT_MS, 'presence');
+                    const stillThere = await fetchRoomSockets(io, room, RPC_PRESENCE_FETCH_TIMEOUT_MS);
                     if (!stillThere.some(s => s.id === target.id)) {
                         consecutiveMisses++;
                         if (consecutiveMisses >= 2) {

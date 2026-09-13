@@ -77,7 +77,6 @@ import { EditViewFull } from './views/EditViewFull';
 import { WriteView } from './views/WriteView';
 import { MultiEditView } from './views/MultiEditView';
 import { MultiEditViewFull } from './views/MultiEditViewFull';
-import { GeminiEditView } from './views/GeminiEditView';
 
 const renderers: ReturnType<typeof create>[] = [];
 function render(element: React.ReactElement) {
@@ -110,7 +109,6 @@ describe('tool rendering on mobile and web', () => {
         ['Edit', EditViewFull, { old_string: '  x', new_string: '    x' }],
         ['MultiEdit', MultiEditView, { edits: [{ old_string: '  x', new_string: '    x' }] }],
         ['MultiEdit', MultiEditViewFull, { edits: [{ old_string: '  x', new_string: '    x' }] }],
-        ['edit', GeminiEditView, { oldText: '  x', newText: '    x' }],
     ])('preserves whitespace-only edits in %s', (name, Component, input) => {
         const tree = render(React.createElement(Component as React.ComponentType<any>, {
             tool: tool(name as string, { ...(input as object), file_path: 'x.ts' }), metadata: null, messages: [],
@@ -124,7 +122,6 @@ describe('tool rendering on mobile and web', () => {
         ['Write', WriteView, { content: 'const x = 1;' }],
         ['MultiEdit', MultiEditView, { edits: [{ old_string: 'const x = 1;', new_string: 'const x = 2;' }] }],
         ['MultiEdit', MultiEditViewFull, { edits: [{ old_string: 'const x = 1;', new_string: 'const x = 2;' }] }],
-        ['edit', GeminiEditView, { oldText: 'const x = 1;', newText: 'const x = 2;' }],
     ])('passes the real filename to syntax detection for %s', (name, Component, input) => {
         const tree = render(React.createElement(Component as React.ComponentType<any>, {
             tool: tool(name as string, { ...(input as object), file_path: '/repo/component.tsx' }),

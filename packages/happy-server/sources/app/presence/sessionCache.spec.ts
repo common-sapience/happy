@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
     dbMock,
-    counterIncMock,
     resetMocks,
 } = vi.hoisted(() => {
     const dbMock = {
@@ -15,23 +14,17 @@ const {
             update: vi.fn(),
         },
     };
-    const counterIncMock = vi.fn();
     const resetMocks = () => {
         dbMock.session.findUnique.mockReset();
         dbMock.session.update.mockReset();
         dbMock.machine.findUnique.mockReset();
         dbMock.machine.update.mockReset();
-        counterIncMock.mockReset();
     };
-    return { dbMock, counterIncMock, resetMocks };
+    return { dbMock, resetMocks };
 });
 
 vi.mock("@/storage/db", () => ({ db: dbMock }));
 vi.mock("@/utils/log", () => ({ log: vi.fn() }));
-vi.mock("@/app/monitoring/metrics2", () => ({
-    sessionCacheCounter: { inc: counterIncMock },
-    databaseUpdatesSkippedCounter: { inc: counterIncMock },
-}));
 
 describe("ActivityCache machine heartbeats", () => {
     beforeEach(() => {

@@ -1,4 +1,4 @@
-import { eventRouter, buildNewSessionUpdate, buildUpdateSessionUpdate, buildSessionActivityEphemeral } from "@/app/events/eventRouter";
+import { eventRouter, buildNewSessionUpdate, buildUpdateSessionUpdate } from "@/app/events/eventRouter";
 import { type Fastify } from "../types";
 import { db } from "@/storage/db";
 import { z } from "zod";
@@ -33,6 +33,7 @@ export function sessionRoutes(app: Fastify) {
                 dataEncryptionKey: true,
                 projectId: true,
                 active: true,
+                archived: true,
                 lastActiveAt: true,
                 // messages: {
                 //     orderBy: { seq: 'desc' },
@@ -60,6 +61,7 @@ export function sessionRoutes(app: Fastify) {
                     createdAt: v.createdAt.getTime(),
                     updatedAt: sessionUpdatedAt,
                     active: v.active,
+                    archived: v.archived,
                     activeAt: v.lastActiveAt.getTime(),
                     metadata: v.metadata,
                     metadataVersion: v.metadataVersion,
@@ -105,6 +107,7 @@ export function sessionRoutes(app: Fastify) {
                 dataEncryptionKey: true,
                 projectId: true,
                 active: true,
+                archived: true,
                 lastActiveAt: true,
             }
         });
@@ -116,6 +119,7 @@ export function sessionRoutes(app: Fastify) {
                 createdAt: v.createdAt.getTime(),
                 updatedAt: v.updatedAt.getTime(),
                 active: v.active,
+                archived: v.archived,
                 activeAt: v.lastActiveAt.getTime(),
                 metadata: v.metadata,
                 metadataVersion: v.metadataVersion,
@@ -187,6 +191,7 @@ export function sessionRoutes(app: Fastify) {
                 dataEncryptionKey: true,
                 projectId: true,
                 active: true,
+                archived: true,
                 lastActiveAt: true,
             }
         });
@@ -209,6 +214,7 @@ export function sessionRoutes(app: Fastify) {
                 createdAt: v.createdAt.getTime(),
                 updatedAt: v.updatedAt.getTime(),
                 active: v.active,
+                archived: v.archived,
                 activeAt: v.lastActiveAt.getTime(),
                 metadata: v.metadata,
                 metadataVersion: v.metadataVersion,
@@ -283,6 +289,7 @@ export function sessionRoutes(app: Fastify) {
                     dataEncryptionKey: sessionForResponse.dataEncryptionKey ? Buffer.from(sessionForResponse.dataEncryptionKey).toString('base64') : null,
                     projectId: sessionForResponse.projectId,
                     active: sessionForResponse.active,
+                    archived: sessionForResponse.archived,
                     activeAt: sessionForResponse.lastActiveAt.getTime(),
                     createdAt: sessionForResponse.createdAt.getTime(),
                     updatedAt: sessionForResponse.updatedAt.getTime(),
@@ -333,6 +340,7 @@ export function sessionRoutes(app: Fastify) {
                     dataEncryptionKey: session.dataEncryptionKey ? Buffer.from(session.dataEncryptionKey).toString('base64') : null,
                     projectId: session.projectId,
                     active: session.active,
+                    archived: session.archived,
                     activeAt: session.lastActiveAt.getTime(),
                     createdAt: session.createdAt.getTime(),
                     updatedAt: session.updatedAt.getTime(),
@@ -392,40 +400,6 @@ export function sessionRoutes(app: Fastify) {
                 updatedAt: v.updatedAt.getTime()
             }))
         });
-    });
-
-    // Archive session (force deactivate)
-    app.post('/v1/sessions/:sessionId/archive', {
-        schema: {
-            params: z.object({
-                sessionId: z.string()
-            })
-        },
-        preHandler: app.authenticate
-    }, async (request, reply) => {
-        const userId = request.userId;
-        const { sessionId } = request.params;
-
-        activityCache.clearSessionUpdates(sessionId);
-
-        const result = await db.session.updateMany({
-            where: { id: sessionId, accountId: userId },
-            data: { active: false, lastActiveAt: new Date() }
-        });
-
-        if (result.count === 0) {
-            return reply.code(404).send({ error: 'Session not found' });
-        }
-
-        // Notify all clients about the session deactivation
-        const sessionActivity = buildSessionActivityEphemeral(sessionId, false, Date.now(), false);
-        eventRouter.emitEphemeral({
-            userId,
-            payload: sessionActivity,
-            recipientFilter: { type: 'user-scoped-only' }
-        });
-
-        return reply.send({ success: true });
     });
 
     // Delete session

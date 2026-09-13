@@ -1,10 +1,25 @@
 import { error as logError } from "@/utils/log";
 import { Fastify } from "../types";
 import { FastifyError } from "fastify";
-import { isTransactionTimeout, recordProductionError } from "@/app/monitoring/productionLogSummary";
 
 export interface EnableErrorHandlersOptions {
     skipNotFoundHandler?: boolean;
+}
+
+function oneLine(value: unknown): string {
+    return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Prisma reports a closed interactive transaction as P2028 or as a free-form message;
+ * both stay visible in the log even when the request itself ends as a client error.
+ */
+export function isTransactionTimeout(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false;
+    const candidate = error as { code?: unknown; message?: unknown; meta?: { code?: unknown; message?: unknown } };
+    if (candidate.code === 'P2028') return true;
+    const message = `${oneLine(candidate.message)} ${oneLine(candidate.meta?.message)}`;
+    return /transaction (already closed|.*expired)|expired transaction|interactive transaction.*timeout/i.test(message);
 }
 
 export function resolveErrorStatusCode(replyStatusCode: number, errorStatusCode?: number): number {
@@ -50,8 +65,6 @@ export function enableErrorHandlers(app: Fastify, options: EnableErrorHandlersOp
         const durationMs = Date.now() - (request.startTime || Date.now());
         const statusCode = resolveErrorStatusCode(reply.statusCode, error.statusCode);
         const txTimeout = isTransactionTimeout(error);
-
-        recordProductionError(error);
 
         // Client errors are summarized, not logged one by one. Server errors
         // and transaction timeouts remain immediately visible.

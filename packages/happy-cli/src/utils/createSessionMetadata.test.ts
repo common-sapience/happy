@@ -1,6 +1,5 @@
 import { execSync } from 'node:child_process';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { SandboxConfig } from '@/persistence';
 import { createSessionMetadata } from './createSessionMetadata';
 
 vi.mock('node:child_process', () => ({
@@ -9,96 +8,54 @@ vi.mock('node:child_process', () => ({
 
 const mockedExecSync = vi.mocked(execSync);
 
-function createSandboxConfig(overrides: Partial<SandboxConfig> = {}): SandboxConfig {
-    return {
-        enabled: true,
-        workspaceRoot: '~/Developer',
-        sessionIsolation: 'workspace',
-        customWritePaths: [],
-        denyReadPaths: ['~/.ssh', '~/.aws', '~/.gnupg'],
-        extraWritePaths: ['/tmp'],
-        denyWritePaths: ['.env'],
-        networkMode: 'allowed',
-        allowedDomains: [],
-        deniedDomains: [],
-        allowLocalBinding: true,
-        ...overrides,
-    };
-}
-
 describe('createSessionMetadata', () => {
     beforeEach(() => {
         mockedExecSync.mockReset();
         mockedExecSync.mockReturnValue('main\n');
     });
 
-    it('sets metadata.sandbox to the config when enabled', () => {
-        const sandbox = createSandboxConfig();
+    it('HOST-10: reports the engine as the session flavor', () => {
         const { metadata } = createSessionMetadata({
-            flavor: 'codex',
+            flavor: 'opencode',
             machineId: 'machine-1',
-            startedBy: 'terminal',
-            sandbox,
-        });
-
-        expect(metadata.sandbox).toEqual(sandbox);
-    });
-
-    it('sets metadata.sandbox to null when sandbox is disabled', () => {
-        const sandbox = createSandboxConfig({ enabled: false });
-        const { metadata } = createSessionMetadata({
-            flavor: 'gemini',
-            machineId: 'machine-2',
             startedBy: 'daemon',
-            sandbox,
         });
 
-        expect(metadata.sandbox).toBeNull();
+        expect(metadata.flavor).toBe('opencode');
     });
 
-    it('sets metadata.sandbox to null when sandbox is not provided', () => {
+    it('HOST-12: carries the agent profile into session metadata', () => {
         const { metadata } = createSessionMetadata({
-            flavor: 'claude',
+            flavor: 'opencode',
+            machineId: 'machine-2',
+            agentProfile: 'research',
+        });
+
+        expect(metadata.agentProfile).toBe('research');
+    });
+
+    it('HOST-12: omits the agent profile when the session runs on the default', () => {
+        const { metadata } = createSessionMetadata({
+            flavor: 'opencode',
             machineId: 'machine-3',
         });
 
-        expect(metadata.sandbox).toBeNull();
-    });
-
-    it('sets metadata.dangerouslySkipPermissions to null when not provided', () => {
-        const { metadata } = createSessionMetadata({
-            flavor: 'codex',
-            machineId: 'machine-4',
-        });
-
-        expect(metadata.dangerouslySkipPermissions).toBeNull();
-    });
-
-    it('sets metadata.dangerouslySkipPermissions when provided', () => {
-        const { metadata } = createSessionMetadata({
-            flavor: 'claude',
-            machineId: 'machine-5',
-            dangerouslySkipPermissions: true,
-        });
-
-        expect(metadata.dangerouslySkipPermissions).toBe(true);
+        expect(metadata.agentProfile).toBeUndefined();
     });
 
     it('sets fork lineage metadata when provided', () => {
         const { metadata } = createSessionMetadata({
-            flavor: 'codex',
+            flavor: 'opencode',
             machineId: 'machine-6',
             parentSessionId: 'happy-source',
-            forkedFromMessageId: 'message-2',
         });
 
         expect(metadata.parentSessionId).toBe('happy-source');
-        expect(metadata.forkedFromMessageId).toBe('message-2');
     });
 
     it('sets metadata.isSideChat when the session is a side chat', () => {
         const { metadata } = createSessionMetadata({
-            flavor: 'claude',
+            flavor: 'opencode',
             machineId: 'machine-side',
             parentSessionId: 'happy-parent',
             isSideChat: true,
@@ -110,7 +67,7 @@ describe('createSessionMetadata', () => {
 
     it('omits metadata.isSideChat for a normal session', () => {
         const { metadata } = createSessionMetadata({
-            flavor: 'claude',
+            flavor: 'opencode',
             machineId: 'machine-normal',
         });
 
@@ -121,7 +78,7 @@ describe('createSessionMetadata', () => {
         mockedExecSync.mockReturnValue('fix/session-status\n');
 
         const { metadata } = createSessionMetadata({
-            flavor: 'codex',
+            flavor: 'opencode',
             machineId: 'machine-7',
         });
 
@@ -135,7 +92,7 @@ describe('createSessionMetadata', () => {
         mockedExecSync.mockReturnValue('HEAD\n');
 
         const detached = createSessionMetadata({
-            flavor: 'codex',
+            flavor: 'opencode',
             machineId: 'machine-8',
         });
 
@@ -146,7 +103,7 @@ describe('createSessionMetadata', () => {
         });
 
         const unavailable = createSessionMetadata({
-            flavor: 'codex',
+            flavor: 'opencode',
             machineId: 'machine-9',
         });
 

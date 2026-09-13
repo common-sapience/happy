@@ -20,8 +20,7 @@ import { useConnectAccount } from '@/hooks/useConnectAccount';
 import { getDisplayName } from '@/sync/profile';
 import { Image } from 'expo-image';
 import { useHappyAction } from '@/hooks/useHappyAction';
-import { disconnectGitHub } from '@/sync/apiGithub';
-import { disconnectService } from '@/sync/apiServices';
+import { disconnectService, fetchServiceConnections, type ServiceConnection } from '@/sync/apiServices';
 import { fetchPushTokens, type PushToken } from '@/sync/apiPush';
 import {
     getCurrentExpoPushToken,
@@ -123,7 +122,6 @@ export default React.memo(() => {
 
     // Profile display values
     const displayName = getDisplayName(profile);
-    const githubUsername = profile.github?.login;
 
     const loadPushSettings = useCallback(async (showError = false) => {
         if (!auth.credentials) {
@@ -163,34 +161,37 @@ export default React.memo(() => {
         }, [loadPushSettings])
     );
 
-    // GitHub disconnection
-    const [disconnecting, handleDisconnectGitHub] = useHappyAction(async () => {
-        const confirmed = await Modal.confirm(
-            t('modals.disconnectGithub'),
-            t('modals.disconnectGithubConfirm'),
-            { confirmText: t('modals.disconnect'), destructive: true }
-        );
-        if (confirmed) {
-            await disconnectGitHub(auth.credentials!);
+    // Connector records (DEV-08). They are keyed by service and computer, so the list comes from
+    // the connector endpoint rather than from the account profile.
+    const [connections, setConnections] = useState<ServiceConnection[]>([]);
+    const loadConnections = useCallback(async () => {
+        if (!auth.credentials) return;
+        try {
+            setConnections(await fetchServiceConnections(auth.credentials));
+        } catch {
+            setConnections([]);
         }
-    });
+    }, [auth.credentials]);
 
-    // Service disconnection
+    useEffect(() => {
+        void loadConnections();
+    }, [loadConnections]);
+
     const [disconnectingService, setDisconnectingService] = useState<string | null>(null);
-    const handleDisconnectService = async (service: string, displayName: string) => {
+    const handleDisconnectService = async (connection: ServiceConnection) => {
+        const key = `${connection.vendor}:${connection.machineId}`;
         const confirmed = await Modal.confirm(
-            t('modals.disconnectService', { service: displayName }),
-            t('modals.disconnectServiceConfirm', { service: displayName }),
+            t('modals.disconnectService', { service: connection.vendor }),
+            t('modals.disconnectServiceConfirm', { service: connection.vendor }),
             { confirmText: t('modals.disconnect'), destructive: true }
         );
         if (confirmed) {
-            setDisconnectingService(service);
+            setDisconnectingService(key);
             try {
-                await disconnectService(auth.credentials!, service);
-                await sync.refreshProfile();
-                // The profile will be updated via sync
+                await disconnectService(auth.credentials!, connection.vendor, connection.machineId);
+                await loadConnections();
             } catch (error) {
-                Modal.alert(t('common.error'), t('errors.disconnectServiceFailed', { service: displayName }));
+                Modal.alert(t('common.error'), t('errors.disconnectServiceFailed', { service: connection.vendor }));
             } finally {
                 setDisconnectingService(null);
             }
@@ -343,7 +344,7 @@ export default React.memo(() => {
                 </ItemGroup>
 
                 {/* Profile Section */}
-                {(displayName || githubUsername || profile.avatar) && (
+                {(displayName || profile.avatar) && (
                     <ItemGroup title={t('settingsAccount.profile')}>
                         {displayName && (
                             <Item
@@ -352,76 +353,32 @@ export default React.memo(() => {
                                 showChevron={false}
                             />
                         )}
-                        {githubUsername && (
-                            <Item
-                                title={t('settingsAccount.github')}
-                                detail={`@${githubUsername}`}
-                                subtitle={t('settingsAccount.tapToDisconnect')}
-                                onPress={handleDisconnectGitHub}
-                                loading={disconnecting}
-                                showChevron={false}
-                                icon={profile.avatar?.url ? (
-                                    <Image
-                                        source={{ uri: profile.avatar.url }}
-                                        style={{ width: 29, height: 29, borderRadius: 14.5 }}
-                                        placeholder={{ thumbhash: profile.avatar.thumbhash }}
-                                        contentFit="cover"
-                                        transition={200}
-                                        cachePolicy="memory-disk"
-                                    />
-                                ) : (
-                                    <Ionicons name="logo-github" size={29} color={theme.colors.textSecondary} />
-                                )}
-                            />
-                        )}
                     </ItemGroup>
                 )}
 
-                {/* Connected Services Section */}
-                {profile.connectedServices && profile.connectedServices.length > 0 && (() => {
-                    // Map of service IDs to display names and icons
-                    const knownServices = {
-                        anthropic: { name: 'Claude Code', icon: require('@/assets/images/icon-claude.png'), tintColor: null },
-                        gemini: { name: 'Google Gemini', icon: require('@/assets/images/icon-gemini.png'), tintColor: null },
-                        openai: { name: 'OpenAI Codex', icon: require('@/assets/images/icon-gpt.png'), tintColor: theme.colors.text }
-                    };
-                    
-                    // Filter to only known services
-                    const displayServices = profile.connectedServices.filter(
-                        service => service in knownServices
-                    );
-                    
-                    if (displayServices.length === 0) return null;
-                    
-                    return (
-                        <ItemGroup title={t('settings.connectedAccounts')}>
-                            {displayServices.map(service => {
-                                const serviceInfo = knownServices[service as keyof typeof knownServices];
-                                const isDisconnecting = disconnectingService === service;
-                                return (
-                                    <Item
-                                        key={service}
-                                        title={serviceInfo.name}
-                                        detail={t('settingsAccount.statusActive')}
-                                        subtitle={t('settingsAccount.tapToDisconnect')}
-                                        onPress={() => handleDisconnectService(service, serviceInfo.name)}
-                                        loading={isDisconnecting}
-                                        disabled={isDisconnecting}
-                                        showChevron={false}
-                                        icon={
-                                            <Image
-                                                source={serviceInfo.icon}
-                                                style={{ width: 29, height: 29 }}
-                                                tintColor={serviceInfo.tintColor}
-                                                contentFit="contain"
-                                            />
-                                        }
-                                    />
-                                );
-                            })}
-                        </ItemGroup>
-                    );
-                })()}
+                {/* Connected Services Section. The relay owns the record, not the credential, so a
+                    row is a service name plus the computer that holds the credential (DEV-08). */}
+                {connections.length > 0 && (
+                    <ItemGroup title={t('settings.connectedAccounts')}>
+                        {connections.map(connection => {
+                            const key = `${connection.vendor}:${connection.machineId}`;
+                            const isDisconnecting = disconnectingService === key;
+                            return (
+                                <Item
+                                    key={key}
+                                    title={connection.vendor}
+                                    detail={connection.status === 'connected' ? t('settingsAccount.statusActive') : connection.status}
+                                    subtitle={t('settingsAccount.tapToDisconnect')}
+                                    onPress={() => handleDisconnectService(connection)}
+                                    loading={isDisconnecting}
+                                    disabled={isDisconnecting}
+                                    showChevron={false}
+                                    icon={<Ionicons name="link-outline" size={29} color={theme.colors.textSecondary} />}
+                                />
+                            );
+                        })}
+                    </ItemGroup>
+                )}
 
                 {/* Backup Section */}
                 <ItemGroup

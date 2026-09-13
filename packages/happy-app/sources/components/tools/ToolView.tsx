@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Text, View, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Ionicons, Octicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { getToolViewComponent } from './views/_all';
 import { Message, ToolCall } from '@/sync/typesMessage';
 import { CodeView } from '../CodeView';
@@ -74,14 +74,6 @@ export const ToolView = React.memo<ToolViewProps>((props) => {
     let noStatus = false;
     let hideDefaultError = false;
     
-    // For Gemini: unknown tools should be rendered as minimal (hidden)
-    // This prevents showing raw INPUT/OUTPUT for internal Gemini tools
-    // that we haven't explicitly added to knownTools
-    const isGemini = props.metadata?.flavor === 'gemini';
-    if (!knownTool && isGemini) {
-        minimal = true;
-    }
-
     // Extract status first to potentially use as title
     if (knownTool && typeof knownTool.extractStatus === 'function') {
         const state = knownTool.extractStatus({ tool, metadata: props.metadata });
@@ -120,17 +112,7 @@ export const ToolView = React.memo<ToolViewProps>((props) => {
         }
     }
     
-    // Special handling for CodexBash to determine icon based on parsed_cmd
-    if (tool.name === 'CodexBash' && tool.input?.parsed_cmd && Array.isArray(tool.input.parsed_cmd) && tool.input.parsed_cmd.length > 0) {
-        const parsedCmd = tool.input.parsed_cmd[0];
-        if (parsedCmd.type === 'read') {
-            icon = <Octicons name="eye" size={18} color={theme.colors.text} />;
-        } else if (parsedCmd.type === 'write') {
-            icon = <Octicons name="file-diff" size={18} color={theme.colors.text} />;
-        } else {
-            icon = <Octicons name="terminal" size={18} color={theme.colors.text} />;
-        }
-    } else if (knownTool && typeof knownTool.icon === 'function') {
+    if (knownTool && typeof knownTool.icon === 'function') {
         icon = knownTool.icon(18, theme.colors.text);
     }
     
@@ -182,7 +164,7 @@ export const ToolView = React.memo<ToolViewProps>((props) => {
         || minimal
         || isCompactTerminalTool);
     const activityLabel = getToolActivityLabel(tool);
-    const isInlineCodexPatch = Platform.OS === 'web' && (tool.name === 'CodexPatch' || tool.name === 'apply_patch');
+    const isInlinePatch = Platform.OS === 'web' && tool.name === 'apply_patch';
     const renderCardHeader = isCompactActivityTool || shouldRenderToolCardHeader(tool.name, Platform.OS);
     const renderPermissionFooter = () => (
         tool.permission && sessionId && tool.name !== 'AskUserQuestion'
@@ -234,7 +216,7 @@ export const ToolView = React.memo<ToolViewProps>((props) => {
     };
 
     return (
-        <View style={isCompactActivityTool ? styles.compactContainer : isInlineCodexPatch ? styles.inlineContainer : styles.container}>
+        <View style={isCompactActivityTool ? styles.compactContainer : isInlinePatch ? styles.inlineContainer : styles.container}>
             {renderCardHeader ? (
                 isPressable ? (
                     <TouchableOpacity style={isCompactActivityTool ? styles.compactHeader : styles.header} onPress={handlePress} activeOpacity={0.8}>
@@ -264,7 +246,7 @@ export const ToolView = React.memo<ToolViewProps>((props) => {
                                 messages={props.messages ?? []}
                                 sessionId={sessionId}
                                 messageId={messageId}
-                                permissionFooter={isInlineCodexPatch ? renderPermissionFooter() : undefined}
+                                permissionFooter={isInlinePatch ? renderPermissionFooter() : undefined}
                             />
                             {tool.state === 'error' && tool.result &&
                                 !(tool.permission && (tool.permission.status === 'denied' || tool.permission.status === 'canceled')) &&
@@ -309,7 +291,7 @@ export const ToolView = React.memo<ToolViewProps>((props) => {
 
             {/* Permission footer - always renders when permission exists to maintain consistent height */}
             {/* AskUserQuestion has its own Submit button UI - no permission footer needed */}
-            {!isInlineCodexPatch ? renderPermissionFooter() : null}
+            {!isInlinePatch ? renderPermissionFooter() : null}
         </View>
     );
 });

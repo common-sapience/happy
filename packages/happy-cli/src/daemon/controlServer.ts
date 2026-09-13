@@ -11,6 +11,7 @@ import { Metadata } from '@/api/types';
 import { decodeBase64 } from '@/api/encryption';
 import { TrackedSession, SessionEncryptionData } from './types';
 import { SpawnSessionOptions, SpawnSessionResult } from '@/modules/common/registerCommonHandlers';
+import { ENGINE_AGENT_NAME } from '@/agent/acp/acpAgentConfig';
 
 export function startDaemonControlServer({
   getChildren,
@@ -129,10 +130,8 @@ export function startDaemonControlServer({
         body: z.object({
           directory: z.string(),
           sessionId: z.string().optional(),
-          agent: z.enum(['claude', 'codex', 'gemini', 'openclaw', 'agy']).optional(),
-          permissionMode: z.string().optional(),
-          modelMode: z.string().optional(),
-          effortLevel: z.string().optional(),
+          agent: z.literal(ENGINE_AGENT_NAME).optional(),
+          agentProfile: z.string().optional(),
           environmentVariables: z.record(z.string(), z.string()).optional(),
         }),
         response: {
@@ -154,10 +153,10 @@ export function startDaemonControlServer({
         }
       }
     }, async (request, reply) => {
-      const { directory, sessionId, agent, permissionMode, modelMode, effortLevel, environmentVariables } = request.body;
+      const { directory, sessionId, agent, agentProfile, environmentVariables } = request.body;
 
-      logger.debug(`[CONTROL SERVER] Spawn session request: dir=${directory}, sessionId=${sessionId || 'new'}, agent=${agent || 'default'}`);
-      const result = await spawnSession({ directory, sessionId, agent, permissionMode, modelMode, effortLevel, environmentVariables });
+      logger.debug(`[CONTROL SERVER] Spawn session request: dir=${directory}, sessionId=${sessionId || 'new'}, agent=${agent || 'default'}, profile=${agentProfile || 'default'}`);
+      const result = await spawnSession({ directory, sessionId, agent, agentProfile, environmentVariables });
 
       switch (result.type) {
         case 'success':

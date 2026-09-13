@@ -2,11 +2,18 @@
 
 ## Project Overview
 
-Happy CLI (`handy-cli`) is a command-line tool that wraps Claude Code to enable remote control and session sharing. It's part of a three-component system:
+Happy CLI is the daemon that runs on the user's computer: it starts the agent
+engine, translates the engine's ACP traffic into the control-plane protocol, and
+keeps an outbound connection to the relay. It is part of a three-component
+system:
 
-1. **handy-cli** (this project) - CLI wrapper for Claude Code
-2. **handy** - React Native mobile client
-3. **handy-server** - Node.js server with Prisma (hosted at https://api.happy-servers.com/)
+1. **happy-cli** (this package) - daemon and session runner
+2. **happy-app** - control end (mobile, web, Tauri desktop shell)
+3. **happy-server** - relay
+
+The engine (`opencode`, driven over ACP) is the only agent. There is no other
+agent backend, no provider login, and no agent-type branching anywhere in this
+package (HOST-10).
 
 ## Code Style Preferences
 
@@ -30,6 +37,9 @@ Happy CLI (`handy-cli`) is a command-line tool that wraps Claude Code to enable 
 - Use of `try-catch` blocks with specific error logging
 - Abort controllers for cancellable operations
 - Careful handling of process lifecycle and cleanup
+- Deny by default on the permission and credential paths: an unreadable or
+  malformed credential store injects nothing, and a profile the engine rejects
+  fails the session instead of silently running on the default
 
 ### Testing
 - Unit tests using Vitest
@@ -38,17 +48,19 @@ Happy CLI (`handy-cli`) is a command-line tool that wraps Claude Code to enable 
 - Descriptive test names and proper async handling
 
 ### Logging
-- All debugging through file logs to avoid disturbing Claude sessions
+- All debugging through file logs to avoid disturbing the terminal
 - Console output only for user-facing messages
 - Special handling for large JSON objects with truncation
+- Credential values are never logged - only key and connector names
 
 ## Architecture & Key Components
 
 ### 1. API Module (`/src/api/`)
-Handles server communication and encryption.
+Handles relay communication and encryption.
 
 - **`api.ts`**: Main API client class for session management
 - **`apiSession.ts`**: WebSocket-based real-time session client with RPC support
+- **`apiMachine.ts`**: Machine-scoped client: machine RPCs (spawn, stop, shutdown) and the capability report
 - **`auth.ts`**: Authentication flow using TweetNaCl for cryptographic signatures
 - **`encryption.ts`**: End-to-end encryption utilities using TweetNaCl
 - **`types.ts`**: Zod schemas for type-safe API communication
@@ -59,68 +71,74 @@ Handles server communication and encryption.
 - Optimistic concurrency control for state updates
 - RPC handler registration for remote procedure calls
 
-### 2. Claude Integration (`/src/claude/`)
-Core Claude Code integration layer.
+### 2. Agent Module (`/src/agent/`)
+The engine integration layer.
 
-- **`loop.ts`**: Main control loop managing interactive/remote modes
-- **`types.ts`**: Claude message type definitions with parsers
+- **`acp/acpAgentConfig.ts`**: The engine's name and ACP invocation - the single source for both
+- **`acp/AcpBackend.ts`**: ACP client: engine process, session updates, permission requests, session modes
+- **`acp/runAcp.ts`**: The session runner: relay session, envelopes, profile, permission switch, credential injection
+- **`acp/AcpSessionManager.ts`**: Turn and tool-call bookkeeping for the session protocol
+- **`core/`**, **`transport/`**: Backend interface and stderr/tool-name handling
 
-- **`claudeSdk.ts`**: Direct SDK integration using `@anthropic-ai/claude-code`
-- **`interactive.ts`**: **LIKELY WILL BE DEPRECATED in favor of running through SDK** PTY-based interactive Claude sessions
-- **`watcher.ts`**: File system watcher for Claude session files (for interactive mode snooping)
+### 3. Daemon Module (`/src/daemon/`)
+Background service that spawns sessions on request.
 
-- **`mcp/startPermissionServer.ts`**: MCP (Model Context Protocol) permission server
+- **`run.ts`**: Daemon lifecycle, machine registration, session tracking, spawn
+- **`engineLaunch.ts`**: The engine session command line and the non-engine spawn refusal
+- **`controlServer.ts`** / **`controlClient.ts`**: Local HTTP control surface
+- **`sessionEnvironment.ts`**: What a spawned session does and does not inherit
 
-**Key Features:**
-- Dual mode operation: interactive (terminal) and remote (mobile control)
-- Session persistence and resumption
-- Real-time message streaming
-- Permission intercepting via MCP [Permission checking not implemented yet]
+### 4. Host-local modules (`/src/modules/`)
 
-### 3. UI Module (`/src/ui/`)
-User interface components.
+- **`permission/permissionSwitch.ts`**: The per-host permission confirmation switch (PERM-08)
+- **`credentials/engineCredentials.ts`**: The single credential source for the engine (HOST-09, HOST-11)
+- **`common/`**: Machine-scoped RPCs, the session kill handler, the Happy MCP server
+
+### 5. UI Module (`/src/ui/`)
 
 - **`logger.ts`**: Centralized logging system with file output
 - **`qrcode.ts`**: QR code generation for mobile authentication
-- **`start.ts`**: Main application startup and orchestration
+- **`auth.ts`**: Login and machine setup
+- **`doctor.ts`**: Diagnostics
 
-**Key Features:**
-- Clean console UI with chalk styling
-- QR code display for easy mobile connection
-- Graceful mode switching between interactive and remote
-
-### 4. Core Files
+### 6. Core Files
 
 - **`index.ts`**: CLI entry point with argument parsing
 - **`persistence.ts`**: Local storage for settings and keys
+- **`happyMcpStdioBridge.ts`**: STDIO bridge so the engine can reach the session's HTTP MCP server
 - **`utils/time.ts`**: Exponential backoff utilities
 
 ## Data Flow
 
-1. **Authentication**: 
+1. **Authentication**:
    - Generate/load secret key → Create signature challenge → Get auth token
 
 2. **Session Creation**:
-   - Create encrypted session with server → Establish WebSocket connection
+   - Create encrypted session with the relay → Establish WebSocket connection
+   - Start the engine over ACP, select the agent profile as the session mode
 
 3. **Message Flow**:
-   - Interactive mode: User input → PTY → Claude → File watcher → Server
-   - Remote mode: Mobile app → Server → Claude SDK → Server → Mobile app
+   - Control end → relay → daemon → engine (ACP prompt)
+   - Engine updates → session envelopes → relay → control end
 
 4. **Permission Handling**:
-   - Claude requests permission → MCP server intercepts → Sends to mobile → Mobile responds → MCP approves/denies
+   - Switch off (default): the engine runs on an allow baseline and decides itself
+   - Switch on: engine permission request → session envelope → control end answers → ACP outcome
 
 ## Key Design Decisions
 
-1. **File-based logging**: Prevents interference with Claude's terminal UI
-2. **Dual Claude integration**: Process spawning for interactive, SDK for remote
+1. **File-based logging**: Prevents interference with the terminal UI
+2. **One agent**: the engine over ACP; differences between agents live in engine profiles, not here
 3. **End-to-end encryption**: All data encrypted before leaving the device
-4. **Session persistence**: Allows resuming sessions across restarts
+4. **Session persistence**: Sessions live in the engine; the relay holds the ciphertext copy
 5. **Optimistic concurrency**: Handles distributed state updates gracefully
 
 ## Security Considerations
 
-- Private keys stored in `~/.handy/access.key` with restricted permissions
+- Private keys stored in `$HAPPY_HOME_DIR/access.key` with restricted permissions
+- Engine credentials stored in `$HAPPY_HOME_DIR/engine-credentials.json` at 0600,
+  injected into the engine process at spawn time and never written out as a
+  plaintext engine config
 - All communications encrypted using TweetNaCl
 - Challenge-response authentication prevents replay attacks
 - Session isolation through unique session IDs
@@ -128,13 +146,12 @@ User interface components.
 ## Dependencies
 
 - Core: Node.js, TypeScript
-- Claude: `@anthropic-ai/claude-code` SDK
-- Networking: Socket.IO client, Axios
+- Engine: `@agentclientprotocol/sdk` (ACP), `@modelcontextprotocol/sdk` (MCP)
+- Networking: Socket.IO client, Axios, Fastify (local control server)
 - Crypto: TweetNaCl
-- Terminal: node-pty, chalk, qrcode-terminal
+- Terminal: ink, chalk, qrcode-terminal
 - Validation: Zod
-- Testing: Vitest 
-
+- Testing: Vitest
 
 # Running the Daemon
 
@@ -154,75 +171,48 @@ HAPPY_SERVER_URL=http://localhost:3005 ./bin/happy.mjs daemon start
 ```
 
 ## Daemon Logs
-- Daemon logs are stored in `~/.happy-dev/logs/` (or `$HAPPY_HOME_DIR/logs/`)
+- Daemon logs are stored in `$HAPPY_HOME_DIR/logs/` (default `~/.happy/logs/`)
 - Named with format: `YYYY-MM-DD-HH-MM-SS-daemon.log`
 
-# Session Forking `claude` and sdk behavior
+# Starting a Session by Hand
 
-## Commands Run
-
-### Initial Session
 ```bash
-claude --print --output-format stream-json --verbose 'list files in this directory'
-```
-- Original Session ID: `aada10c6-9299-4c45-abc4-91db9c0f935d`
-- Created file: `~/.claude/projects/.../aada10c6-9299-4c45-abc4-91db9c0f935d.jsonl`
+# Start an engine session in the current directory
+./bin/happy.mjs
 
-### Resume with --resume flag
-```bash
-claude --print --output-format stream-json --verbose --resume aada10c6-9299-4c45-abc4-91db9c0f935d 'what file did we just see?'
-```
-- New Session ID: `1433467f-ff14-4292-b5b2-2aac77a808f0`
-- Created file: `~/.claude/projects/.../1433467f-ff14-4292-b5b2-2aac77a808f0.jsonl`
+# Under a named engine agent profile
+./bin/happy.mjs --agent-profile research
 
-## Key Findings for --resume
-
-### 1. Session File Behavior
-- Creates a NEW session file with NEW session ID
-- Original session file remains unchanged
-- Two separate files exist after resumption
-
-### 2. History Preservation
-- The new session file contains the COMPLETE history from the original session
-- History is prefixed at the beginning of the new file
-- Includes a summary line at the very top
-
-### 3. Session ID Rewriting
-- **CRITICAL FINDING**: All historical messages have their sessionId field UPDATED to the new session ID
-- Original messages from session `aada10c6-9299-4c45-abc4-91db9c0f935d` now show `sessionId: "1433467f-ff14-4292-b5b2-2aac77a808f0"`
-- This creates a unified session history under the new ID
-
-### 4. Message Structure in New File
-```
-Line 1: Summary of previous conversation
-Lines 2-6: Complete history from original session (with updated session IDs)
-Lines 7-8: New messages from current interaction
+# Against a specific engine build instead of the one on PATH
+./bin/happy.mjs acp -- /opt/engine/opencode acp
 ```
 
-### 5. Context Preservation
-- Claude successfully maintains full context
-- Can answer questions about previous interactions
-- Behaves as if it's a continuous conversation
+# Permission Confirmation Switch
 
-## Technical Details
+The switch is per host, stored as `permissionConfirmationEnabled` in
+`$HAPPY_HOME_DIR/settings.json`, and off by default.
 
-### Original Session File Structure
-- Contains only messages from the original session
-- All messages have original session ID
-- Remains untouched after resume
+- Off: the engine starts with `OPENCODE_PERMISSION={"*":"allow"}` and the daemon
+  surfaces no permission request, so a multi-step task needs zero confirmations.
+- On: the engine applies its own rules and asks over ACP; the daemon forwards the
+  request to the control end and relays the answer back. It never decides itself.
 
-### New Session File Structure After Resume
+The engine's sensitive-file denials are in its managed config and apply either
+way.
+
+# Engine Credentials
+
+`$HAPPY_HOME_DIR/engine-credentials.json`, mode 0600:
+
 ```json
-{"type":"summary","summary":"Listing directory files in current location","leafUuid":"..."}
-{"parentUuid":null,"sessionId":"1433467f-ff14-4292-b5b2-2aac77a808f0","message":{"role":"user","content":[{"type":"text","text":"list files in this directory"}]},...}
-// ... all historical messages with NEW session ID ...
-{"parentUuid":"...","sessionId":"1433467f-ff14-4292-b5b2-2aac77a808f0","message":{"role":"user","content":"what file did we just see?"},...}
+{
+  "platformApiKey": "...",
+  "connectors": {
+    "gmail": { "command": "gmail-mcp", "args": ["--stdio"], "env": { "GMAIL_TOKEN": "..." } }
+  }
+}
 ```
 
-## Implications for handy-cli
-
-When using --resume:
-1. Must handle new session ID in responses
-2. Original session remains as historical record
-3. All context preserved but under new session identity
-4. Session ID in stream-json output will be the new one, not the resumed one
+At session start the platform key becomes `MODEL_API_KEY` in the engine process
+environment, and every connector becomes an MCP server entry carrying its own
+secret. A missing store is normal; a malformed one injects nothing.

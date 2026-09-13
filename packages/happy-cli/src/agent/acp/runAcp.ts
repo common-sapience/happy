@@ -11,13 +11,24 @@ import { logger } from '@/ui/logger';
 import { MessageQueue2 } from '@/utils/MessageQueue2';
 import { hashObject } from '@/utils/deterministicJson';
 import { Credentials, readSettings } from '@/persistence';
+import { ENGINE_AGENT_NAME } from './acpAgentConfig';
 import { initialMachineMetadata } from '@/daemon/run';
 import { createSessionMetadata } from '@/utils/createSessionMetadata';
 import { setupOfflineReconnection } from '@/utils/setupOfflineReconnection';
 import { notifyDaemonSessionStarted } from '@/daemon/controlClient';
 import { encodeBase64 } from '@/api/encryption';
-import { registerKillSessionHandler } from '@/claude/registerKillSessionHandler';
-import { startHappyServer } from '@/claude/utils/startHappyServer';
+import { registerKillSessionHandler } from '@/modules/common/registerKillSessionHandler';
+import { startHappyServer } from '@/modules/common/startHappyServer';
+import {
+  buildEnginePermissionEnv,
+  readPermissionConfirmationEnabled,
+} from '@/modules/permission/permissionSwitch';
+import {
+  buildConnectorMcpServers,
+  buildEngineCredentialEnv,
+  describeInjectedCredentials,
+  readEngineCredentials,
+} from '@/modules/credentials/engineCredentials';
 import { projectPath } from '@/projectPath';
 import { BasePermissionHandler, type PermissionResult } from '@/utils/BasePermissionHandler';
 import { connectionState } from '@/utils/serverConnectionErrors';
@@ -436,16 +447,6 @@ type PendingTurn = {
   timeout: NodeJS.Timeout;
 };
 
-function resolveSessionFlavor(agentName: string): 'gemini' | 'opencode' | 'acp' {
-  if (agentName === 'gemini') {
-    return 'gemini';
-  }
-  if (agentName === 'opencode') {
-    return 'opencode';
-  }
-  return 'acp';
-}
-
 export async function runAcp(opts: {
   credentials: Credentials;
   agentName: string;
@@ -453,6 +454,8 @@ export async function runAcp(opts: {
   args: string[];
   startedBy?: 'daemon' | 'terminal';
   verbose?: boolean;
+  /** Engine agent profile this session runs under (HOST-12). */
+  agentProfile?: string;
 }): Promise<void> {
   const verbose = opts.verbose === true;
   const sessionTag = randomUUID();
@@ -470,10 +473,10 @@ export async function runAcp(opts: {
   });
 
   const { state, metadata } = createSessionMetadata({
-    flavor: resolveSessionFlavor(opts.agentName),
+    flavor: ENGINE_AGENT_NAME,
     machineId: settings.machineId,
     startedBy: opts.startedBy,
-    sandbox: settings.sandboxConfig,
+    agentProfile: opts.agentProfile,
   });
   const response = await api.getOrCreateSession({ tag: sessionTag, metadata, state });
   if (response) {
@@ -511,10 +514,15 @@ export async function runAcp(opts: {
     }
   }
 
+  // PERM-08: with confirmation off the engine runs on an allow baseline and the
+  // daemon never surfaces a permission request; with it on the ACP round trip
+  // stays and the daemon only forwards, it does not decide.
+  const permissionConfirmationEnabled = await readPermissionConfirmationEnabled();
+  logger.debug(`[${opts.agentName}] Permission confirmation ${permissionConfirmationEnabled ? 'enabled' : 'disabled'}`);
+
   permissionHandler = new GenericAcpPermissionHandler(session, opts.agentName);
   // Drop any permission requests left in agent state from a previous CLI
-  // process that died while a tool prompt was open — see the matching
-  // call in claudeRemoteLauncher for the full rationale.
+  // process that died while a tool prompt was open.
   permissionHandler.reset('Previous CLI process exited before responding');
   const sessionManager = new AcpSessionManager();
   const messageQueue = new MessageQueue2<AcpSwitchMode>((mode) => hashObject(mode));
@@ -529,11 +537,21 @@ export async function runAcp(opts: {
   let sawModels = false;
 
   const happyServer = await startHappyServer(session);
+
+  // HOST-09 / HOST-11: one credential source on this host feeds the engine
+  // process environment and the connector MCP servers. Values never reach a log.
+  const engineCredentials = await readEngineCredentials();
+  const injected = describeInjectedCredentials(engineCredentials);
+  logger.debug(
+    `[${opts.agentName}] Engine credentials: platformApiKey=${injected.platformApiKey} connectors=[${injected.connectors.join(', ')}]`,
+  );
+
   const mcpServers = {
     happy: {
       command: join(projectPath(), 'bin', 'happy-mcp.mjs'),
       args: ['--url', happyServer.url],
     },
+    ...buildConnectorMcpServers(engineCredentials),
   };
 
   const backend = new AcpBackend({
@@ -541,9 +559,14 @@ export async function runAcp(opts: {
     cwd: process.cwd(),
     command: opts.command,
     args: opts.args,
+    env: {
+      ...buildEngineCredentialEnv(engineCredentials),
+      ...buildEnginePermissionEnv(permissionConfirmationEnabled),
+    },
     mcpServers,
-    permissionHandler,
+    permissionHandler: permissionConfirmationEnabled ? permissionHandler : undefined,
     transportHandler: new DefaultTransport(opts.agentName),
+    agentProfile: opts.agentProfile,
     verbose,
   });
 
@@ -890,8 +913,13 @@ export async function runAcp(opts: {
   });
 
   try {
+    // The profile travels in the newSession call itself (HOST-12), so the session is bound to it
+    // before the first prompt; an unknown profile fails startSession instead of running unprofiled.
     const started = await backend.startSession();
     acpSessionId = started.sessionId;
+    if (opts.agentProfile) {
+      logAcp('muted', `Agent profile applied: ${opts.agentProfile}`);
+    }
     if (verbose) {
       if (!sawSlashCommands) {
         logAcp('muted', `Outgoing slash commands from ${opts.agentName}: not reported yet`);

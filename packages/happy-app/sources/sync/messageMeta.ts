@@ -1,6 +1,6 @@
 import type { Session } from './storageTypes';
 import type { Settings } from './settings';
-import { getAgentDefaultOverride, resolveAgentDefaultConfig, retirePermissionMode } from './agentDefaults';
+import { getAgentDefaultOverride, retirePermissionMode } from './agentDefaults';
 import { permissionModeSupportedByCli } from '@/components/modelModeOptions';
 import type { PermissionModeKey } from '@/components/PermissionModeSelector';
 import {
@@ -90,22 +90,6 @@ export function resolveMessageModeMeta(
         }
         return mode;
     };
-
-    // Codex and Agy turns always run with a concrete permission, model, and
-    // effort. Send the same effective defaults the composer displays instead
-    // of omitting them: Codex can reset to its launch mode during an abort, and
-    // Agy maps its model + effort pair independently at the provider boundary.
-    // In either case an omitted fallback could execute differently from the UI.
-    if (flavor === 'codex' || flavor === 'agy') {
-        const defaults = resolveAgentDefaultConfig(settings?.agentDefaultOverrides, flavor, cliVersion);
-        meta.permissionMode = supported(retirePermissionMode(session.permissionMode ?? defaults.permissionMode));
-
-        const modelMode = session.modelMode ?? defaults.modelMode;
-        meta.model = modelMode === 'default' ? null : modelMode;
-
-        meta.effort = session.effortLevel ?? defaults.effortLevel;
-        return meta;
-    }
 
     if (session.permissionMode !== null && session.permissionMode !== undefined) {
         // A session picked before a mode was retired still carries the old key,

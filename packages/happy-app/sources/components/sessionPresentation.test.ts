@@ -85,7 +85,6 @@ vi.mock('@/utils/sessionUtils', () => ({
     getSessionName: () => 'A long session title that needs the available header width',
     useSessionStatus: () => ({ isConnected: true, isPulsing: true, statusText: 'Working' }),
     formatOSPlatform: () => '', formatPathRelativeToHome: (path: string) => path,
-    getResumeCommand: () => null,
 }));
 vi.mock('@/text', () => ({ t: (key: string, params?: { count: number }) => params ? `${params.count} changed files` : key }));
 vi.mock('@/components/Item', async () => {

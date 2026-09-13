@@ -3,7 +3,6 @@ import { Session } from '@/sync/storageTypes';
 import { resolveSessionState } from '@/sync/sessionState';
 import type { SessionState } from '@/sync/sessionState';
 import { t } from '@/text';
-import { buildResumeCommand, buildResumeCommandBlock, ResumeCommandBlock } from './resumeCommand';
 
 export type { SessionState } from '@/sync/sessionState';
 
@@ -120,14 +119,6 @@ export function getSessionAvatarId(session: Session): string {
  * Returns the CLI command to resume a disconnected session, or null if not resumable.
  * Uses flavor-specific commands which work without happy-agent auth.
  */
-export function getResumeCommand(session: Session): string | null {
-    return buildResumeCommand(session.metadata ?? {});
-}
-
-export function getResumeCommandBlock(session: Session): ResumeCommandBlock | null {
-    return buildResumeCommandBlock(session.metadata ?? {});
-}
-
 /**
  * Formats a path relative to home directory if possible.
  * If the path starts with the home directory, replaces it with ~

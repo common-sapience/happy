@@ -175,8 +175,8 @@ export function machinesRoutes(app: Fastify) {
         };
     });
 
-    // DELETE /v1/machines/:id - Remove a machine and its access keys.
-    // Sessions spawned by this machine are preserved so history is not lost.
+    // DELETE /v1/machines/:id - Remove a machine. Its connector records go with it (cascade);
+    // sessions spawned by this machine are preserved so history is not lost.
     app.delete('/v1/machines/:id', {
         preHandler: app.authenticate,
         schema: {
@@ -195,10 +195,6 @@ export function machinesRoutes(app: Fastify) {
             if (!machine) {
                 return false;
             }
-
-            await tx.accessKey.deleteMany({
-                where: { accountId: userId, machineId: id }
-            });
 
             await tx.machine.delete({
                 where: { id }

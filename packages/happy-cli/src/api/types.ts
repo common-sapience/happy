@@ -1,7 +1,5 @@
 import { z } from 'zod'
 import type { Update, UpdateMachineBody } from '@slopus/happy-wire';
-import { UsageSchema } from '@/claude/types'
-import type { SandboxConfig } from '@/persistence'
 
 export {
   SessionMessageContentSchema,
@@ -21,29 +19,11 @@ export type {
 } from '@slopus/happy-wire';
 
 /**
- * Permission mode type - includes both Claude and Codex modes
+ * Permission mode name as reported by the engine over ACP.
  * The wire schema (MessageMetaSchema.permissionMode) deliberately accepts any
- * string; each harness narrows to this union itself and ignores the rest.
- *
- * Shared: auto — the harness reviews each call itself
- * Claude modes: default, acceptEdits, bypassPermissions, plan
- * Codex modes: read-only, safe-yolo, yolo
- *
- * `auto` is the one mode both harnesses implement natively: Claude ships it
- * in the Agent SDK's own PermissionMode union, and Codex spells it as the
- * `on-request` approval policy inside the workspace sandbox.
- *
- * When calling Claude SDK, Codex modes are mapped at the SDK boundary:
- * - yolo → bypassPermissions
- * - safe-yolo → default
- * - read-only → default
+ * string; the engine owns the set of modes and the daemon does not enumerate it.
  */
-export type PermissionMode = 'auto' | 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'read-only' | 'safe-yolo' | 'yolo'
-
-/**
- * Usage data type from Claude
- */
-export type Usage = z.infer<typeof UsageSchema>
+export type PermissionMode = string
 
 /**
  * Socket events from server to client
@@ -72,7 +52,12 @@ export interface ClientToServerEvents {
     mode?: 'local' | 'remote';
   }) => void
   'session-end': (data: { sid: string, time: number }) => void,
-  'update-metadata': (data: { sid: string, expectedVersion: number, metadata: string }, cb: (answer: {
+  /**
+   * RL-07: the archive state belongs to the host. It travels inside the encrypted metadata; the
+   * plaintext `archived` marker rides along in the same write so the relay's list copy can only
+   * ever be derived from a host write, never flipped by a control end or by the relay itself.
+   */
+  'update-metadata': (data: { sid: string, expectedVersion: number, metadata: string, archived?: boolean }, cb: (answer: {
     result: 'error'
   } | {
     result: 'version-mismatch'
@@ -102,18 +87,6 @@ export interface ClientToServerEvents {
     result?: string
     error?: string
   }) => void) => void
-  'usage-report': (data: {
-    key: string
-    sessionId: string
-    tokens: {
-      total: number
-      [key: string]: number
-    }
-    cost: {
-      total: number
-      [key: string]: number
-    }
-  }) => void
 }
 
 /**
@@ -140,21 +113,9 @@ export const MachineMetadataSchema = z.object({
   homeDir: z.string(),
   happyHomeDir: z.string(),
   happyLibDir: z.string(),
+  // The engine is the only agent this daemon can start (HOST-10).
   cliAvailability: z.object({
-    claude: z.boolean(),
-    codex: z.boolean(),
-    gemini: z.boolean(),
-    openclaw: z.boolean(),
-    // Optional so metadata written by a CLI predating agy detection still
-    // matches this shape. detectCLIAvailability always reports it.
-    agy: z.boolean().optional(),
-    detectedAt: z.number(),
-  }).optional(),
-  resumeSupport: z.object({
-    rpcAvailable: z.boolean(),
-    requiresSameMachine: z.boolean(),
-    requiresHappyAgentAuth: z.boolean(),
-    happyAgentAuthenticated: z.boolean(),
+    opencode: z.boolean(),
     detectedAt: z.number(),
   }).optional(),
 })
@@ -314,8 +275,6 @@ export type Metadata = {
   },
   machineId?: string,
   gitBranch?: string,
-  claudeSessionId?: string, // Claude Code session ID
-  codexThreadId?: string, // Codex app-server thread ID
   tools?: string[],
   slashCommands?: string[],
   mcpServers?: Array<{ name: string; status: string }>,
@@ -333,11 +292,10 @@ export type Metadata = {
   archivedBy?: string,
   archiveReason?: string,
   flavor?: string
-  sandbox?: SandboxConfig | null
-  dangerouslySkipPermissions?: boolean | null
-  /** Lineage for sessions created via the fork / duplicate flow. */
+  /** Engine agent profile the session runs under (HOST-12). */
+  agentProfile?: string
+  /** Lineage for sessions created via the fork flow. */
   parentSessionId?: string
-  forkedFromMessageId?: string
   /**
    * Marks a session as a hidden "side chat" forked from `parentSessionId`.
    * Side chats never appear in the top-level session list; they render only
@@ -346,65 +304,8 @@ export type Metadata = {
   isSideChat?: boolean
 };
 
-export type UsageLimitWindowStatus = 'allowed' | 'allowed_warning' | 'rejected'
-
-export type UsageLimitWindow = {
-  /** Stable machine key, e.g. 'five_hour' / 'seven_day'. */
-  id: string,
-  label?: string,
-  status?: UsageLimitWindowStatus,
-  /** Percent of the window used, 0-100. */
-  utilization?: number | null,
-  /** Epoch milliseconds when the window resets. */
-  resetsAt?: number | null,
-}
-
-export type UsageLimits = {
-  capturedAt: number,
-  windows: UsageLimitWindow[],
-}
-
-export type AgentGoalStatus = {
-  source: 'claude' | 'codex',
-  observedAt: number,
-  sourceSessionId?: string,
-  sourceRevision?: string | number,
-} & (
-  | {
-      status: 'unavailable',
-      reason?: 'unsupported' | 'not_loaded' | 'stale' | 'malformed' | 'error' | 'unknown',
-    }
-  | {
-      status: 'inactive',
-      reason?: 'none' | 'cleared' | 'completed' | 'unknown',
-    }
-  | {
-      status: 'active',
-      sourceSessionId: string,
-      text: string,
-      capabilities?: {
-        clear?: boolean,
-        stop?: boolean,
-        edit?: boolean,
-      },
-      progress?: {
-        currentStep?: number,
-        totalSteps?: number,
-        steps?: Array<{
-          text: string,
-          status: 'pending' | 'in_progress' | 'completed',
-        }>,
-      },
-    }
-);
-
 export type AgentState = {
   controlledByUser?: boolean | null | undefined
-  /**
-   * Ephemeral plan rate-limit windows reported by the agent backend.
-   * Apps must tolerate window ids they don't recognize.
-   */
-  usageLimits?: UsageLimits
   requests?: {
     [id: string]: {
       tool: string,
@@ -434,5 +335,4 @@ export type AgentState = {
       toolUseId?: string
     }
   }
-  agentGoalStatus?: AgentGoalStatus
 }

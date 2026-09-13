@@ -3,56 +3,17 @@ import { resolveMessageModeMeta, UnsupportedPermissionModeError } from './messag
 import { rigMetadataFixture } from './__testdata__/rigMetadata';
 
 describe('resolveMessageModeMeta', () => {
-    it('reasserts the displayed codex defaults after abort clears session overrides', () => {
+    // Nothing chosen means nothing asserted on the wire: the host keeps the
+    // session on whatever the agent profile already gave it.
+    it('omits every field a session has not chosen', () => {
         const meta = resolveMessageModeMeta({
             permissionMode: null,
             modelMode: null,
             effortLevel: null,
-            metadata: { flavor: 'codex' },
+            metadata: { flavor: 'opencode' },
         } as any);
 
-        expect(meta).toEqual({
-            permissionMode: 'auto',
-            model: 'gpt-5.6-sol',
-            effort: 'medium',
-        });
-    });
-
-    it('always sends the displayed Agy model and effort pair', () => {
-        const meta = resolveMessageModeMeta({
-            permissionMode: null,
-            modelMode: null,
-            effortLevel: null,
-            metadata: { flavor: 'agy' },
-        } as any);
-
-        expect(meta).toEqual({
-            permissionMode: 'default',
-            model: 'Gemini 3.8 Flash',
-            effort: 'medium',
-        });
-    });
-
-    it('uses Default for an unset Codex code default on an old CLI', () => {
-        const meta = resolveMessageModeMeta({
-            permissionMode: null,
-            modelMode: null,
-            effortLevel: null,
-            metadata: { flavor: 'codex', version: '1.2.0' },
-        } as any);
-
-        expect(meta.permissionMode).toBe('default');
-    });
-
-    it('uses Auto for an unset Codex code default on a new CLI', () => {
-        const meta = resolveMessageModeMeta({
-            permissionMode: null,
-            modelMode: null,
-            effortLevel: null,
-            metadata: { flavor: 'codex', version: '1.2.1-beta.2' },
-        } as any);
-
-        expect(meta.permissionMode).toBe('auto');
+        expect(meta).toEqual({});
     });
 
     it('keeps an explicit Codex YOLO override on an old CLI', () => {
@@ -60,9 +21,9 @@ describe('resolveMessageModeMeta', () => {
             permissionMode: null,
             modelMode: null,
             effortLevel: null,
-            metadata: { flavor: 'codex', version: '1.2.0' },
+            metadata: { flavor: 'opencode', version: '1.2.0' },
         } as any, {
-            agentDefaultOverrides: { codex: { permissionMode: 'yolo' } },
+            agentDefaultOverrides: { opencode: { permissionMode: 'yolo' } },
         } as any);
 
         expect(meta.permissionMode).toBe('yolo');
@@ -76,7 +37,7 @@ describe('resolveMessageModeMeta', () => {
             permissionMode: 'dontAsk',
             modelMode: null,
             effortLevel: null,
-            metadata: { flavor: 'claude' },
+            metadata: { flavor: 'opencode' },
         } as any);
 
         expect(meta.permissionMode).toBe('acceptEdits');
@@ -87,9 +48,9 @@ describe('resolveMessageModeMeta', () => {
             permissionMode: null,
             modelMode: null,
             effortLevel: null,
-            metadata: { flavor: 'claude' },
+            metadata: { flavor: 'opencode' },
         } as any, {
-            agentDefaultOverrides: { claude: { permissionMode: 'dontAsk' } },
+            agentDefaultOverrides: { opencode: { permissionMode: 'dontAsk' } },
         } as any);
 
         expect(meta.permissionMode).toBe('acceptEdits');
@@ -105,7 +66,7 @@ describe('resolveMessageModeMeta', () => {
             permissionMode: 'auto',
             modelMode: null,
             effortLevel: null,
-            metadata: { flavor: 'claude', version: '1.2.1-beta.1' },
+            metadata: { flavor: 'opencode', version: '1.2.1-beta.1' },
         } as any)).toThrow(UnsupportedPermissionModeError);
     });
 
@@ -114,9 +75,9 @@ describe('resolveMessageModeMeta', () => {
             permissionMode: null,
             modelMode: null,
             effortLevel: null,
-            metadata: { flavor: 'codex', version: '1.2.0' },
+            metadata: { flavor: 'opencode', version: '1.2.0' },
         } as any, {
-            agentDefaultOverrides: { codex: { permissionMode: 'auto' } },
+            agentDefaultOverrides: { opencode: { permissionMode: 'auto' } },
         } as any)).toThrow(UnsupportedPermissionModeError);
     });
 
@@ -125,9 +86,9 @@ describe('resolveMessageModeMeta', () => {
             permissionMode: null,
             modelMode: null,
             effortLevel: null,
-            metadata: { flavor: 'claude', version: '1.2.0' },
+            metadata: { flavor: 'opencode', version: '1.2.0' },
         } as any, {
-            agentDefaultOverrides: { claude: { permissionMode: 'auto' } },
+            agentDefaultOverrides: { opencode: { permissionMode: 'auto' } },
         } as any)).toThrow(UnsupportedPermissionModeError);
     });
 
@@ -137,7 +98,7 @@ describe('resolveMessageModeMeta', () => {
                 permissionMode: 'auto',
                 modelMode: null,
                 effortLevel: null,
-                metadata: { flavor: 'claude', version: '1.2.0' },
+                metadata: { flavor: 'opencode', version: '1.2.0' },
             } as any);
             expect.unreachable('should have thrown');
         } catch (error) {
@@ -152,7 +113,7 @@ describe('resolveMessageModeMeta', () => {
             permissionMode: 'auto',
             modelMode: null,
             effortLevel: null,
-            metadata: { flavor: 'claude', version: '1.2.1-beta.2' },
+            metadata: { flavor: 'opencode', version: '1.2.1-beta.2' },
         } as any);
 
         expect(meta.permissionMode).toBe('auto');
@@ -163,7 +124,7 @@ describe('resolveMessageModeMeta', () => {
             permissionMode: 'auto',
             modelMode: null,
             effortLevel: null,
-            metadata: { flavor: 'claude' },
+            metadata: { flavor: 'opencode' },
         } as any);
 
         expect(meta.permissionMode).toBe('auto');
@@ -174,7 +135,7 @@ describe('resolveMessageModeMeta', () => {
             permissionMode: 'read-only',
             modelMode: 'gpt-5.6-terra',
             effortLevel: 'high',
-            metadata: { flavor: 'codex' },
+            metadata: { flavor: 'opencode' },
         } as any);
 
         expect(meta).toEqual({
@@ -189,10 +150,10 @@ describe('resolveMessageModeMeta', () => {
             permissionMode: null,
             modelMode: null,
             effortLevel: null,
-            metadata: { flavor: 'claude' },
+            metadata: { flavor: 'opencode' },
         } as any, {
             agentDefaultOverrides: {
-                claude: {
+                opencode: {
                     permissionMode: 'bypassPermissions',
                     modelMode: 'opus',
                     effortLevel: 'medium',
@@ -212,10 +173,10 @@ describe('resolveMessageModeMeta', () => {
             permissionMode: 'default',
             modelMode: 'gpt-5.6-terra',
             effortLevel: 'xhigh',
-            metadata: { flavor: 'codex' },
+            metadata: { flavor: 'opencode' },
         } as any, {
             agentDefaultOverrides: {
-                codex: {
+                opencode: {
                     permissionMode: 'yolo',
                     modelMode: 'gpt-5.6-luna',
                     effortLevel: 'medium',
@@ -230,38 +191,30 @@ describe('resolveMessageModeMeta', () => {
         });
     });
 
-    it('passes a custom codex model through unchanged', () => {
+    it('passes a custom model through unchanged', () => {
         const meta = resolveMessageModeMeta({
             permissionMode: null,
             modelMode: 'my-workspace-model',
             effortLevel: null,
-            metadata: { flavor: 'codex' },
+            metadata: { flavor: 'opencode' },
         } as any);
 
-        expect(meta).toEqual({
-            permissionMode: 'auto',
-            model: 'my-workspace-model',
-            effort: 'medium',
-        });
+        expect(meta).toEqual({ model: 'my-workspace-model' });
     });
 
-    it('uses a custom codex model saved in agent settings', () => {
+    it('uses a custom model saved in agent settings', () => {
         const meta = resolveMessageModeMeta({
             permissionMode: null,
             modelMode: null,
             effortLevel: null,
-            metadata: { flavor: 'codex' },
+            metadata: { flavor: 'opencode' },
         } as any, {
             agentDefaultOverrides: {
-                codex: { modelMode: 'my-workspace-model' },
+                opencode: { modelMode: 'my-workspace-model' },
             },
         } as any);
 
-        expect(meta).toEqual({
-            permissionMode: 'auto',
-            model: 'my-workspace-model',
-            effort: 'medium',
-        });
+        expect(meta).toEqual({ model: 'my-workspace-model' });
     });
 
     it('fills unset codex fields from settings while preserving session picks', () => {
@@ -269,10 +222,10 @@ describe('resolveMessageModeMeta', () => {
             permissionMode: 'read-only',
             modelMode: null,
             effortLevel: null,
-            metadata: { flavor: 'codex' },
+            metadata: { flavor: 'opencode' },
         } as any, {
             agentDefaultOverrides: {
-                codex: {
+                opencode: {
                     permissionMode: 'auto',
                     modelMode: 'gpt-5.6-terra',
                     effortLevel: 'high',
@@ -292,7 +245,7 @@ describe('resolveMessageModeMeta', () => {
             permissionMode: null,
             modelMode: 'default',
             effortLevel: null,
-            metadata: { flavor: 'claude' },
+            metadata: { flavor: 'opencode' },
         } as any);
 
         expect(meta).toEqual({ model: null });

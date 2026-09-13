@@ -6,30 +6,14 @@
 import { io, Socket } from 'socket.io-client';
 import { logger } from '@/ui/logger';
 import { configuration } from '@/configuration';
-import { MachineMetadata, DaemonState, Machine, Update, UpdateMachineBody } from './types';
+import { MachineMetadata, DaemonState, Machine, Metadata, Update, UpdateMachineBody } from './types';
+import { isMetadataArchived } from './sessionArchiveMarker';
 import { registerCommonHandlers, SpawnSessionOptions, SpawnSessionResult } from '../modules/common/registerCommonHandlers';
 import { encodeBase64, decodeBase64, encrypt, decrypt } from './encryption';
 import { backoff } from '@/utils/time';
 import { RpcHandlerManager } from './rpc/RpcHandlerManager';
 import { detectCLIAvailability, CLIAvailability } from '@/utils/detectCLI';
-import { detectResumeSupport, type ResumeSupport } from '@/resume/localHappyAgentAuth';
 import { shouldReconnect } from '@/utils/lidState';
-import { getProjectPath } from '@/claude/utils/path';
-import {
-    forkSession as claudeForkSession,
-    forkAndTruncateSession as claudeForkAndTruncateSession,
-    listClaudeRewindPoints,
-    ForkTruncateUuidNotFoundError,
-    ForkSourceMissingError,
-} from '@/claude/utils/claudeSessionFork';
-import { CodexAppServerClient } from '@/codex/codexAppServerClient';
-import {
-    CodexForkRewindPointNotFoundError,
-    forkCodexThread,
-    listCodexRewindPoints,
-} from '@/codex/codexThreadFork';
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface ServerToDaemonEvents {
     update: (data: Update) => void;
@@ -79,6 +63,28 @@ interface DaemonToServerEvents {
         daemonState: string
     }) => void) => void;
 
+    /**
+     * RL-07: the daemon writes a session's archive state for the whole machine — the session's own
+     * process may be long gone by the time a control end asks. The plaintext `archived` marker goes
+     * out in the same call as the ciphertext, and the relay accepts it only from a host connection.
+     */
+    'update-metadata': (data: {
+        sid: string;
+        expectedVersion: number;
+        metadata: string; // Encrypted Metadata
+        archived: boolean;
+    }, cb: (answer: {
+        result: 'error'
+    } | {
+        result: 'version-mismatch'
+        version: number,
+        metadata: string
+    } | {
+        result: 'success',
+        version: number,
+        metadata: string
+    }) => void) => void;
+
     'rpc-register': (data: { method: string }) => void;
     'rpc-unregister': (data: { method: string }) => void;
     'rpc-call': (data: { method: string, params: any }, callback: (response: {
@@ -90,35 +96,29 @@ interface DaemonToServerEvents {
 
 type MachineRpcHandlers = {
     spawnSession: (options: SpawnSessionOptions) => Promise<SpawnSessionResult>;
-    resumeSession?: (sessionId: string, options?: { model?: string; permissionMode?: string }) => Promise<SpawnSessionResult>;
     stopSession: (sessionId: string) => boolean;
+    /** RL-07: archive or restore a session of this machine on the host's authority. */
+    archiveSession: (sessionId: string, archived: boolean) => Promise<void>;
     requestShutdown: () => void;
 }
 
-function requireNonEmptyString(value: unknown, name: string): string {
-    if (typeof value !== 'string' || value.length === 0) {
-        throw new Error(`${name} is required`);
-    }
-    return value;
+/** What the daemon knows about a session whose metadata it is about to rewrite. */
+export interface SessionMetadataTarget {
+    sessionId: string;
+    encryptionKey: Uint8Array;
+    encryptionVariant: 'legacy' | 'dataKey';
+    metadata: Metadata;
+    metadataVersion: number;
 }
 
-async function withCodexAppServerClient<T>(handler: (client: CodexAppServerClient) => Promise<T>): Promise<T> {
-    const client = new CodexAppServerClient();
-    await client.connect();
-    try {
-        return await handler(client);
-    } finally {
-        await client.disconnect();
-    }
-}
+/** A bounded retry: an RPC caller waits on this, so it must fail rather than retry forever. */
+const SESSION_METADATA_WRITE_ATTEMPTS = 3;
 
 export class ApiMachineClient {
     private socket!: Socket<ServerToDaemonEvents, DaemonToServerEvents>;
     private keepAliveInterval: NodeJS.Timeout | null = null;
     private lastKnownCLIAvailability: CLIAvailability | null = null;
-    private lastKnownResumeSupport: ResumeSupport | null = null;
     private rpcHandlerManager: RpcHandlerManager;
-    private resumeSessionHandler: ((sessionId: string, options?: { model?: string; permissionMode?: string }) => Promise<SpawnSessionResult>) | null = null;
     private reconnectInterval: NodeJS.Timeout | null = null;
 
     constructor(
@@ -140,22 +140,20 @@ export class ApiMachineClient {
 
     setRPCHandlers({
         spawnSession,
-        resumeSession,
         stopSession,
+        archiveSession,
         requestShutdown
     }: MachineRpcHandlers) {
-        this.resumeSessionHandler = resumeSession ?? null;
-
         // Register spawn session handler
         this.rpcHandlerManager.registerHandler('spawn-happy-session', async (params: any) => {
-            const { directory, sessionId, machineId, approvedNewDirectoryCreation, agent, permissionMode, modelMode, effortLevel, environmentVariables, token, resumeClaudeSessionId, resumeCodexThreadId, parentSessionId, forkedFromMessageId, isSideChat } = params || {};
+            const { directory, sessionId, machineId, approvedNewDirectoryCreation, agent, agentProfile, environmentVariables, parentSessionId, isSideChat } = params || {};
             logger.debug(`[API MACHINE] Spawning session with params: ${JSON.stringify(params)}`);
 
             if (!directory) {
                 throw new Error('Directory is required');
             }
 
-            const result = await spawnSession({ directory, sessionId, machineId, approvedNewDirectoryCreation, agent, permissionMode, modelMode, effortLevel, environmentVariables, token, resumeClaudeSessionId, resumeCodexThreadId, parentSessionId, forkedFromMessageId, isSideChat });
+            const result = await spawnSession({ directory, sessionId, machineId, approvedNewDirectoryCreation, agent, agentProfile, environmentVariables, parentSessionId, isSideChat });
 
             switch (result.type) {
                 case 'success':
@@ -170,8 +168,6 @@ export class ApiMachineClient {
                     throw new Error(result.errorMessage);
             }
         });
-
-        this.syncResumeSessionRpcRegistration();
 
         // Register stop session handler
         this.rpcHandlerManager.registerHandler('stop-session', (params: any) => {
@@ -190,131 +186,21 @@ export class ApiMachineClient {
             return { message: 'Session stopped' };
         });
 
-        // Register Claude session fork handlers (used by app-side fork /
-        // duplicate flows). These take the source session's working
-        // directory and underlying Claude UUID, copy the on-disk JSONL
-        // — optionally truncated at a chosen message — and return the new
-        // Claude UUID. The caller then spawns a fresh Happy session with
-        // `resumeClaudeSessionId` set so `claude --resume <newUuid>`
-        // continues the conversation.
-        this.rpcHandlerManager.registerHandler('claude-fork-session', async (params: any) => {
-            const { directory, claudeSessionId } = params || {};
-            if (typeof directory !== 'string' || directory.length === 0) {
-                throw new Error('directory is required');
-            }
-            if (typeof claudeSessionId !== 'string' || !UUID_RE.test(claudeSessionId)) {
-                throw new Error('claudeSessionId must be a valid UUID');
-            }
-            try {
-                const newClaudeSessionId = await claudeForkSession(getProjectPath(directory), claudeSessionId);
-                return { type: 'success', newClaudeSessionId };
-            } catch (error) {
-                if (error instanceof ForkSourceMissingError) {
-                    throw new Error('Claude session file not found on this machine');
-                }
-                throw error;
-            }
-        });
+        // Register archive session handler (RL-07). The control end asks, the host decides: the
+        // daemon rewrites the session metadata and the relay's list marker follows that write.
+        this.rpcHandlerManager.registerHandler('archive-session', async (params: any) => {
+            const { sessionId, archived } = params || {};
 
-        // List user-text rewind points directly from the on-disk JSONL.
-        // The server-side session log misses claudeUuid for messages typed
-        // live in the app (legacy `sentFrom: 'web'` path); disk is the
-        // source of truth and carries the right uuids for every message.
-        this.rpcHandlerManager.registerHandler('claude-list-rewind-points', async (params: any) => {
-            const { directory, claudeSessionId } = params || {};
-            if (typeof directory !== 'string' || directory.length === 0) {
-                throw new Error('directory is required');
+            if (!sessionId || typeof sessionId !== 'string') {
+                throw new Error('Session ID is required');
             }
-            if (typeof claudeSessionId !== 'string' || !UUID_RE.test(claudeSessionId)) {
-                throw new Error('claudeSessionId must be a valid UUID');
+            if (typeof archived !== 'boolean') {
+                throw new Error('archived must be a boolean');
             }
-            try {
-                const points = await listClaudeRewindPoints(getProjectPath(directory), claudeSessionId);
-                return { type: 'success', points };
-            } catch (error) {
-                if (error instanceof ForkSourceMissingError) {
-                    throw new Error('Claude session file not found on this machine');
-                }
-                throw error;
-            }
-        });
 
-        this.rpcHandlerManager.registerHandler('claude-duplicate-session', async (params: any) => {
-            const { directory, claudeSessionId, cutAfterUuid } = params || {};
-            if (typeof directory !== 'string' || directory.length === 0) {
-                throw new Error('directory is required');
-            }
-            if (typeof claudeSessionId !== 'string' || !UUID_RE.test(claudeSessionId)) {
-                throw new Error('claudeSessionId must be a valid UUID');
-            }
-            if (typeof cutAfterUuid !== 'string' || !UUID_RE.test(cutAfterUuid)) {
-                throw new Error('cutAfterUuid must be a valid UUID');
-            }
-            try {
-                const newClaudeSessionId = await claudeForkAndTruncateSession(
-                    getProjectPath(directory),
-                    claudeSessionId,
-                    cutAfterUuid,
-                );
-                return { type: 'success', newClaudeSessionId };
-            } catch (error) {
-                if (error instanceof ForkSourceMissingError) {
-                    throw new Error('Claude session file not found on this machine');
-                }
-                if (error instanceof ForkTruncateUuidNotFoundError) {
-                    throw new Error(
-                        'The chosen rewind point is no longer present in the source session — try forking without truncation',
-                    );
-                }
-                throw error;
-            }
-        });
-
-        this.rpcHandlerManager.registerHandler('codex-fork-thread', async (params: any) => {
-            const directory = requireNonEmptyString(params?.directory, 'directory');
-            const codexThreadId = requireNonEmptyString(params?.codexThreadId, 'codexThreadId');
-
-            const result = await withCodexAppServerClient((client) => forkCodexThread(client, {
-                threadId: codexThreadId,
-                cwd: directory,
-            }));
-            return result;
-        });
-
-        this.rpcHandlerManager.registerHandler('codex-list-rewind-points', async (params: any) => {
-            const codexThreadId = requireNonEmptyString(params?.codexThreadId, 'codexThreadId');
-
-            return withCodexAppServerClient(async (client) => {
-                const { thread } = await client.readThread({
-                    threadId: codexThreadId,
-                    includeTurns: true,
-                });
-                return {
-                    type: 'success',
-                    points: listCodexRewindPoints(thread),
-                };
-            });
-        });
-
-        this.rpcHandlerManager.registerHandler('codex-duplicate-thread', async (params: any) => {
-            const directory = requireNonEmptyString(params?.directory, 'directory');
-            const codexThreadId = requireNonEmptyString(params?.codexThreadId, 'codexThreadId');
-            const cutAfterItemId = requireNonEmptyString(params?.cutAfterItemId, 'cutAfterItemId');
-
-            try {
-                return await withCodexAppServerClient((client) => forkCodexThread(client, {
-                    threadId: codexThreadId,
-                    cwd: directory,
-                    cutAfterItemId,
-                }));
-            } catch (error) {
-                if (error instanceof CodexForkRewindPointNotFoundError) {
-                    throw new Error(
-                        'The chosen rewind point is no longer present in the source Codex thread — try forking without truncation',
-                    );
-                }
-                throw error;
-            }
+            await archiveSession(sessionId, archived);
+            logger.debug(`[API MACHINE] Session ${sessionId} archived=${archived}`);
+            return { sessionId, archived };
         });
 
         // Register stop daemon handler
@@ -331,40 +217,45 @@ export class ApiMachineClient {
         });
     }
 
-    private syncResumeSessionRpcRegistration(): void {
-        const method = 'resume-happy-session';
+    /**
+     * Rewrite a session's metadata from the daemon, carrying the plaintext archive marker the
+     * relay keeps for list queries (RL-07). The session's own process is not involved: a session
+     * a control end wants archived has usually already exited.
+     *
+     * Returns the metadata and version the relay settled on, so the caller can keep its copy.
+     */
+    async updateSessionMetadata(
+        target: SessionMetadataTarget,
+        handler: (metadata: Metadata) => Metadata
+    ): Promise<{ metadata: Metadata, metadataVersion: number }> {
+        let metadata = target.metadata;
+        let metadataVersion = target.metadataVersion;
 
-        if (this.resumeSessionHandler) {
-            if (!this.rpcHandlerManager.hasHandler(method)) {
-                this.rpcHandlerManager.registerHandler(method, async (params: any) => {
-                    const { sessionId, model, permissionMode } = params || {};
+        for (let attempt = 1; attempt <= SESSION_METADATA_WRITE_ATTEMPTS; attempt++) {
+            const updated = handler(metadata);
+            const answer = await this.socket.emitWithAck('update-metadata', {
+                sid: target.sessionId,
+                expectedVersion: metadataVersion,
+                metadata: encodeBase64(encrypt(target.encryptionKey, target.encryptionVariant, updated)),
+                archived: isMetadataArchived(updated)
+            });
 
-                    if (!sessionId || typeof sessionId !== 'string') {
-                        throw new Error('Session ID is required');
-                    }
-
-                    const handler = this.resumeSessionHandler;
-                    if (!handler) {
-                        throw new Error('Resume session handler not available');
-                    }
-
-                    const result = await handler(sessionId, { model, permissionMode });
-                    switch (result.type) {
-                        case 'success':
-                            return { type: 'success', sessionId: result.sessionId };
-                        case 'requestToApproveDirectoryCreation':
-                            return result;
-                        case 'error':
-                            throw new Error(result.errorMessage);
-                    }
-                });
+            if (answer.result === 'success') {
+                return {
+                    metadata: decrypt(target.encryptionKey, target.encryptionVariant, decodeBase64(answer.metadata)),
+                    metadataVersion: answer.version
+                };
             }
-            return;
+            if (answer.result !== 'version-mismatch') {
+                throw new Error(`Relay rejected the metadata write for session ${target.sessionId}`);
+            }
+
+            // Another writer got there first; rebase on its copy and try again.
+            metadata = decrypt(target.encryptionKey, target.encryptionVariant, decodeBase64(answer.metadata));
+            metadataVersion = answer.version;
         }
 
-        if (this.rpcHandlerManager.hasHandler(method)) {
-            this.rpcHandlerManager.unregisterHandler(method);
-        }
+        throw new Error(`Metadata for session ${target.sessionId} kept changing under the write`);
     }
 
     /**
@@ -457,7 +348,6 @@ export class ApiMachineClient {
             }));
 
             this.rpcHandlerManager.onSocketConnect(this.socket);
-            this.syncResumeSessionRpcRegistration();
             this.startKeepAlive();
         });
 
@@ -517,24 +407,11 @@ export class ApiMachineClient {
         }
         this.socket.emit('machine-alive', payload);
 
-        // Re-detect CLI availability and push metadata update if changed
+        // Re-detect engine availability and push metadata update if changed.
+        // The engine is the only agent reported (HOST-10), so one flag is compared.
         const newAvailability = detectCLIAvailability();
         const prev = this.lastKnownCLIAvailability;
-        const newResumeSupport = detectResumeSupport();
-        const prevResume = this.lastKnownResumeSupport;
-        // Every detected CLI has to be compared here. A key left out is never
-        // republished after startup, so installing or removing that agent goes
-        // unnoticed for the life of the daemon — and the app hides agents it is
-        // not told about.
-        const cliAvailabilityChanged = !prev
-            || prev.claude !== newAvailability.claude
-            || prev.codex !== newAvailability.codex
-            || prev.gemini !== newAvailability.gemini
-            || prev.openclaw !== newAvailability.openclaw
-            || prev.agy !== newAvailability.agy;
-        const resumeSupportChanged = !prevResume
-            || prevResume.rpcAvailable !== newResumeSupport.rpcAvailable
-            || prevResume.happyAgentAuthenticated !== newResumeSupport.happyAgentAuthenticated;
+        const cliAvailabilityChanged = !prev || prev.opencode !== newAvailability.opencode;
         // POST /v1/machines returns the stored encrypted metadata when the
         // machine already exists. After a CLI upgrade that can leave the app
         // looking at the version from the machine's first registration even
@@ -543,14 +420,12 @@ export class ApiMachineClient {
         // are preserved.
         const cliVersionChanged = this.machine.metadata?.happyCliVersion !== configuration.currentCliVersion;
 
-        if (cliAvailabilityChanged || resumeSupportChanged || cliVersionChanged) {
+        if (cliAvailabilityChanged || cliVersionChanged) {
             this.lastKnownCLIAvailability = newAvailability;
-            this.lastKnownResumeSupport = newResumeSupport;
             this.updateMachineMetadata((metadata) => ({
                 ...(metadata || {} as any),
                 happyCliVersion: configuration.currentCliVersion,
                 cliAvailability: newAvailability,
-                resumeSupport: { ...newResumeSupport, rpcAvailable: !!this.resumeSessionHandler },
             })).catch((err) => {
                 logger.debug('[API MACHINE] Failed to update machine capabilities:', err);
             });

@@ -1,48 +1,61 @@
 import { AuthCredentials } from '@/auth/tokenStorage';
 import { backoff } from '@/utils/time';
+import { z } from 'zod';
 import { getServerUrl } from './serverConfig';
 import { getHappyClientId } from './apiSocket';
 
 /**
- * Connect a service to the user's account
+ * DEV-08: a connector is a record of "this computer of this account is connected to this external
+ * service", and nothing more. The credential lives only on the computer that authorized it, so the
+ * relay has no token to hand out and the control end never asks for one.
  */
-export async function connectService(
-    credentials: AuthCredentials,
-    service: string,
-    token: any
-): Promise<void> {
+const ServiceConnectionSchema = z.object({
+    vendor: z.string(),
+    machineId: z.string(),
+    status: z.enum(['connected', 'disconnected']),
+    createdAt: z.number(),
+    updatedAt: z.number(),
+});
+
+const ServiceConnectionListSchema = z.object({
+    connections: z.array(ServiceConnectionSchema),
+});
+
+export type ServiceConnection = z.infer<typeof ServiceConnectionSchema>;
+
+/** Every connector record on the account, newest first. */
+export async function fetchServiceConnections(credentials: AuthCredentials): Promise<ServiceConnection[]> {
     const API_ENDPOINT = getServerUrl();
 
     return await backoff(async () => {
-        const response = await fetch(`${API_ENDPOINT}/v1/connect/${service}/register`, {
-            method: 'POST',
+        const response = await fetch(`${API_ENDPOINT}/v1/connect`, {
             headers: {
                 'Authorization': `Bearer ${credentials.token}`,
-                'Content-Type': 'application/json',
                 'X-Happy-Client': getHappyClientId(),
-            },
-            body: JSON.stringify({ token: JSON.stringify(token) })
+            }
         });
 
         if (!response.ok) {
-            throw new Error(`Failed to connect ${service}: ${response.status}`);
+            throw new Error(`Failed to list connected services: ${response.status}`);
         }
 
-        const data = await response.json() as { success: true };
-        if (!data.success) {
-            throw new Error(`Failed to connect ${service} account`);
-        }
+        return ServiceConnectionListSchema.parse(await response.json()).connections;
     });
 }
 
 /**
- * Disconnect a connected service from the user's account
+ * Forget one computer's connection to a service. The credential itself is revoked on that computer
+ * by the host (HOST-11); this only removes the record the account page reads.
  */
-export async function disconnectService(credentials: AuthCredentials, service: string): Promise<void> {
+export async function disconnectService(
+    credentials: AuthCredentials,
+    service: string,
+    machineId: string
+): Promise<void> {
     const API_ENDPOINT = getServerUrl();
 
     return await backoff(async () => {
-        const response = await fetch(`${API_ENDPOINT}/v1/connect/${service}`, {
+        const response = await fetch(`${API_ENDPOINT}/v1/connect/${service}?machineId=${encodeURIComponent(machineId)}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${credentials.token}`,
@@ -52,15 +65,9 @@ export async function disconnectService(credentials: AuthCredentials, service: s
 
         if (!response.ok) {
             if (response.status === 404) {
-                const error = await response.json();
-                throw new Error(error.error || `${service} account not connected`);
+                throw new Error(`${service} is not connected on that computer`);
             }
             throw new Error(`Failed to disconnect ${service}: ${response.status}`);
-        }
-
-        const data = await response.json() as { success: true };
-        if (!data.success) {
-            throw new Error(`Failed to disconnect ${service} account`);
         }
     });
 }

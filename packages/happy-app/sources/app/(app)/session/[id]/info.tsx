@@ -8,7 +8,7 @@ import { ItemGroup } from '@/components/ItemGroup';
 import { ItemList } from '@/components/ItemList';
 import { GitLineChanges } from '@/components/GitLineChanges';
 import { useSession, useIsDataReady, useSessionGitStatus, useSessionGitStatusFiles } from '@/sync/storage';
-import { getSessionName, useSessionStatus, formatOSPlatform, formatPathRelativeToHome, getResumeCommand } from '@/utils/sessionUtils';
+import { getSessionName, useSessionStatus, formatOSPlatform, formatPathRelativeToHome } from '@/utils/sessionUtils';
 import { resolveSessionGitPresentation } from '@/utils/sessionGitPresentation';
 import * as Clipboard from 'expo-clipboard';
 import { Modal } from '@/modal';
@@ -91,16 +91,6 @@ function SessionInfoContent({ session }: { session: Session }) {
     const router = useRouter();
     const devModeEnabled = __DEV__;
     const sessionStatus = useSessionStatus(session);
-    const {
-        canShowResume,
-        canFork,
-        forking,
-        forkSession,
-        openDuplicateSheet,
-        resumeSession,
-        resumeSessionSubtitle,
-    } = useSessionQuickActions(session);
-
     const gitStatus = useSessionGitStatus(session.id);
     const gitStatusFiles = useSessionGitStatusFiles(session.id);
     const gitPresentation = React.useMemo(
@@ -236,31 +226,6 @@ function SessionInfoContent({ session }: { session: Session }) {
                             onPress={() => router.push(`/machine/${session.metadata?.machineId}`)}
                         />
                     )}
-                    {canShowResume && (
-                        <Item
-                            title={t('sessionInfo.resumeSession')}
-                            subtitle={resumeSessionSubtitle}
-                            icon={<Ionicons name="play-circle-outline" size={29} color="#007AFF" />}
-                            onPress={resumeSession}
-                        />
-                    )}
-                    {canFork && (
-                        <Item
-                            title={t('session.forkAction')}
-                            subtitle={t('session.forkSubtitle')}
-                            icon={<Ionicons name="git-branch-outline" size={29} color="#007AFF" />}
-                            onPress={forkSession}
-                            loading={forking}
-                        />
-                    )}
-                    {canFork && (
-                        <Item
-                            title={t('session.duplicateAction')}
-                            subtitle={t('session.duplicateSubtitle')}
-                            icon={<Ionicons name="time-outline" size={29} color="#007AFF" />}
-                            onPress={openDuplicateSheet}
-                        />
-                    )}
                     {session.metadata?.parentSessionId && (
                         <Item
                             title={t('session.forkedFromLabel')}
@@ -332,16 +297,6 @@ function SessionInfoContent({ session }: { session: Session }) {
                                     Modal.alert(t('common.error'), t('sessionInfo.failedToCopyCodexThreadId'));
                                 }
                             }}
-                        />
-                    )}
-                    {/* Resume command — shown for disconnected sessions with a backend session ID */}
-                    {/* TODO: migrate to `happy resume <happy-session-id>` once it works without happy-agent auth */}
-                    {!sessionStatus.isConnected && getResumeCommand(session) && (
-                        <CopyableItem
-                            title="Resume Command"
-                            subtitle={getResumeCommand(session)!}
-                            icon={<Ionicons name="play-circle-outline" size={29} color="#30D158" />}
-                            copyText={getResumeCommand(session)!}
                         />
                     )}
                     <Item
