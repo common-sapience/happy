@@ -39,7 +39,7 @@ describe('DESK-15 connector board', () => {
         expect(rows).toHaveLength(1);
         expect(rows[0].serviceLabel).toBe('Gmail');
         expect(rows[0].computerLabel).toBe('Studio');
-        expect(rows[0].statusLabel).toBe('Connected');
+        expect(rows[0].connected).toBe(true);
         expect(rows[0].key).toBe('gmail:machine-1');
     });
 
@@ -54,14 +54,14 @@ describe('DESK-15 connector board', () => {
     it('keeps a record whose computer has left the account readable', () => {
         const rows = buildConnectorRows([connection({ machineId: 'gone' })], []);
 
-        expect(rows[0].computerLabel).toBe('A computer no longer on this account');
+        expect(rows[0].computerLabel).toBeNull();
+        expect(rows[0].machineId).toBe('gone');
     });
 
-    it('says not connected in words for a disconnected record', () => {
+    it('marks a disconnected record as not connected', () => {
         const rows = buildConnectorRows([connection({ status: 'disconnected' })], [machine({ id: 'machine-1' })]);
 
         expect(rows[0].connected).toBe(false);
-        expect(rows[0].statusLabel).toBe('Not connected');
     });
 
     it('groups one service across computers together', () => {

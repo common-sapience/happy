@@ -3,7 +3,6 @@ import type { Machine, Session } from '@/sync/storageTypes';
 import {
     buildArchivedAgentRows,
     canRestoreArchivedAgent,
-    describeRestoreBlockedReason,
 } from './archivedAgents';
 
 function session(overrides: Partial<Session> & { id: string }): Session {
@@ -57,7 +56,6 @@ describe('DESK-14 archived agent board', () => {
 
         expect(rows[0].restoreBlockedReason).toBeNull();
         expect(canRestoreArchivedAgent(rows[0])).toBe(true);
-        expect(describeRestoreBlockedReason(rows[0])).toBeNull();
         expect(rows[0].computerName).toBe('Studio');
     });
 
@@ -67,8 +65,8 @@ describe('DESK-14 archived agent board', () => {
         ], [machine({ id: 'machine-1', active: false, metadata: { host: 'laptop' } as Machine['metadata'] })]);
 
         expect(canRestoreArchivedAgent(rows[0])).toBe(false);
-        expect(describeRestoreBlockedReason(rows[0])).toContain('laptop');
-        expect(describeRestoreBlockedReason(rows[0])).toContain('read');
+        expect(rows[0].restoreBlockedReason).toBe('computer-offline');
+        expect(rows[0].computerName).toBe('laptop');
     });
 
     it('blocks restoring when the computer has left the account', () => {
@@ -78,6 +76,6 @@ describe('DESK-14 archived agent board', () => {
 
         expect(rows[0].restoreBlockedReason).toBe('computer-unknown');
         expect(canRestoreArchivedAgent(rows[0])).toBe(false);
-        expect(describeRestoreBlockedReason(rows[0])).toContain('no longer connected');
+        expect(rows[0].computerName).toBeNull();
     });
 });

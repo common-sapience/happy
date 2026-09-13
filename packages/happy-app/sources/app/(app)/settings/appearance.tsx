@@ -7,7 +7,6 @@ import { useSettingMutable, useLocalSettingMutable } from '@/sync/storage';
 import { useRouter } from 'expo-router';
 import * as Localization from 'expo-localization';
 import { StyleSheet, useUnistyles, UnistylesRuntime } from 'react-native-unistyles';
-import { Switch } from '@/components/Switch';
 import { Appearance, Platform, Pressable, Text, View } from 'react-native';
 import * as SystemUI from 'expo-system-ui';
 import { darkTheme, lightTheme } from '@/theme';
@@ -20,10 +19,12 @@ import {
 } from '@/utils/userMessageBubbleColor';
 import * as React from 'react';
 import { AnimatedCollapsible } from '@/components/AnimatedOverlay';
-import { AvatarBrutalist } from '@/components/AvatarBrutalist';
-import { AvatarSkia } from '@/components/AvatarSkia';
-import { AvatarGradient } from '@/components/AvatarGradient';
-import { AVATAR_STYLES, normalizeAvatarStyle, type AvatarStyle } from '@/utils/avatarStyle';
+
+/**
+ * DESK-17, D-16: settings are the appearance and language preferences only. The permission
+ * confirmation switch belongs to the computer that enforces it and lives on that computer's page;
+ * everything the product did not decide on was deleted rather than tucked away here (D-17).
+ */
 
 const getUserMessageBubbleColorLabel = (color: UserMessageBubbleColor): string => {
     switch (color) {
@@ -41,87 +42,6 @@ const getUserMessageBubbleColorLabel = (color: UserMessageBubbleColor): string =
             return t('settingsAppearance.userMessageBubbleColorOptions.gray');
     }
 };
-
-const getAvatarStyleLabel = (style: AvatarStyle): string => {
-    switch (style) {
-        case 'brutalist':
-            return t('settingsAppearance.avatarStyleOptions.brutalist');
-        case 'pixelated':
-            return t('settingsAppearance.avatarStyleOptions.pixelated');
-        case 'gradient':
-            return t('settingsAppearance.avatarStyleOptions.gradient');
-    }
-};
-
-// One fixed id so the three previews stay comparable: same seed, different
-// renderer.
-const AVATAR_PREVIEW_ID = 'avatar-style-preview';
-
-function AvatarStylePreview({ style, monochrome }: { style: AvatarStyle; monochrome: boolean }) {
-    const size = 28;
-    switch (style) {
-        case 'brutalist':
-            return <AvatarBrutalist id={AVATAR_PREVIEW_ID} size={size} monochrome={monochrome} />;
-        case 'pixelated':
-            return <AvatarSkia id={AVATAR_PREVIEW_ID} size={size} monochrome={monochrome} />;
-        case 'gradient':
-            return <AvatarGradient id={AVATAR_PREVIEW_ID} size={size} monochrome={monochrome} />;
-    }
-}
-
-function AvatarStyleDropdownValue(props: {
-    style: AvatarStyle;
-    monochrome: boolean;
-    expanded: boolean;
-}) {
-    const { theme } = useUnistyles();
-    const styles = stylesheet;
-
-    return (
-        <View style={styles.dropdownValue}>
-            <AvatarStylePreview style={props.style} monochrome={props.monochrome} />
-            <Text style={styles.dropdownValueText} numberOfLines={1}>
-                {getAvatarStyleLabel(props.style)}
-            </Text>
-            <Ionicons
-                name={props.expanded ? 'chevron-up' : 'chevron-down'}
-                size={18}
-                color={theme.colors.groupped.chevron}
-            />
-        </View>
-    );
-}
-
-function AvatarStyleOption(props: {
-    style: AvatarStyle;
-    monochrome: boolean;
-    selected: boolean;
-    onPress: () => void;
-}) {
-    const { theme } = useUnistyles();
-    const styles = stylesheet;
-
-    return (
-        <Pressable
-            onPress={props.onPress}
-            style={({ pressed }) => [
-                styles.statusPlacementOption,
-                props.selected && styles.statusPlacementOptionSelected,
-                pressed && styles.statusPlacementOptionPressed,
-            ]}
-        >
-            <AvatarStylePreview style={props.style} monochrome={props.monochrome} />
-            <Text style={styles.statusPlacementOptionText} numberOfLines={1}>
-                {getAvatarStyleLabel(props.style)}
-            </Text>
-            {props.selected ? (
-                <Ionicons name="checkmark-circle" size={20} color={theme.colors.status.connecting} />
-            ) : (
-                <View style={styles.bubbleColorOptionCheckPlaceholder} />
-            )}
-        </Pressable>
-    );
-}
 
 /**
  * The same opaque fill and edge `MessageBubble` paints in the transcript, from
@@ -206,35 +126,23 @@ export default function AppearanceSettingsScreen() {
     const { theme } = useUnistyles();
     const router = useRouter();
     const [showLineNumbersInToolViews, setShowLineNumbersInToolViews] = useSettingMutable('showLineNumbersInToolViews');
-    const [alwaysShowContextSize, setAlwaysShowContextSize] = useSettingMutable('alwaysShowContextSize');
-    const [showFlavorIcons, setShowFlavorIcons] = useSettingMutable('showFlavorIcons');
-    const [showHarnessIconInSessionHeader, setShowHarnessIconInSessionHeader] = useSettingMutable('showHarnessIconInSessionHeader');
-    const [compactToolCalls, setCompactToolCalls] = useSettingMutable('compactToolCalls');
     const [userMessageBubbleColor, setUserMessageBubbleColor] = useSettingMutable('userMessageBubbleColor');
-    const [usageLimitShowRemaining, setUsageLimitShowRemaining] = useSettingMutable('usageLimitShowRemaining');
     const [themePreference, setThemePreference] = useLocalSettingMutable('themePreference');
     const [preferredLanguage] = useSettingMutable('preferredLanguage');
-    const [avatarStyleSetting, setAvatarStyle] = useSettingMutable('avatarStyle');
-    const [avatarMonochrome, setAvatarMonochrome] = useSettingMutable('avatarMonochrome');
-    const [agentInputEnterToSend, setAgentInputEnterToSend] = useSettingMutable('agentInputEnterToSend');
-    const [commandPaletteEnabled, setCommandPaletteEnabled] = useLocalSettingMutable('commandPaletteEnabled');
-    const [fileDiffsSidebar, setFileDiffsSidebar] = useSettingMutable('fileDiffsSidebar');
     const [groupToolCalls, setGroupToolCalls] = useSettingMutable('groupToolCalls');
     const [bubbleColorDropdownOpen, setBubbleColorDropdownOpen] = React.useState(false);
-    const [avatarStyleDropdownOpen, setAvatarStyleDropdownOpen] = React.useState(false);
 
-    const avatarStyle = normalizeAvatarStyle(avatarStyleSetting);
     const displayBubbleColor = normalizeUserMessageBubbleColor(userMessageBubbleColor);
     const displayBubblePalette = resolveUserMessageBubbleColor(displayBubbleColor, theme.dark);
     const displayBubbleColorLabel = getUserMessageBubbleColorLabel(displayBubbleColor);
-    
+
     // Language display
     const getLanguageDisplayText = () => {
         if (preferredLanguage === null) {
             const deviceLocale = Localization.getLocales()?.[0]?.languageTag ?? 'en-US';
             const deviceLanguage = deviceLocale.split('-')[0].toLowerCase();
-            const detectedLanguageName = deviceLanguage in SUPPORTED_LANGUAGES ? 
-                                        getLanguageNativeName(deviceLanguage as keyof typeof SUPPORTED_LANGUAGES) : 
+            const detectedLanguageName = deviceLanguage in SUPPORTED_LANGUAGES ?
+                                        getLanguageNativeName(deviceLanguage as keyof typeof SUPPORTED_LANGUAGES) :
                                         getLanguageNativeName('en');
             return `${t('settingsLanguage.automatic')} (${detectedLanguageName})`;
         } else if (preferredLanguage && preferredLanguage in SUPPORTED_LANGUAGES) {
@@ -300,13 +208,6 @@ export default function AppearanceSettingsScreen() {
             </ItemGroup>
 
             <ItemGroup title={t('settingsAppearance.chat')} footer={t('settingsAppearance.chatDescription')}>
-                <SettingsRow
-                    title={t('settingsAppearance.usageLimitShowRemaining')}
-                    subtitle={t('settingsAppearance.usageLimitShowRemainingDescription')}
-                    icon="speedometer-outline"
-                    value={usageLimitShowRemaining}
-                    onValueChange={setUsageLimitShowRemaining}
-                />
                 <Item
                     title={t('settingsAppearance.userMessageBubbleColor')}
                     subtitle={t('settingsAppearance.userMessageBubbleColorDescription')}
@@ -318,10 +219,7 @@ export default function AppearanceSettingsScreen() {
                             expanded={bubbleColorDropdownOpen}
                         />
                     }
-                    onPress={() => {
-                        setAvatarStyleDropdownOpen(false);
-                        setBubbleColorDropdownOpen((open) => !open);
-                    }}
+                    onPress={() => setBubbleColorDropdownOpen((open) => !open)}
                     showDivider={bubbleColorDropdownOpen}
                 />
                 {bubbleColorDropdownOpen && (
@@ -341,121 +239,7 @@ export default function AppearanceSettingsScreen() {
                 )}
             </ItemGroup>
 
-            {/* Avatar Settings */}
-            <ItemGroup title={t('settingsAppearance.avatars')} footer={t('settingsAppearance.avatarsDescription')}>
-                <SettingsRow
-                    title={t('settingsAppearance.avatarStyle')}
-                    icon="person-circle-outline"
-                    tone="accent"
-                    onPress={() => {
-                        setBubbleColorDropdownOpen(false);
-                        setAvatarStyleDropdownOpen((open) => !open);
-                    }}
-                    trailing={
-                        <AvatarStyleDropdownValue
-                            style={avatarStyle}
-                            monochrome={avatarMonochrome}
-                            expanded={avatarStyleDropdownOpen}
-                        />
-                    }
-                    showDivider={avatarStyleDropdownOpen}
-                />
-                {avatarStyleDropdownOpen && (
-                    <AnimatedCollapsible style={stylesheet.statusPlacementDropdown}>
-                        {AVATAR_STYLES.map((style) => (
-                            <AvatarStyleOption
-                                key={style}
-                                style={style}
-                                monochrome={avatarMonochrome}
-                                selected={style === avatarStyle}
-                                onPress={() => {
-                                    setAvatarStyle(style);
-                                    setAvatarStyleDropdownOpen(false);
-                                }}
-                            />
-                        ))}
-                    </AnimatedCollapsible>
-                )}
-                <SettingsRow
-                    title={t('settingsAppearance.avatarMonochrome')}
-                    subtitle={t('settingsAppearance.avatarMonochromeDescription')}
-                    icon="contrast-outline"
-                    value={avatarMonochrome}
-                    onValueChange={setAvatarMonochrome}
-                />
-            </ItemGroup>
-
-            {/* Text Settings */}
-            {/* <ItemGroup title="Text" footer="Adjust text size and font preferences">
-                <SettingsRow
-                    title="Text Size"
-                    subtitle="Make text larger or smaller"
-                    detail="Default"
-                    icon="text-outline"
-                    tone="warning"
-                    onPress={() => { }}
-                />
-                <SettingsRow
-                    title="Font"
-                    subtitle="Choose your preferred font"
-                    detail="System"
-                    icon="text-outline"
-                    tone="warning"
-                    onPress={() => { }}
-                />
-            </ItemGroup> */}
-
-            {/* Display Settings */}
-            <ItemGroup title={t('settingsAppearance.input')} footer={t('settingsAppearance.inputDescription')}>
-                <SettingsRow
-                    title={t('settingsAppearance.alwaysShowContextSize')}
-                    subtitle={t('settingsAppearance.alwaysShowContextSizeDescription')}
-                    icon="analytics-outline"
-                    value={alwaysShowContextSize}
-                    onValueChange={setAlwaysShowContextSize}
-                />
-                {Platform.OS === 'web' && (
-                    <>
-                        <SettingsRow
-                            title={t('settingsFeatures.enterToSend')}
-                            subtitle={agentInputEnterToSend
-                            ? t('settingsFeatures.enterToSendEnabled')
-                            : t('settingsFeatures.enterToSendDisabled')}
-                            icon="return-down-forward-outline"
-                            value={agentInputEnterToSend}
-                            onValueChange={setAgentInputEnterToSend}
-                            showChevron={false}
-                        />
-                        <SettingsRow
-                            title={t('settingsFeatures.commandPalette')}
-                            subtitle={commandPaletteEnabled
-                            ? t('settingsFeatures.commandPaletteEnabled')
-                            : t('settingsFeatures.commandPaletteDisabled')}
-                            icon="keypad-outline"
-                            value={commandPaletteEnabled}
-                            onValueChange={setCommandPaletteEnabled}
-                            showChevron={false}
-                        />
-                    </>
-                )}
-            </ItemGroup>
-
             <ItemGroup title={t('settingsAppearance.display')} footer={t('settingsAppearance.displayDescription')}>
-                <SettingsRow
-                    title={t('settingsAppearance.compactToolCalls')}
-                    subtitle={t('settingsAppearance.compactToolCallsDescription')}
-                    icon="contract-outline"
-                    value={compactToolCalls}
-                    onValueChange={setCompactToolCalls}
-                />
-                <SettingsRow
-                    title="File Diffs Sidebar"
-                    subtitle="Show git changes next to the chat on desktop"
-                    icon="git-branch-outline"
-                    value={fileDiffsSidebar}
-                    onValueChange={setFileDiffsSidebar}
-                    showChevron={false}
-                />
                 <SettingsRow
                     title={t('settingsFeatures.groupToolCalls')}
                     subtitle={t('settingsFeatures.groupToolCallsSubtitle')}
@@ -471,45 +255,7 @@ export default function AppearanceSettingsScreen() {
                     value={showLineNumbersInToolViews}
                     onValueChange={setShowLineNumbersInToolViews}
                 />
-                <SettingsRow
-                    title={t('settingsAppearance.showHarnessIconInSessionHeader')}
-                    subtitle={t('settingsAppearance.showHarnessIconInSessionHeaderDescription')}
-                    icon="apps-outline"
-                    value={showHarnessIconInSessionHeader}
-                    onValueChange={setShowHarnessIconInSessionHeader}
-                />
-                <SettingsRow
-                    title={t('settingsAppearance.showHarnessIconsInSessionList')}
-                    subtitle={t('settingsAppearance.showHarnessIconsInSessionListDescription')}
-                    icon="apps-outline"
-                    value={showFlavorIcons}
-                    onValueChange={setShowFlavorIcons}
-                />
-                {/* <SettingsRow
-                            title="Show Avatars"
-                            subtitle="Display user and assistant avatars"
-                            icon="person-circle-outline"
-                            tone="accent"
-                            trailing={
-                        <Switch
-                            value={true}
-                            disabled
-                        />
-                    }
-                /> */}
             </ItemGroup>
-
-            {/* Colors */}
-            {/* <ItemGroup title="Colors" footer="Customize accent colors and highlights">
-                <SettingsRow
-                    title="Accent Color"
-                    subtitle="Choose your accent color"
-                    detail="Blue"
-                    icon="color-palette-outline"
-                    tone="destructive"
-                    onPress={() => { }}
-                />
-            </ItemGroup> */}
         </ItemList>
     );
 }
@@ -528,27 +274,6 @@ const stylesheet = StyleSheet.create((theme) => ({
     },
     bubbleColorDropdown: {
         paddingVertical: 6,
-    },
-    statusPlacementDropdown: {
-        paddingVertical: 6,
-    },
-    statusPlacementOption: {
-        minHeight: 48,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        paddingHorizontal: 16,
-    },
-    statusPlacementOptionSelected: {
-        backgroundColor: Platform.select({ web: theme.colors.surfaceSelected, default: theme.colors.glass.backgroundSubtle }),
-    },
-    statusPlacementOptionPressed: {
-        backgroundColor: Platform.select({ web: theme.colors.surfacePressedOverlay, default: theme.colors.glass.backgroundStrong }),
-    },
-    statusPlacementOptionText: {
-        color: theme.colors.text,
-        fontSize: 16,
-        flex: 1,
     },
     bubbleColorOption: {
         minHeight: 48,

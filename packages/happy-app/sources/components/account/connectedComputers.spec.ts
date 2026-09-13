@@ -38,13 +38,15 @@ describe('DESK-16 connected computer board', () => {
         expect(rows.map((row) => row.name)).toEqual(['Studio', 'mini-2', 'c']);
     });
 
-    it('says on or off in words rather than by colour alone', () => {
+    it('reports the platform and reachability the page turns into words', () => {
         const rows = buildConnectedComputerRows([
             machine({ id: 'a', active: true, metadata: { host: 'mini', platform: 'darwin' } as Machine['metadata'] }),
             machine({ id: 'b', active: false, metadata: { host: 'box' } as Machine['metadata'] }),
         ]);
 
-        expect(rows[0].description).toBe('darwin · On');
-        expect(rows[1].description).toBe('Off');
+        expect(rows[0].platform).toBe('darwin');
+        expect(rows[0].online).toBe(true);
+        expect(rows[1].platform).toBeNull();
+        expect(rows[1].online).toBe(false);
     });
 });

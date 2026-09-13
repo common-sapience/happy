@@ -110,13 +110,9 @@ describe('usage limit helpers', () => {
         expect(getUsageLimitStatus({ id: 'x' })).toBe('allowed');
     });
 
-    it('flips utilization for the remaining view without touching status', () => {
-        expect(getUsageLimitDisplayPercentage(42, false)).toBe(42);
-        expect(getUsageLimitDisplayPercentage(42, true)).toBe(58);
-        expect(getUsageLimitDisplayPercentage(100, true)).toBe(0);
-        // The collapsed chip still picks the window closest to its limit,
-        // which is the one with the least remaining.
-        expect(getUsageLimitChips(limits, true)[0].id).toBe('seven_day');
+    it('shows utilization as percent used', () => {
+        expect(getUsageLimitDisplayPercentage(42)).toBe(42);
+        expect(getUsageLimitDisplayPercentage(100)).toBe(100);
     });
 
     it('formats snapshot age compactly', () => {

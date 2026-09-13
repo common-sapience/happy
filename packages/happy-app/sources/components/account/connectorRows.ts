@@ -12,22 +12,23 @@ import type { Machine } from '@/sync/storageTypes';
 export interface ConnectorRow {
     key: string;
     service: string;
-    serviceLabel: string;
+    /** Null when the relay recorded no vendor name; the page supplies the words for that. */
+    serviceLabel: string | null;
     machineId: string;
-    computerLabel: string;
+    /** Null when the computer holding this connection has left the account. */
+    computerLabel: string | null;
     connected: boolean;
-    statusLabel: string;
     connection: ServiceConnection;
 }
 
-function labelService(service: string): string {
+function labelService(service: string): string | null {
     const trimmed = service.trim();
-    if (trimmed.length === 0) return 'Unnamed service';
+    if (trimmed.length === 0) return null;
     return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 }
 
-function labelComputer(machine: Machine | null, machineId: string): string {
-    if (!machine) return 'A computer no longer on this account';
+function labelComputer(machine: Machine | null, machineId: string): string | null {
+    if (!machine) return null;
     return machine.metadata?.displayName || machine.metadata?.host || machineId;
 }
 
@@ -52,7 +53,6 @@ export function buildConnectorRows(
                 machineId: connection.machineId,
                 computerLabel: labelComputer(machinesById.get(connection.machineId) ?? null, connection.machineId),
                 connected,
-                statusLabel: connected ? 'Connected' : 'Not connected',
                 connection,
             };
         });

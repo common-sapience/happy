@@ -9,6 +9,13 @@ import { useAllMachines } from '@/sync/storage';
 import { disconnectService, fetchServiceConnections, type ServiceConnection } from '@/sync/apiServices';
 import { Modal } from '@/modal';
 import { buildConnectorRows, type ConnectorRow } from '@/components/account/connectorRows';
+import { t } from '@/text';
+
+const serviceLabelOf = (row: ConnectorRow) => row.serviceLabel ?? t('connectors.unnamedService');
+const computerLabelOf = (row: ConnectorRow) => row.computerLabel ?? t('connectors.unknownComputer');
+const statusLabelOf = (row: ConnectorRow) => row.connected
+    ? t('connectors.statusConnected')
+    : t('connectors.statusNotConnected');
 
 /**
  * DESK-15: connectors.
@@ -46,10 +53,12 @@ export default function ConnectorsScreen() {
 
     const disconnect = React.useCallback(async (row: ConnectorRow) => {
         if (!auth.credentials) return;
+        const service = serviceLabelOf(row);
+        const computer = computerLabelOf(row);
         const confirmed = await Modal.confirm(
-            `Disconnect ${row.serviceLabel}?`,
-            `New agents on ${row.computerLabel} will no longer be able to use ${row.serviceLabel}.`,
-            { confirmText: 'Disconnect', destructive: true },
+            t('connectors.disconnectTitle', { service }),
+            t('connectors.disconnectMessage', { service, computer }),
+            { confirmText: t('connectors.disconnect'), destructive: true },
         );
         if (!confirmed) return;
 
@@ -58,7 +67,10 @@ export default function ConnectorsScreen() {
             await disconnectService(auth.credentials, row.service, row.machineId);
             await load();
         } catch {
-            Modal.alert('Could not disconnect', `${row.serviceLabel} is still connected on ${row.computerLabel}.`);
+            Modal.alert(
+                t('connectors.disconnectFailedTitle'),
+                t('connectors.disconnectFailedMessage', { service, computer }),
+            );
         } finally {
             setDisconnectingKey(null);
         }
@@ -70,22 +82,22 @@ export default function ConnectorsScreen() {
         >
             {connections === null ? (
                 <ItemGroup>
-                    <Item title="Reading your connections" loading showChevron={false} />
+                    <Item title={t('connectors.loading')} loading showChevron={false} />
                 </ItemGroup>
             ) : (
-                <ItemGroup footer="Only the service name, the computer and the connection state are stored here. The sign-in itself never leaves the computer.">
+                <ItemGroup footer={t('connectors.footer')}>
                     {rows.length === 0 ? (
                         <Item
-                            title="Nothing connected"
-                            subtitle="Connect a service on the computer that should use it"
+                            title={t('connectors.emptyTitle')}
+                            subtitle={t('connectors.emptyHint')}
                             showChevron={false}
                         />
                     ) : rows.map((row) => (
                         <Item
                             key={row.key}
-                            title={row.serviceLabel}
-                            subtitle={`${row.statusLabel} · ${row.computerLabel}`}
-                            detail="Disconnect"
+                            title={serviceLabelOf(row)}
+                            subtitle={`${statusLabelOf(row)} · ${computerLabelOf(row)}`}
+                            detail={t('connectors.disconnect')}
                             onPress={() => void disconnect(row)}
                             loading={disconnectingKey === row.key}
                             disabled={disconnectingKey !== null}
@@ -96,10 +108,10 @@ export default function ConnectorsScreen() {
                 </ItemGroup>
             )}
 
-            <ItemGroup title="Connecting a service">
+            <ItemGroup title={t('connectors.howTitle')}>
                 <Item
-                    title="Set it up on the computer"
-                    subtitle="Open the service's sign-in on the computer that will use it. The sign-in is stored there, in that computer's credential store, and only the record of it appears on this page."
+                    title={t('connectors.howRow')}
+                    subtitle={t('connectors.howHint')}
                     subtitleLines={0}
                     showChevron={false}
                 />

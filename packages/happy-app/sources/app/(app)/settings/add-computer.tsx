@@ -10,6 +10,7 @@ import { useConnectAccount } from '@/hooks/useConnectAccount';
 import { Modal } from '@/modal';
 import { useUnistyles } from 'react-native-unistyles';
 import { normalizeLoginRequestCode } from '@/components/account/loginRequestCode';
+import { t } from '@/text';
 
 /**
  * DESK-06, DESK-16: letting another computer onto this account.
@@ -30,10 +31,7 @@ export default function AddComputerScreen() {
     const approve = React.useCallback(async () => {
         const url = normalizeLoginRequestCode(code);
         if (!url) {
-            Modal.alert(
-                'That code does not look right',
-                'Copy the code exactly as the other computer shows it, then paste it here.',
-            );
+            Modal.alert(t('addComputer.badCodeTitle'), t('addComputer.badCodeMessage'));
             return;
         }
         await connectWithUrl(url);
@@ -44,24 +42,24 @@ export default function AddComputerScreen() {
             containerStyle={{ paddingTop: Platform.OS === 'ios' ? MOBILE_GLASS_HEADER_HEIGHT : 0 }}
             keyboardShouldPersistTaps="handled"
         >
-            <ItemGroup title="On the other computer">
+            <ItemGroup title={t('addComputer.otherComputer')}>
                 <Item
-                    title="Open this app and choose to join an account"
-                    subtitle="It will show a one-time code and wait."
+                    title={t('addComputer.otherComputerRow')}
+                    subtitle={t('addComputer.otherComputerHint')}
                     subtitleLines={0}
                     showChevron={false}
                 />
             </ItemGroup>
 
             <ItemGroup
-                title="Code from the other computer"
-                footer="The code works once. If it stops working, let the other computer show a new one."
+                title={t('addComputer.codeTitle')}
+                footer={t('addComputer.codeFooter')}
             >
                 <View style={{ paddingHorizontal: 16, paddingVertical: 14, gap: 12 }}>
                     <TextInput
                         value={code}
                         onChangeText={setCode}
-                        placeholder="Paste the code here"
+                        placeholder={t('addComputer.codePlaceholder')}
                         placeholderTextColor={theme.colors.input.placeholder}
                         autoCapitalize="none"
                         autoCorrect={false}
@@ -79,7 +77,7 @@ export default function AddComputerScreen() {
                         }}
                     />
                     <RoundButton
-                        title={isLoading ? 'Adding the computer…' : 'Add this computer'}
+                        title={isLoading ? t('addComputer.adding') : t('addComputer.add')}
                         size="large"
                         onPress={approve}
                         loading={isLoading}
@@ -89,9 +87,9 @@ export default function AddComputerScreen() {
             </ItemGroup>
 
             {Platform.OS !== 'web' && (
-                <ItemGroup footer="Phones can read the code from the other computer's screen instead of typing it.">
+                <ItemGroup footer={t('addComputer.scanFooter')}>
                     <Item
-                        title="Scan the code instead"
+                        title={t('addComputer.scan')}
                         onPress={connectAccount}
                         disabled={isLoading}
                         showChevron={false}
@@ -99,10 +97,10 @@ export default function AddComputerScreen() {
                 </ItemGroup>
             )}
 
-            <ItemGroup title="What this does">
+            <ItemGroup title={t('addComputer.whatTitle')}>
                 <Item
-                    title="The other computer joins this account"
-                    subtitle="It can then run agents for you, and it appears in the list of computers on the account page. Remove it there whenever you want."
+                    title={t('addComputer.whatRow')}
+                    subtitle={t('addComputer.whatHint')}
                     subtitleLines={0}
                     showChevron={false}
                 />

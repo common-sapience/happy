@@ -57,14 +57,3 @@ export function canRestoreArchivedAgent(row: ArchivedAgentRow): boolean {
     return row.restoreBlockedReason === null;
 }
 
-/** Plain language for why restoring is unavailable, naming the computer whenever one is known. */
-export function describeRestoreBlockedReason(row: ArchivedAgentRow): string | null {
-    switch (row.restoreBlockedReason) {
-        case null:
-            return null;
-        case 'computer-offline':
-            return `${row.computerName ?? 'That computer'} is off. You can read this agent now and bring it back when the computer is on.`;
-        case 'computer-unknown':
-            return 'The computer this agent ran on is no longer connected to your account, so it can only be read.';
-    }
-}

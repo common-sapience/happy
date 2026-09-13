@@ -725,7 +725,6 @@ function NewSessionScreen() {
     // Real data sources
     const allMachines = useAllMachines({ includeOffline: true });
     const sessions = useSessions();
-    const agentInputEnterToSend = useSetting('agentInputEnterToSend');
     const agentDefaultOverrides = useSetting('agentDefaultOverrides');
     const fileDiffsSidebarEnabled = useSetting('fileDiffsSidebar');
     const zenMode = useLocalSetting('zenMode');
@@ -1363,14 +1362,14 @@ function NewSessionScreen() {
 
     // Handle Enter/Cmd+Enter to send on web
     const handleKeyPress = React.useCallback((event: KeyPressEvent): boolean => {
-        if (Platform.OS === 'web' && event.key === 'Enter' && !event.shiftKey && agentInputEnterToSend) {
+        if (Platform.OS === 'web' && event.key === 'Enter' && !event.shiftKey) {
             if (canSend) {
                 handleSend();
                 return true;
             }
         }
         return false;
-    }, [agentInputEnterToSend, canSend, handleSend]);
+    }, [canSend, handleSend]);
 
     // Auto-focus the text input when the composer mounts
     React.useEffect(() => {

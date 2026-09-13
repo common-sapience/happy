@@ -419,6 +419,12 @@ export interface Session {
     modelMode?: string | null; // Model pick; local mirror of synced metadata.modelMode (#1492)
     effortLevel?: string | null; // Effort pick; local mirror of synced metadata.effortLevel (#1492)
     lastMessageSentAt?: number; // Local timestamp of last user-sent message, not synced to server; used for activity-based sort
+    /**
+     * The agent's opening user message, derived locally from loaded messages and not synced. Names
+     * the agent when the host has not written a title (see utils/sessionTitle.ts); absent until
+     * this session's messages have been read.
+     */
+    openingUserText?: string | null;
     // IMPORTANT: latestUsage is extracted from reducerState.latestUsage after message processing.
     // We store it directly on Session to ensure it's available immediately on load.
     // Do NOT store reducerState itself on Session - it's mutable and should only exist in SessionMessages.
