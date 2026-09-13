@@ -304,7 +304,6 @@ export default function AppearanceSettingsScreen() {
                     title={t('settingsAppearance.usageLimitShowRemaining')}
                     subtitle={t('settingsAppearance.usageLimitShowRemainingDescription')}
                     icon="speedometer-outline"
-                    tone="accent"
                     value={usageLimitShowRemaining}
                     onValueChange={setUsageLimitShowRemaining}
                 />
@@ -381,7 +380,6 @@ export default function AppearanceSettingsScreen() {
                     title={t('settingsAppearance.avatarMonochrome')}
                     subtitle={t('settingsAppearance.avatarMonochromeDescription')}
                     icon="contrast-outline"
-                    tone="accent"
                     value={avatarMonochrome}
                     onValueChange={setAvatarMonochrome}
                 />
@@ -413,7 +411,6 @@ export default function AppearanceSettingsScreen() {
                     title={t('settingsAppearance.alwaysShowContextSize')}
                     subtitle={t('settingsAppearance.alwaysShowContextSizeDescription')}
                     icon="analytics-outline"
-                    tone="accent"
                     value={alwaysShowContextSize}
                     onValueChange={setAlwaysShowContextSize}
                 />
@@ -425,7 +422,6 @@ export default function AppearanceSettingsScreen() {
                             ? t('settingsFeatures.enterToSendEnabled')
                             : t('settingsFeatures.enterToSendDisabled')}
                             icon="return-down-forward-outline"
-                            tone="accent"
                             value={agentInputEnterToSend}
                             onValueChange={setAgentInputEnterToSend}
                             showChevron={false}
@@ -436,7 +432,6 @@ export default function AppearanceSettingsScreen() {
                             ? t('settingsFeatures.commandPaletteEnabled')
                             : t('settingsFeatures.commandPaletteDisabled')}
                             icon="keypad-outline"
-                            tone="accent"
                             value={commandPaletteEnabled}
                             onValueChange={setCommandPaletteEnabled}
                             showChevron={false}
@@ -450,7 +445,6 @@ export default function AppearanceSettingsScreen() {
                     title={t('settingsAppearance.compactToolCalls')}
                     subtitle={t('settingsAppearance.compactToolCallsDescription')}
                     icon="contract-outline"
-                    tone="accent"
                     value={compactToolCalls}
                     onValueChange={setCompactToolCalls}
                 />
@@ -458,7 +452,6 @@ export default function AppearanceSettingsScreen() {
                     title="File Diffs Sidebar"
                     subtitle="Show git changes next to the chat on desktop"
                     icon="git-branch-outline"
-                    tone="accent"
                     value={fileDiffsSidebar}
                     onValueChange={setFileDiffsSidebar}
                     showChevron={false}
@@ -467,7 +460,6 @@ export default function AppearanceSettingsScreen() {
                     title={t('settingsFeatures.groupToolCalls')}
                     subtitle={t('settingsFeatures.groupToolCallsSubtitle')}
                     icon="layers-outline"
-                    tone="accent"
                     value={groupToolCalls}
                     onValueChange={setGroupToolCalls}
                     showChevron={false}
@@ -476,7 +468,6 @@ export default function AppearanceSettingsScreen() {
                     title={t('settingsAppearance.showLineNumbersInToolViews')}
                     subtitle={t('settingsAppearance.showLineNumbersInToolViewsDescription')}
                     icon="code-working-outline"
-                    tone="accent"
                     value={showLineNumbersInToolViews}
                     onValueChange={setShowLineNumbersInToolViews}
                 />
@@ -484,7 +475,6 @@ export default function AppearanceSettingsScreen() {
                     title={t('settingsAppearance.showHarnessIconInSessionHeader')}
                     subtitle={t('settingsAppearance.showHarnessIconInSessionHeaderDescription')}
                     icon="apps-outline"
-                    tone="accent"
                     value={showHarnessIconInSessionHeader}
                     onValueChange={setShowHarnessIconInSessionHeader}
                 />
@@ -492,7 +482,6 @@ export default function AppearanceSettingsScreen() {
                     title={t('settingsAppearance.showHarnessIconsInSessionList')}
                     subtitle={t('settingsAppearance.showHarnessIconsInSessionListDescription')}
                     icon="apps-outline"
-                    tone="accent"
                     value={showFlavorIcons}
                     onValueChange={setShowFlavorIcons}
                 />
