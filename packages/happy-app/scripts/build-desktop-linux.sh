@@ -6,7 +6,7 @@
 #
 # Inputs:
 #   ENGINE_REPO        checkout of the engine fork at the pinned commit (required)
-#   HAPPY_SERVER_URL   relay the package talks to; unset keeps the upstream default
+#   HAPPY_SERVER_URL   relay baked into the package; unset ships one that asks on first launch
 #   CARGO_WORK_DIR     where the Rust build writes (default /var/tmp/harness-tauri)
 #   BUNDLES            Tauri bundle list (default deb,appimage)
 
