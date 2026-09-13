@@ -4,11 +4,10 @@ import { Image } from 'expo-image';
 import * as React from 'react';
 import { Text } from '@/components/StyledText';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useAuth } from '@/auth/AuthContext';
 import { Typography } from "@/constants/Typography";
-import { Item } from '@/components/Item';
+import { SettingsRow } from './kit';
 import { ItemGroup } from '@/components/ItemGroup';
 import { ItemList } from '@/components/ItemList';
 import { useConnectTerminal } from '@/hooks/useConnectTerminal';
@@ -171,16 +170,18 @@ export const SettingsView = React.memo(function SettingsView({
             {/* Connect Terminal - Only show on native platforms */}
             {Platform.OS !== 'web' && (
                 <ItemGroup>
-                    <Item
+                    <SettingsRow
                         title={t('settings.scanQrCodeToAuthenticate')}
-                        icon={<Ionicons name="qr-code-outline" size={29} color="#007AFF" />}
+                        icon="qr-code-outline"
+                        tone="accent"
                         onPress={connectTerminal}
                         loading={isLoading}
                         showChevron={false}
                     />
-                    <Item
+                    <SettingsRow
                         title={t('connect.enterUrlManually')}
-                        icon={<Ionicons name="link-outline" size={29} color="#007AFF" />}
+                        icon="link-outline"
+                        tone="accent"
                         onPress={async () => {
                             const url = await Modal.prompt(
                                 t('modals.authenticateTerminal'),
@@ -201,16 +202,18 @@ export const SettingsView = React.memo(function SettingsView({
 
             {/* Features */}
             <ItemGroup title={t('settings.features')}>
-                <Item
+                <SettingsRow
                     title={t('settings.account')}
                     subtitle={t('settings.accountSubtitle')}
-                    icon={<Ionicons name="person-circle-outline" size={29} color="#007AFF" />}
+                    icon="person-circle-outline"
+                    tone="accent"
                     onPress={() => router.push('/settings/account')}
                 />
-                <Item
+                <SettingsRow
                     title={t('settings.appearance')}
                     subtitle={t('settings.appearanceSubtitle')}
-                    icon={<Ionicons name="color-palette-outline" size={29} color="#5856D6" />}
+                    icon="color-palette-outline"
+                    tone="accent"
                     onPress={() => router.push('/settings/appearance')}
                 />
             </ItemGroup>
@@ -218,48 +221,52 @@ export const SettingsView = React.memo(function SettingsView({
             {/* Developer */}
             {/* About */}
             <ItemGroup title={t('settings.about')} footer={t('settings.aboutFooter')}>
-                <Item
+                <SettingsRow
                     title={t('settings.whatsNew')}
                     subtitle={t('settings.whatsNewSubtitle')}
-                    icon={<Ionicons name="sparkles-outline" size={29} color="#FF9500" />}
+                    icon="sparkles-outline"
+                    tone="warning"
                     onPress={() => {
                         router.push('/changelog');
                     }}
                 />
-                <Item
+                <SettingsRow
                     title={t('settings.github')}
-                    icon={<Ionicons name="logo-github" size={29} color={theme.colors.text} />}
                     detail="slopus/happy"
+                    icon="logo-github"
                     onPress={handleGitHub}
                 />
-                <Item
+                <SettingsRow
                     title={t('settings.reportIssue')}
-                    icon={<Ionicons name="bug-outline" size={29} color="#FF3B30" />}
+                    icon="bug-outline"
                     onPress={handleReportIssue}
                 />
-                <Item
+                <SettingsRow
                     title={t('settings.privacyPolicy')}
-                    icon={<Ionicons name="shield-checkmark-outline" size={29} color="#007AFF" />}
+                    icon="shield-checkmark-outline"
+                    tone="accent"
                     onPress={() => openExternalUrl('https://happy.engineering/privacy/')}
                 />
-                <Item
+                <SettingsRow
                     title={t('settings.termsOfService')}
-                    icon={<Ionicons name="document-text-outline" size={29} color="#007AFF" />}
+                    icon="document-text-outline"
+                    tone="accent"
                     onPress={() => openExternalUrl('https://github.com/slopus/happy/blob/main/TERMS.md')}
                 />
                 {Platform.OS === 'ios' && (
-                    <Item
+                    <SettingsRow
                         title={t('settings.eula')}
-                        icon={<Ionicons name="document-text-outline" size={29} color="#007AFF" />}
+                        icon="document-text-outline"
+                        tone="accent"
                         onPress={() => openExternalUrl('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/')}
                     />
                 )}
-                <Item
+                <SettingsRow
                     title={t('common.version')}
                     subtitle={versionSubtitle}
                     subtitleLines={2}
                     detail={versionDetail}
-                    icon={<Ionicons name="information-circle-outline" size={29} color={theme.colors.textSecondary} />}
+                    icon="information-circle-outline"
                     onPress={handleVersionClick}
                     showChevron={false}
                 />
