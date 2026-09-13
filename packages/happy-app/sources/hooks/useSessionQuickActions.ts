@@ -1,22 +1,16 @@
 import * as React from 'react';
 import { useHappyAction } from '@/hooks/useHappyAction';
-import { useNavigateToSession } from '@/hooks/useNavigateToSession';
 import { Modal } from '@/modal';
-import { machineResumeSession, sessionArchive, sessionKill, sessionSetAgentModes } from '@/sync/ops';
+import { sessionArchive, sessionKill } from '@/sync/ops';
 import { maybeCleanupWorktree } from '@/hooks/useWorktreeCleanup';
-import { storage, useLocalSetting, useMachine, useSetting } from '@/sync/storage';
-import { Machine, Session } from '@/sync/storageTypes';
-import { sync } from '@/sync/sync';
-import { resolveMessageModeMeta, UnsupportedPermissionModeError } from '@/sync/messageMeta';
+import { useLocalSetting } from '@/sync/storage';
+import { Session } from '@/sync/storageTypes';
 import { t } from '@/text';
 import { HappyError } from '@/utils/errors';
 import { copySessionMetadataToClipboard, copySessionMetadataAndLogsToClipboard } from '@/utils/copySessionMetadataToClipboard';
-import { useSessionStatus } from '@/utils/sessionUtils';
-import { isMachineOnline } from '@/utils/machineUtils';
 import { useRouter } from 'expo-router';
 import { useSession } from '@/sync/storage';
 import type { SessionActionShortcutId } from '@/keyboard/shortcuts';
-import { isRigMetadata } from '@/sync/rig';
 
 export interface SessionActionItem {
     id: SessionActionShortcutId;
@@ -32,92 +26,6 @@ interface UseSessionQuickActionsOptions {
     onAfterCopySessionMetadata?: () => void;
 }
 
-type ResumeAvailability = {
-    canResume: boolean;
-    canShowResume: boolean;
-    subtitle: string;
-    message: string;
-};
-
-function getResumeAvailability(session: Session, machine: Machine | null | undefined, isConnected: boolean): ResumeAvailability {
-    if (isRigMetadata(session.metadata) || session.metadata?.capabilities?.resume === false) {
-        return {
-            canResume: false,
-            canShowResume: false,
-            subtitle: '',
-            message: '',
-        };
-    }
-    if (isConnected) {
-        return {
-            canResume: false,
-            canShowResume: false,
-            subtitle: '',
-            message: '',
-        };
-    }
-
-    const machineId = session.metadata?.machineId;
-    if (!machineId) {
-        const message = t('sessionInfo.resumeSessionMissingMachine');
-        return {
-            canResume: false,
-            canShowResume: true,
-            subtitle: message,
-            message,
-        };
-    }
-
-    const hasBackendResumeId = Boolean(session.metadata?.claudeSessionId || session.metadata?.codexThreadId);
-    if (!hasBackendResumeId) {
-        const message = t('sessionInfo.resumeSessionMissingBackendId');
-        return {
-            canResume: false,
-            canShowResume: true,
-            subtitle: message,
-            message,
-        };
-    }
-
-    if (!machine) {
-        const message = t('sessionInfo.resumeSessionSameMachineOnly');
-        return {
-            canResume: false,
-            canShowResume: true,
-            subtitle: message,
-            message,
-        };
-    }
-
-    if (!isMachineOnline(machine)) {
-        return {
-            canResume: false,
-            canShowResume: true,
-            subtitle: t('sessionInfo.resumeSessionMachineOffline'),
-            message: t('sessionInfo.resumeSessionMachineOffline'),
-        };
-    }
-
-    // Older daemons do not publish resumeSupport and do not implement the
-    // resume RPC. Capability presence is the compatibility check; the UI is
-    // hidden instead of offering an action that the machine cannot execute.
-    if (machine.metadata?.resumeSupport?.rpcAvailable !== true) {
-        return {
-            canResume: false,
-            canShowResume: false,
-            subtitle: '',
-            message: '',
-        };
-    }
-
-    return {
-        canResume: true,
-        canShowResume: true,
-        subtitle: t('sessionInfo.resumeSessionSubtitle'),
-        message: t('sessionInfo.resumeSessionSubtitle'),
-    };
-}
-
 export function useSessionQuickActions(
     session: Session,
     options: UseSessionQuickActionsOptions = {},
@@ -127,16 +35,7 @@ export function useSessionQuickActions(
         onAfterCopySessionMetadata,
     } = options;
     const router = useRouter();
-    const navigateToSession = useNavigateToSession();
-    const sessionStatus = useSessionStatus(session);
-    const machineId = session.metadata?.machineId ?? '';
-    const machine = useMachine(machineId);
     const devModeEnabled = useLocalSetting('devModeEnabled');
-    const continuationExperimentsEnabled = useSetting('expResumeSession');
-    const resumeAvailability = React.useMemo(
-        () => getResumeAvailability(session, machine, sessionStatus.isConnected),
-        [machine, session, sessionStatus.isConnected],
-    );
 
     const openDetails = React.useCallback(() => {
         router.push(`/session/${session.id}/info`);
@@ -159,55 +58,6 @@ export function useSessionQuickActions(
             }
         })();
     }, [onAfterCopySessionMetadata, session]);
-
-    const [resumingSession, performResume] = useHappyAction(async () => {
-        if (!resumeAvailability.canResume) {
-            throw new HappyError(resumeAvailability.message, false);
-        }
-
-        if (!machineId) {
-            throw new HappyError(t('sessionInfo.resumeSessionMissingMachine'), false);
-        }
-
-        let modeMeta: ReturnType<typeof resolveMessageModeMeta>;
-        try {
-            modeMeta = resolveMessageModeMeta(session, storage.getState().settings);
-        } catch (error) {
-            if (error instanceof UnsupportedPermissionModeError) {
-                // Refuse loudly instead of substituting a mode: swapping in a
-                // default would silently change what the agent may do.
-                throw new HappyError(error.message, false);
-            }
-            throw error;
-        }
-        const result = await machineResumeSession({
-            machineId,
-            sessionId: session.id,
-            model: modeMeta.model ?? undefined,
-            permissionMode: modeMeta.permissionMode,
-        });
-
-        switch (result.type) {
-            case 'success': {
-                // Session reconnects to the same ID, so messages are preserved.
-                // Refresh to pick up the updated session state.
-                await sync.refreshSessions();
-
-                if (session.permissionMode) {
-                    sessionSetAgentModes(result.sessionId, { permissionMode: session.permissionMode });
-                }
-                // Model / effort picks survive resume on their own — they live
-                // in the session's synced metadata (#1492).
-
-                navigateToSession(result.sessionId);
-                return;
-            }
-            case 'requestToApproveDirectoryCreation':
-                throw new HappyError(t('sessionInfo.resumeSessionUnexpectedDirectoryPrompt'), false);
-            case 'error':
-                throw new HappyError(result.errorMessage, false);
-        }
-    });
 
     const [archivingSession, performArchive] = useHappyAction(async () => {
         if (session.metadata?.bot) {
@@ -232,20 +82,12 @@ export function useSessionQuickActions(
         performArchive();
     }, [performArchive]);
 
-    const resumeSession = React.useCallback(() => {
-        performResume();
-    }, [performResume]);
-
     const canCopySessionMetadata = __DEV__ || devModeEnabled;
 
     const actionItems = React.useMemo<SessionActionItem[]>(() => {
         const items: SessionActionItem[] = [
             { id: 'details', icon: 'information-circle-outline', label: t('profile.details'), onPress: openDetails },
         ];
-
-        if (resumeAvailability.canShowResume) {
-            items.push({ id: 'resume', icon: 'play-circle-outline', label: t('sessionInfo.resumeSession'), onPress: resumeSession });
-        }
 
         if (canCopySessionMetadata) {
             items.push({ id: 'copy-metadata', icon: 'bug-outline', label: t('sessionInfo.copyMetadata'), onPress: copySessionMetadata });
@@ -261,8 +103,6 @@ export function useSessionQuickActions(
         copySessionMetadata,
         copySessionMetadataAndLogs,
         openDetails,
-        resumeAvailability.canShowResume,
-        resumeSession,
     ]);
 
     const showActionAlert = React.useCallback(() => {
@@ -282,14 +122,9 @@ export function useSessionQuickActions(
         archivingSession,
         canArchive: true,
         canCopySessionMetadata,
-        canResume: resumeAvailability.canResume,
-        canShowResume: resumeAvailability.canShowResume,
         copySessionMetadata,
         copySessionMetadataAndLogs,
         openDetails,
-        resumeSession,
-        resumeSessionSubtitle: resumeAvailability.subtitle,
-        resumingSession,
     };
 }
 

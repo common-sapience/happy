@@ -20,7 +20,7 @@ import { useConnectAccount } from '@/hooks/useConnectAccount';
 import { getDisplayName } from '@/sync/profile';
 import { Image } from 'expo-image';
 import { useHappyAction } from '@/hooks/useHappyAction';
-import { disconnectService } from '@/sync/apiServices';
+import { disconnectService, fetchServiceConnections, type ServiceConnection } from '@/sync/apiServices';
 import { fetchPushTokens, type PushToken } from '@/sync/apiPush';
 import {
     getCurrentExpoPushToken,
@@ -161,22 +161,37 @@ export default React.memo(() => {
         }, [loadPushSettings])
     );
 
-    // Service disconnection
+    // Connector records (DEV-08). They are keyed by service and computer, so the list comes from
+    // the connector endpoint rather than from the account profile.
+    const [connections, setConnections] = useState<ServiceConnection[]>([]);
+    const loadConnections = useCallback(async () => {
+        if (!auth.credentials) return;
+        try {
+            setConnections(await fetchServiceConnections(auth.credentials));
+        } catch {
+            setConnections([]);
+        }
+    }, [auth.credentials]);
+
+    useEffect(() => {
+        void loadConnections();
+    }, [loadConnections]);
+
     const [disconnectingService, setDisconnectingService] = useState<string | null>(null);
-    const handleDisconnectService = async (service: string, displayName: string) => {
+    const handleDisconnectService = async (connection: ServiceConnection) => {
+        const key = `${connection.vendor}:${connection.machineId}`;
         const confirmed = await Modal.confirm(
-            t('modals.disconnectService', { service: displayName }),
-            t('modals.disconnectServiceConfirm', { service: displayName }),
+            t('modals.disconnectService', { service: connection.vendor }),
+            t('modals.disconnectServiceConfirm', { service: connection.vendor }),
             { confirmText: t('modals.disconnect'), destructive: true }
         );
         if (confirmed) {
-            setDisconnectingService(service);
+            setDisconnectingService(key);
             try {
-                await disconnectService(auth.credentials!, service);
-                await sync.refreshProfile();
-                // The profile will be updated via sync
+                await disconnectService(auth.credentials!, connection.vendor, connection.machineId);
+                await loadConnections();
             } catch (error) {
-                Modal.alert(t('common.error'), t('errors.disconnectServiceFailed', { service: displayName }));
+                Modal.alert(t('common.error'), t('errors.disconnectServiceFailed', { service: connection.vendor }));
             } finally {
                 setDisconnectingService(null);
             }
@@ -341,20 +356,20 @@ export default React.memo(() => {
                     </ItemGroup>
                 )}
 
-                {/* Connected Services Section. The relay owns the connection
-                    record, not the credential, so the list renders whatever
-                    service names it reports. */}
-                {profile.connectedServices && profile.connectedServices.length > 0 && (
+                {/* Connected Services Section. The relay owns the record, not the credential, so a
+                    row is a service name plus the computer that holds the credential (DEV-08). */}
+                {connections.length > 0 && (
                     <ItemGroup title={t('settings.connectedAccounts')}>
-                        {profile.connectedServices.map(service => {
-                            const isDisconnecting = disconnectingService === service;
+                        {connections.map(connection => {
+                            const key = `${connection.vendor}:${connection.machineId}`;
+                            const isDisconnecting = disconnectingService === key;
                             return (
                                 <Item
-                                    key={service}
-                                    title={service}
-                                    detail={t('settingsAccount.statusActive')}
+                                    key={key}
+                                    title={connection.vendor}
+                                    detail={connection.status === 'connected' ? t('settingsAccount.statusActive') : connection.status}
                                     subtitle={t('settingsAccount.tapToDisconnect')}
-                                    onPress={() => handleDisconnectService(service, service)}
+                                    onPress={() => handleDisconnectService(connection)}
                                     loading={isDisconnecting}
                                     disabled={isDisconnecting}
                                     showChevron={false}

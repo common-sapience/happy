@@ -6,7 +6,7 @@ import {
     ApiUpdateSessionStateSchema as SharedApiUpdateSessionStateSchema,
     type ApiMessage,
 } from '@slopus/happy-wire';
-import { GitHubProfileSchema, ImageRefSchema } from './profile';
+import { ImageRefSchema } from './profile';
 
 export {
     ApiMessageSchema,
@@ -90,7 +90,6 @@ export const ApiUpdateAccountSchema = z.object({
     firstName: z.string().nullish(),
     lastName: z.string().nullish(),
     avatar: ImageRefSchema.nullish(),
-    github: GitHubProfileSchema.nullish(),
 });
 
 // Use a plain union here to avoid runtime discriminator extraction issues

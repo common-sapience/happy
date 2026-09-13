@@ -20,9 +20,8 @@ import { useMultiClick } from '@/hooks/useMultiClick';
 import { useUnistyles } from 'react-native-unistyles';
 import { layout } from '@/components/layout';
 import { useHappyAction } from '@/hooks/useHappyAction';
-import { disconnectService } from '@/sync/apiServices';
 import { useProfile } from '@/sync/storage';
-import { getDisplayName, getAvatarUrl, getBio } from '@/sync/profile';
+import { getDisplayName, getAvatarUrl } from '@/sync/profile';
 import { Avatar } from '@/components/Avatar';
 import { t } from '@/text';
 
@@ -94,7 +93,6 @@ export const SettingsView = React.memo(function SettingsView({
     const profile = useProfile();
     const displayName = getDisplayName(profile);
     const avatarUrl = getAvatarUrl(profile);
-    const bio = getBio(profile);
 
     const { connectTerminal, connectWithUrl, isLoading } = useConnectTerminal();
 
@@ -153,14 +151,9 @@ export const SettingsView = React.memo(function SettingsView({
                                     thumbhash={profile.avatar?.thumbhash}
                                 />
                             </View>
-                            <Text style={{ fontSize: 20, fontWeight: '600', color: theme.colors.text, marginBottom: bio ? 4 : 8 }}>
+                            <Text style={{ fontSize: 20, fontWeight: '600', color: theme.colors.text, marginBottom: 8 }}>
                                 {displayName}
                             </Text>
-                            {bio && (
-                                <Text style={{ fontSize: 14, color: theme.colors.textSecondary, textAlign: 'center', marginBottom: 8, paddingHorizontal: 16 }}>
-                                    {bio}
-                                </Text>
-                            )}
                         </>
                     ) : (
                         // Logo view: Original logo + version

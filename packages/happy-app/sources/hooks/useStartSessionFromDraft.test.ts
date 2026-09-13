@@ -221,9 +221,7 @@ describe('useStartSessionFromDraft', () => {
             approvedNewDirectoryCreation: false,
             agent: 'opencode',
             clientRequestId: 'spawn-request-1',
-            permissionMode: 'auto',
-            modelMode: undefined,
-            effortLevel: 'medium',
+            agentProfile: 'default',
         });
         expect(mocks.sessionSetAgentModes).toHaveBeenCalledWith('session-1', {
             permissionMode: 'auto',
@@ -254,11 +252,14 @@ describe('useStartSessionFromDraft', () => {
 
         await expect(startSession()).resolves.toBe(true);
 
-        // Default is expressed as no override on the wire: the old CLI runs its
-        // own configured mode instead of receiving `auto`.
+        // The wire carries the agent profile (HOST-12); the permission pick stays a local
+        // selection pinned to the session afterwards.
         expect(mocks.machineSpawnNewSession).toHaveBeenCalledWith(expect.objectContaining({
             agent: 'opencode',
-            permissionMode: undefined,
+            agentProfile: 'default',
+        }));
+        expect(mocks.sessionSetAgentModes).toHaveBeenCalledWith('session-1', expect.objectContaining({
+            permissionMode: 'default',
         }));
     });
 
@@ -280,8 +281,7 @@ describe('useStartSessionFromDraft', () => {
 
         await expect(startSession()).resolves.toBe(true);
 
-        expect(mocks.machineSpawnNewSession).toHaveBeenCalledWith(expect.objectContaining({
-            agent: 'opencode',
+        expect(mocks.sessionSetAgentModes).toHaveBeenCalledWith('session-1', expect.objectContaining({
             permissionMode: 'bypassPermissions',
         }));
     });
@@ -298,10 +298,6 @@ describe('useStartSessionFromDraft', () => {
         const { startSession } = useStartSessionFromDraft();
 
         await expect(startSession()).resolves.toBe(true);
-        expect(mocks.machineSpawnNewSession).toHaveBeenCalledWith(expect.objectContaining({
-            agent: 'opencode',
-            modelMode: 'my-workspace-model',
-        }));
         expect(mocks.sessionSetAgentModes).toHaveBeenCalledWith('session-1', {
             permissionMode: 'default',
             modelMode: 'my-workspace-model',

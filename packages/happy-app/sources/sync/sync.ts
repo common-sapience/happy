@@ -1004,6 +1004,8 @@ class Sync {
             dataEncryptionKey: string | null;
             projectId?: string | null;
             active: boolean;
+            /** RL-07: the relay's list marker, derived from the host's metadata write. */
+            archived?: boolean;
             activeAt: number;
             createdAt: number;
             updatedAt: number;
@@ -1377,8 +1379,7 @@ class Sync {
             timestamp: parsedProfile.timestamp,
             firstName: parsedProfile.firstName,
             lastName: parsedProfile.lastName,
-            hasAvatar: !!parsedProfile.avatar,
-            hasGitHub: !!parsedProfile.github
+            hasAvatar: !!parsedProfile.avatar
         }));
 
         // Apply profile to storage
@@ -2025,7 +2026,6 @@ class Sync {
         } else if (updateData.body.t === 'update-account') {
             const accountUpdate = updateData.body;
             const currentProfile = storage.getState().profile;
-            const hadGitHub = !!currentProfile.github?.login;
 
             // Build updated profile with new data
             const updatedProfile: Profile = {
@@ -2033,7 +2033,6 @@ class Sync {
                 firstName: accountUpdate.firstName !== undefined ? accountUpdate.firstName : currentProfile.firstName,
                 lastName: accountUpdate.lastName !== undefined ? accountUpdate.lastName : currentProfile.lastName,
                 avatar: accountUpdate.avatar !== undefined ? accountUpdate.avatar : currentProfile.avatar,
-                github: accountUpdate.github !== undefined ? accountUpdate.github : currentProfile.github,
                 timestamp: updateData.createdAt // Update timestamp to latest
             };
 

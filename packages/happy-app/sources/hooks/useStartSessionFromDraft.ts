@@ -42,6 +42,7 @@ import {
     completeSpawnRequest,
     resolveSpawnRequestId,
 } from '@/sync/spawnRequestId';
+import { ENGINE_DEFAULT_AGENT_PROFILE } from '@/utils/harnessCatalog';
 import type { NewSessionStartPhase } from '@/components/newSessionProgress';
 import type { Session } from '@/sync/storageTypes';
 import { collectSessionPlaces, collectSessionWorkspaces } from '@/sync/agentSessionPlaces';
@@ -304,9 +305,10 @@ export function useStartSessionFromDraft() {
                     approvedNewDirectoryCreation,
                     agent: agentType,
                     clientRequestId,
-                    permissionMode: permission.key !== 'default' ? permission.key : undefined,
-                    modelMode: model.key !== 'default' ? model.key : undefined,
-                    effortLevel: effort?.key,
+                    // HOST-12: the profile carries the tool and skill allow-list, so it is what the
+                    // host needs at creation. Until the picker lands (DESK-10) every session starts
+                    // on the engine's built-in profile, which has everything switched on.
+                    agentProfile: ENGINE_DEFAULT_AGENT_PROFILE,
                 };
                 let result = await machineSpawnNewSession(spawnOptions);
                 let pendingResults = 0;

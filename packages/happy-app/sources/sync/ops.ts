@@ -173,9 +173,12 @@ export interface SpawnSessionOptions {
     approvedNewDirectoryCreation?: boolean;
     token?: string;
     agent?: NewSessionAgentType;
-    permissionMode?: string;
-    modelMode?: string;
-    effortLevel?: string;
+    /**
+     * HOST-12: the engine agent profile the session runs under. The profile is defined in the
+     * engine's managed config and carries the tool and skill allow-list, so the control end only
+     * names it; the host binds the session to it at creation.
+     */
+    agentProfile?: string;
     /** Idempotency key so a retried spawn cannot create a second session. */
     clientRequestId?: string;
     /** Happy session id this fork was branched from (lineage). */
@@ -186,11 +189,6 @@ export interface SpawnSessionOptions {
     isSideChat?: boolean;
 }
 
-export interface ResumeSessionOptions {
-    machineId: string;
-    sessionId: string;
-}
-
 // Exported session operation functions
 
 /**
@@ -198,7 +196,7 @@ export interface ResumeSessionOptions {
  */
 export async function machineSpawnNewSession(options: SpawnSessionOptions): Promise<SpawnSessionResult> {
 
-    const { machineId, directory, approvedNewDirectoryCreation = false, token, agent, permissionMode, modelMode, effortLevel, clientRequestId, parentSessionId, forkedFromMessageId, isSideChat } = options;
+    const { machineId, directory, approvedNewDirectoryCreation = false, token, agent, agentProfile, clientRequestId, parentSessionId, forkedFromMessageId, isSideChat } = options;
 
     try {
         type DirectorySpawnRequest = {
@@ -207,16 +205,14 @@ export async function machineSpawnNewSession(options: SpawnSessionOptions): Prom
             approvedNewDirectoryCreation?: boolean,
             token?: string,
             agent?: NewSessionAgentType,
-            permissionMode?: string,
-            modelMode?: string,
-            effortLevel?: string,
+            agentProfile?: string,
             clientRequestId?: string,
             parentSessionId?: string,
             forkedFromMessageId?: string,
             isSideChat?: boolean,
         };
         type SpawnRequest = DirectorySpawnRequest;
-        const request: SpawnRequest = { type: 'spawn-in-directory', directory, approvedNewDirectoryCreation, token, agent, permissionMode, modelMode, effortLevel, clientRequestId, parentSessionId, forkedFromMessageId, isSideChat };
+        const request: SpawnRequest = { type: 'spawn-in-directory', directory, approvedNewDirectoryCreation, token, agent, agentProfile, clientRequestId, parentSessionId, forkedFromMessageId, isSideChat };
         const result = await apiSocket.machineRPC<SpawnSessionResult, SpawnRequest>(
             machineId,
             'spawn-happy-session',
@@ -228,24 +224,6 @@ export async function machineSpawnNewSession(options: SpawnSessionOptions): Prom
         return {
             type: 'error',
             errorMessage: error instanceof Error ? error.message : 'Failed to spawn session'
-        };
-    }
-}
-
-export async function machineResumeSession(options: ResumeSessionOptions & { model?: string; permissionMode?: string }): Promise<SpawnSessionResult> {
-    const { machineId, sessionId, model, permissionMode } = options;
-
-    try {
-        const result = await apiSocket.machineRPC<SpawnSessionResult, { sessionId: string; model?: string; permissionMode?: string }>(
-            machineId,
-            'resume-happy-session',
-            { sessionId, model, permissionMode },
-        );
-        return result;
-    } catch (error) {
-        return {
-            type: 'error',
-            errorMessage: error instanceof Error ? error.message : 'Failed to resume session',
         };
     }
 }
@@ -796,20 +774,27 @@ export async function sessionKill(sessionId: string): Promise<SessionKillRespons
 }
 
 /**
- * Archive a session by deactivating it on the server.
- * Use this when the CLI process is already dead and sessionKill can't reach it.
+ * Archive a session, or put an archived one back in the active list.
+ *
+ * RL-07: the archive state belongs to the host, so this asks the session's machine rather than
+ * writing anything itself. The relay's plaintext list marker follows the host's metadata write;
+ * with the host offline there is nothing to ask and the caller is told so.
  */
-export async function sessionArchive(sessionId: string): Promise<{ success: boolean; message?: string }> {
-    if (storage.getState().sessions[sessionId]?.metadata?.bot) {
+export async function sessionArchive(sessionId: string, archived = true): Promise<{ success: boolean; message?: string }> {
+    const session = storage.getState().sessions[sessionId];
+    if (session?.metadata?.bot) {
         return { success: false, message: 'Connect to the bot’s machine to archive it.' };
     }
+    const machineId = session?.metadata?.machineId;
+    if (!machineId) {
+        return { success: false, message: 'This session has no machine to ask.' };
+    }
     try {
-        const response = await apiSocket.request(`/v1/sessions/${sessionId}/archive`, {
-            method: 'POST'
-        });
-        if (!response.ok) {
-            return { success: false, message: `Server error: ${response.status}` };
-        }
+        await apiSocket.machineRPC<{ sessionId: string; archived: boolean }, { sessionId: string; archived: boolean }>(
+            machineId,
+            'archive-session',
+            { sessionId, archived },
+        );
         return { success: true };
     } catch (error) {
         return { success: false, message: error instanceof Error ? error.message : 'Unknown error' };

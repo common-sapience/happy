@@ -6,6 +6,12 @@ import type { NewSessionAgentType } from '@/sync/persistence';
  */
 export const ENGINE_AGENT: NewSessionAgentType = 'opencode';
 
+/**
+ * The engine's built-in agent profile: every tool and every skill switched on (RULE-09). A session
+ * that was not given a narrower profile runs here.
+ */
+export const ENGINE_DEFAULT_AGENT_PROFILE = 'default';
+
 export const HARNESS_NAMES: Record<NewSessionAgentType, string> = {
     opencode: 'Agent',
 };

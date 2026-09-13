@@ -106,6 +106,20 @@ describe('MachineMetadataSchema', () => {
         expect((metadata as any).futureRigMachineField).toEqual({ enabled: true });
     });
 
+    it('HOST-10: reads the one-agent capability report the daemon now publishes', () => {
+        const metadata = MachineMetadataSchema.parse({
+            host: 'workstation',
+            platform: 'linux',
+            happyCliVersion: '1.2.3',
+            happyHomeDir: '/home/dev/.happy',
+            homeDir: '/home/dev',
+            cliAvailability: { opencode: true, detectedAt: 123 },
+        });
+
+        expect(metadata.cliAvailability?.opencode).toBe(true);
+        expect(metadata.cliAvailability?.detectedAt).toBe(123);
+    });
+
     // A failed parse returns null for the whole metadata object, so anything Rig
     // may legitimately omit has to survive. These are the shapes its own session
     // schema already permits.
