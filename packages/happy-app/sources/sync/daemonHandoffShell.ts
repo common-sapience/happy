@@ -1,7 +1,7 @@
 import { getRandomBytesAsync } from 'expo-crypto';
 
 import { approveTerminalLogin } from '@/auth/approveTerminalLogin';
-import { getCurrentAuth } from '@/auth/AuthContext';
+import type { AuthCredentials } from '@/auth/tokenStorage';
 import { encodeBase64 } from '@/encryption/base64';
 import { isTauri } from '@/utils/isTauri';
 import { checkDaemonLoginReply, decideLoginHandoff, decideRelayHandoff } from './daemonHandoff';
@@ -57,15 +57,14 @@ let loginAsked = false;
  * hand: the shell asks its daemon to publish a login request, and this app approves
  * the one carrying the token it minted for that request.
  */
-export async function letDaemonJoinTheAccount(): Promise<void> {
+export async function letDaemonJoinTheAccount(credentials: AuthCredentials | null): Promise<void> {
     const invoke = shellInvoke();
-    const auth = getCurrentAuth();
     const decision = decideLoginHandoff({
         shellPresent: invoke !== null,
-        loggedIn: auth?.isAuthenticated === true && auth.credentials !== null,
+        loggedIn: credentials !== null,
         alreadyAsked: loginAsked,
     });
-    if (!decision.ask || !invoke || !auth?.credentials) {
+    if (!decision.ask || !invoke || !credentials) {
         return;
     }
     loginAsked = true;
@@ -79,7 +78,7 @@ export async function letDaemonJoinTheAccount(): Promise<void> {
             }
             return;
         }
-        await approveTerminalLogin(auth.credentials, checked.url);
+        await approveTerminalLogin(credentials, checked.url);
     } catch (error) {
         loginAsked = false;
         console.warn('Could not put this computer on the account', error);

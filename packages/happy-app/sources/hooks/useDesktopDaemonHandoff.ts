@@ -21,9 +21,9 @@ export function useDesktopDaemonHandoff(): void {
     }, []);
 
     React.useEffect(() => {
-        if (!auth.isAuthenticated) {
+        if (!auth.isAuthenticated || !auth.credentials) {
             return;
         }
-        void letDaemonJoinTheAccount();
-    }, [auth.isAuthenticated]);
+        void letDaemonJoinTheAccount(auth.credentials);
+    }, [auth.isAuthenticated, auth.credentials]);
 }
