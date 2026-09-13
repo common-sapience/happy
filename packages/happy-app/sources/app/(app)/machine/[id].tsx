@@ -18,6 +18,11 @@ import { t } from '@/text';
 import { useNavigateToSession } from '@/hooks/useNavigateToSession';
 import { MOBILE_GLASS_HEADER_HEIGHT } from '@/components/navigation/headerMetrics';
 import { ENGINE_AGENT, getHarnessName, isHarnessAvailable } from '@/utils/harnessCatalog';
+import { Switch } from '@/components/Switch';
+import {
+    machineGetPermissionConfirmation,
+    machineSetPermissionConfirmation,
+} from '@/components/account/machinePermissionConfirmation';
 
 export default function MachineDetailScreen() {
     const { theme } = useUnistyles();
@@ -46,6 +51,50 @@ export default function MachineDetailScreen() {
             .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
             .slice(0, 5);
     }, [machineSessions]);
+
+    /**
+     * DESK-17, PERM-08: the permission confirmation switch belongs to this computer, not to the
+     * control end, so it is read from and written to the computer itself. Null means "not known
+     * yet or the computer did not answer" — it is never shown as "off", because claiming no
+     * confirmations are coming when the computer may be asking for them is the unsafe reading.
+     */
+    const [confirmationEnabled, setConfirmationEnabled] = useState<boolean | null>(null);
+    const [confirmationError, setConfirmationError] = useState<string | null>(null);
+    const [isChangingConfirmation, setIsChangingConfirmation] = useState(false);
+    const machineIsOnline = machine ? isMachineOnline(machine) : false;
+
+    React.useEffect(() => {
+        if (!machineId || !machineIsOnline) {
+            setConfirmationEnabled(null);
+            return;
+        }
+        let cancelled = false;
+        setConfirmationError(null);
+        machineGetPermissionConfirmation(machineId)
+            .then((enabled) => {
+                if (!cancelled) setConfirmationEnabled(enabled);
+            })
+            .catch((error: unknown) => {
+                if (cancelled) return;
+                setConfirmationEnabled(null);
+                setConfirmationError(error instanceof Error ? error.message : 'This computer did not answer.');
+            });
+        return () => { cancelled = true; };
+    }, [machineId, machineIsOnline]);
+
+    const handleConfirmationChange = async (next: boolean) => {
+        if (!machineId) return;
+        setIsChangingConfirmation(true);
+        setConfirmationError(null);
+        try {
+            setConfirmationEnabled(await machineSetPermissionConfirmation(machineId, next));
+        } catch (error) {
+            setConfirmationEnabled(null);
+            setConfirmationError(error instanceof Error ? error.message : 'This computer did not answer.');
+        } finally {
+            setIsChangingConfirmation(false);
+        }
+    };
 
     const handleStopDaemon = async () => {
         // Show confirmation modal using alert with buttons
@@ -178,7 +227,7 @@ export default function MachineDetailScreen() {
         key: ENGINE_AGENT,
     });
     const machineName = metadata?.displayName || metadata?.host || 'unknown machine';
-    const machineOnline = isMachineOnline(machine);
+    const machineOnline = machineIsOnline;
 
     return (
         <>
@@ -281,6 +330,38 @@ export default function MachineDetailScreen() {
                             title={t('machine.daemonStateVersion')}
                             subtitle={String(machine.daemonStateVersion)}
                         />
+                </ItemGroup>
+
+                {/* Permission confirmation (DESK-17, PERM-08). Off means the agent works without
+                    stopping to ask; on means risky steps wait for an answer on this page. */}
+                <ItemGroup
+                    title="Confirmation"
+                    footer={confirmationError
+                        ? `This computer did not report the setting: ${confirmationError}`
+                        : machineOnline
+                            ? 'While this is on, the agent stops and asks before deleting or overwriting your files, reaching outside the folders you allowed, sending anything out, paying, or installing software. While it is off, it works without asking. Reading sensitive files is refused either way.'
+                            : 'Turn this computer on to read or change the setting.'}
+                >
+                    <Item
+                        title="Ask before risky steps"
+                        subtitle={!machineOnline
+                            ? 'This computer is off'
+                            : confirmationEnabled === null
+                                ? 'Not reported by this computer'
+                                : confirmationEnabled
+                                    ? 'On for this computer'
+                                    : 'Off for this computer'}
+                        showChevron={false}
+                        rightElement={isChangingConfirmation ? (
+                            <ActivityIndicator size="small" color={theme.colors.textSecondary} />
+                        ) : (
+                            <Switch
+                                value={confirmationEnabled === true}
+                                onValueChange={(next) => { void handleConfirmationChange(next); }}
+                                disabled={!machineOnline || isChangingConfirmation}
+                            />
+                        )}
+                    />
                 </ItemGroup>
 
                 {/* CLI Availability */}
