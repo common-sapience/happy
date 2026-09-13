@@ -40,7 +40,7 @@ export const en: TranslationStructure = {
     tabs: {
         // Tab navigation labels
         inbox: 'Inbox',
-        sessions: 'Sessions',
+        agents: 'Agents',
         settings: 'Account',
     },
 
@@ -304,7 +304,7 @@ export const en: TranslationStructure = {
     },
 
     newSession: {
-        title: 'Start New Session',
+        title: 'New agent',
         machineOffline: 'Machine is offline',
         switchMachinesHint: '• Switch machines by clicking on the machine above',
     },
@@ -561,10 +561,10 @@ export const en: TranslationStructure = {
     },
 
     sidebar: {
-        sessionsTitle: 'Happy',
+        agentsTitle: 'Agents',
         showArchived: 'Show archived',
         hideArchived: 'Hide archived',
-        newSession: 'New session',
+        newAgent: 'New agent',
         projects: "Projects",
     },
 
@@ -941,24 +941,6 @@ export const en: TranslationStructure = {
         unknownTime: 'unknown time',
     },
 
-    codex: {
-        // Codex permission dialog buttons
-        permissions: {
-            yesForSession: "Yes, and don't ask for a session",
-            stopAndExplain: 'Stop, and explain what to do',
-        }
-    },
-
-    claude: {
-        // Claude permission dialog buttons
-        permissions: {
-            yesAllowAllEdits: 'Yes, allow all edits during this session',
-            yesAllowEverything: 'Yes, allow everything during this session',
-            yesForTool: "Yes, don't ask again for this tool",
-            noTellClaude: 'No, and provide feedback',
-        }
-    },
-
     textSelection: {
         // Text selection screen
         selectText: 'Select text range',
@@ -1109,6 +1091,35 @@ export const en: TranslationStructure = {
         extraInstructions: 'Extra instructions',
         extraInstructionsPlaceholder: 'Anything this agent should always keep in mind',
         noAgentsTitle: 'No agents yet',
+        noAgentsDescription: "Start one on a computer you have connected.",
+        noComputersTitle: "No computers connected",
+        noComputersDescription: "Install the app on the computer you want your agents to work on.",
+        computerUnreachableTitle: "No computer is reachable",
+        computerUnreachableDescription: "Bring a computer online to start an agent.",
+        troubleshoot: "Troubleshoot",
+        emptyTranscriptTitle: "Nothing here yet",
+        emptyTranscriptDescription: "Describe the task and this agent gets to work.",
+    },
+
+    permissionRequest: {
+        allowOnce: "Allow once",
+        allowAlways: "Always allow",
+        deny: "Don't allow",
+        runCommand: "Run a command",
+        readFile: "Read a file",
+        createFile: "Create a file",
+        changeFile: "Change a file",
+        searchFiles: "Look through files",
+        fetchWeb: "Open a page on the web",
+        searchWeb: "Search the web",
+        startHelper: "Start a helper agent",
+        startChanges: "Start making changes",
+        useTool: "Use a tool",
+        scopeFolder: "Inside the folder it works in",
+        scopeComputer: "On this computer",
+        scopeWeb: "Outside this computer",
+        answeredAllowed: "You allowed this.",
+        answeredDenied: "You didn't allow this.",
     },
 
 } as const;

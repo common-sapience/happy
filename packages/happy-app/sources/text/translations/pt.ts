@@ -25,7 +25,7 @@ export const pt: TranslationStructure = {
     tabs: {
         // Tab navigation labels
         inbox: 'Caixa de entrada',
-        sessions: 'Sessões',
+        agents: 'Agents',
         settings: 'Conta',
     },
 
@@ -289,7 +289,7 @@ export const pt: TranslationStructure = {
     },
 
     newSession: {
-        title: 'Iniciar nova sessão',
+        title: 'Novo agent',
         machineOffline: 'A máquina está offline',
         switchMachinesHint: '• Troque de máquina clicando na máquina acima',
     },
@@ -546,10 +546,10 @@ export const pt: TranslationStructure = {
     },
 
     sidebar: {
-        sessionsTitle: 'Happy',
+        agentsTitle: 'Agents',
         showArchived: 'Mostrar arquivadas',
         hideArchived: 'Ocultar arquivadas',
-        newSession: 'Nova sessão',
+        newAgent: 'Novo agent',
         projects: "Projetos",
     },
 
@@ -926,24 +926,6 @@ export const pt: TranslationStructure = {
         unknownTime: 'horário desconhecido',
     },
 
-    codex: {
-        // Codex permission dialog buttons
-        permissions: {
-            yesForSession: 'Sim, e não perguntar para esta sessão',
-            stopAndExplain: 'Parar, e explicar o que fazer',
-        }
-    },
-
-    claude: {
-        // Claude permission dialog buttons
-        permissions: {
-            yesAllowAllEdits: 'Sim, permitir todas as edições durante esta sessão',
-            yesAllowEverything: 'Sim, permitir tudo durante esta sessão',
-            yesForTool: 'Sim, não perguntar novamente para esta ferramenta',
-            noTellClaude: 'Não, fornecer feedback',
-        }
-    },
-
     textSelection: {
         // Text selection screen
         selectText: 'Selecionar intervalo de texto',
@@ -1092,6 +1074,35 @@ export const pt: TranslationStructure = {
         extraInstructions: 'Instruções adicionais',
         extraInstructionsPlaceholder: 'O que este agente deve lembrar sempre',
         noAgentsTitle: 'Ainda sem agentes',
+        noAgentsDescription: "Inicie um em um computador que você conectou.",
+        noComputersTitle: "Nenhum computador conectado",
+        noComputersDescription: "Instale o app no computador onde seus agents devem trabalhar.",
+        computerUnreachableTitle: "Nenhum computador está acessível",
+        computerUnreachableDescription: "Ligue um computador para iniciar um agent.",
+        troubleshoot: "Diagnosticar",
+        emptyTranscriptTitle: "Ainda não há nada aqui",
+        emptyTranscriptDescription: "Descreva a tarefa e este agent começa a trabalhar.",
+    },
+
+    permissionRequest: {
+        allowOnce: "Permitir uma vez",
+        allowAlways: "Permitir sempre",
+        deny: "Não permitir",
+        runCommand: "Executar um comando",
+        readFile: "Ler um arquivo",
+        createFile: "Criar um arquivo",
+        changeFile: "Alterar um arquivo",
+        searchFiles: "Procurar nos arquivos",
+        fetchWeb: "Abrir uma página na web",
+        searchWeb: "Pesquisar na web",
+        startHelper: "Iniciar um agent auxiliar",
+        startChanges: "Começar a fazer alterações",
+        useTool: "Usar uma ferramenta",
+        scopeFolder: "Dentro da pasta em que trabalha",
+        scopeComputer: "Neste computador",
+        scopeWeb: "Fora deste computador",
+        answeredAllowed: "Você permitiu isso.",
+        answeredDenied: "Você não permitiu isso.",
     },
 
 } as const;

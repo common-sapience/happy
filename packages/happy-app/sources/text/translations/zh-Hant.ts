@@ -27,7 +27,7 @@ export const zhHant: TranslationStructure = {
     tabs: {
         // Tab navigation labels
         inbox: '收件匣',
-        sessions: '工作階段',
+        agents: 'Agent',
         settings: '帳戶',
     },
 
@@ -290,7 +290,7 @@ export const zhHant: TranslationStructure = {
     },
 
     newSession: {
-        title: '開始新工作階段',
+        title: '新建 agent',
         machineOffline: '裝置離線',
         switchMachinesHint: '• 點擊上方的裝置來切換裝置',
     },
@@ -547,10 +547,10 @@ export const zhHant: TranslationStructure = {
     },
 
     sidebar: {
-        sessionsTitle: 'Happy',
+        agentsTitle: 'Agent',
         showArchived: '顯示已封存',
         hideArchived: '隱藏已封存',
-        newSession: '新建對話',
+        newAgent: '新建 agent',
         projects: "專案",
     },
 
@@ -927,24 +927,6 @@ export const zhHant: TranslationStructure = {
         unknownTime: '未知時間',
     },
 
-    codex: {
-        // Codex permission dialog buttons
-        permissions: {
-            yesForSession: '是，並且本次工作階段不再詢問',
-            stopAndExplain: '停止，並說明該做什麼',
-        }
-    },
-
-    claude: {
-        // Claude permission dialog buttons
-        permissions: {
-            yesAllowAllEdits: '是，允許本次工作階段的所有編輯',
-            yesAllowEverything: '是，允許本次工作階段的所有操作',
-            yesForTool: '是，不再詢問此工具',
-            noTellClaude: '否，並告訴 Claude 該如何不同地操作',
-        }
-    },
-
     textSelection: {
         // Text selection screen
         selectText: '選擇文字範圍',
@@ -1093,6 +1075,35 @@ export const zhHant: TranslationStructure = {
         extraInstructions: '追加說明',
         extraInstructionsPlaceholder: '這個 agent 需要一直記住的事',
         noAgentsTitle: '還沒有 agent',
+        noAgentsDescription: "在一台已連線的電腦上新增一個。",
+        noComputersTitle: "尚未連線任何電腦",
+        noComputersDescription: "在要工作的那台電腦上安裝這個應用程式。",
+        computerUnreachableTitle: "沒有可用的電腦",
+        computerUnreachableDescription: "讓一台電腦上線，才能新增 agent。",
+        troubleshoot: "診斷",
+        emptyTranscriptTitle: "這裡還是空的",
+        emptyTranscriptDescription: "說清任務，這個 agent 就開始工作。",
+    },
+
+    permissionRequest: {
+        allowOnce: "允許一次",
+        allowAlways: "一律允許",
+        deny: "拒絕",
+        runCommand: "執行命令",
+        readFile: "讀取檔案",
+        createFile: "新增檔案",
+        changeFile: "修改檔案",
+        searchFiles: "搜尋檔案",
+        fetchWeb: "開啟網頁",
+        searchWeb: "搜尋網頁",
+        startHelper: "啟動輔助 agent",
+        startChanges: "開始變更",
+        useTool: "使用工具",
+        scopeFolder: "僅限它的工作目錄",
+        scopeComputer: "這台電腦上",
+        scopeWeb: "這台電腦之外",
+        answeredAllowed: "你已允許。",
+        answeredDenied: "你已拒絕。",
     },
 
 } as const;

@@ -7,13 +7,12 @@ import {
 } from './flatSessionRowPresentation';
 
 describe('resolveFlatSessionRowPresentation', () => {
-    it('shimmers active work and keeps its timestamp', () => {
+    it('keeps the timestamp while the agent works', () => {
         expect(resolveFlatSessionRowPresentation({
             state: 'thinking',
             hasUnread: false,
             faded: false,
         })).toEqual({
-            shimmerTitle: true,
             topRight: { type: 'timestamp' },
         });
     });
@@ -24,7 +23,6 @@ describe('resolveFlatSessionRowPresentation', () => {
             hasUnread: true,
             faded: false,
         })).toEqual({
-            shimmerTitle: false,
             topRight: { type: 'dot', color: SESSION_READY_DOT_COLOR },
         });
     });
@@ -37,7 +35,6 @@ describe('resolveFlatSessionRowPresentation', () => {
                 hasUnread: true,
                 faded: false,
             })).toEqual({
-                shimmerTitle: false,
                 topRight: { type: 'dot', color: SESSION_BLOCKED_DOT_COLOR },
             });
         },
@@ -55,7 +52,6 @@ describe('resolveFlatSessionRowPresentation', () => {
             hasUnread: true,
             faded: true,
         })).toEqual({
-            shimmerTitle: false,
             topRight: { type: 'timestamp' },
         });
     });

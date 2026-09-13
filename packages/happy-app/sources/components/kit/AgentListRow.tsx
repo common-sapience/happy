@@ -1,14 +1,9 @@
 import * as React from 'react';
-import { Pressable, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Pressable, Text, View, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import { Typography } from '@/constants/Typography';
-import {
-    resolveKitAgentStatusPresentation,
-    type KitAgentStatus,
-    type KitAgentStatusTokens,
-} from './kitAgentStatus';
-
-const STATUS_DOT_SIZE = 8;
+import { StatusDot } from '../StatusDot';
+import { resolveKitAgentStatusPresentation, type KitAgentStatus } from './kitAgentStatus';
 
 const stylesheet = StyleSheet.create((theme) => ({
     row: {
@@ -16,10 +11,14 @@ const stylesheet = StyleSheet.create((theme) => ({
         alignItems: 'center',
         gap: theme.margins.md,
         paddingHorizontal: theme.margins.lg,
+        paddingVertical: theme.margins.sm,
         minHeight: theme.minTouchTarget + theme.margins.md,
     },
     rowPressed: {
         backgroundColor: theme.colors.surfacePressed,
+    },
+    rowSelected: {
+        backgroundColor: theme.colors.surfaceSelected,
     },
     center: {
         flex: 1,
@@ -44,6 +43,7 @@ const stylesheet = StyleSheet.create((theme) => ({
         ...Typography.default('regular'),
         fontSize: theme.typography.caption.fontSize,
         lineHeight: theme.typography.caption.lineHeight,
+        flexShrink: 0,
     },
     subtitle: {
         ...Typography.default('regular'),
@@ -52,24 +52,32 @@ const stylesheet = StyleSheet.create((theme) => ({
         lineHeight: theme.typography.caption.lineHeight,
         flexShrink: 1,
     },
-    dot: {
-        width: STATUS_DOT_SIZE,
-        height: STATUS_DOT_SIZE,
-        borderRadius: STATUS_DOT_SIZE / 2,
-    },
     muted: {
         opacity: 0.6,
     },
+    divider: {
+        position: 'absolute',
+        right: 0,
+        bottom: 0,
+        height: StyleSheet.hairlineWidth,
+        backgroundColor: theme.colors.divider,
+    },
 }));
 
-export type AgentListRowProps = {
+export type AgentListRowProps = Omit<PressableProps, 'style' | 'children'> & {
     title: string;
     /** The path or machine the agent runs on; technical detail stays on one line. */
     subtitle?: string;
     status: KitAgentStatus;
+    /** Word and colour both come from `agentListState`, never from the row. */
     statusLabel: string;
-    onPress?: () => void;
+    statusColor: string;
+    leading?: React.ReactNode;
     trailing?: React.ReactNode;
+    selected?: boolean;
+    showDivider?: boolean;
+    /** Where the divider starts, so it can clear a leading avatar. */
+    dividerInset?: number;
     style?: StyleProp<ViewStyle>;
 };
 
@@ -82,33 +90,32 @@ export const AgentListRow = React.memo(function AgentListRow({
     subtitle,
     status,
     statusLabel,
-    onPress,
+    statusColor,
+    leading,
     trailing,
+    selected,
+    showDivider,
+    dividerInset = 0,
     style,
+    ...pressableProps
 }: AgentListRowProps) {
-    const { theme } = useUnistyles();
     const styles = stylesheet;
-    const statusTokens: KitAgentStatusTokens = {
-        running: theme.colors.status.connected,
-        waiting: theme.colors.box.warning.border,
-        idle: theme.colors.status.default,
-        archived: theme.colors.status.disconnected,
-    };
-    const presentation = resolveKitAgentStatusPresentation(status, statusTokens);
+    const presentation = resolveKitAgentStatusPresentation(status);
 
     return (
         <Pressable
             accessibilityRole="button"
             accessibilityLabel={`${title}, ${statusLabel}`}
-            onPress={onPress}
+            {...pressableProps}
             style={({ pressed }) => [
                 styles.row,
+                selected && styles.rowSelected,
                 pressed && styles.rowPressed,
                 presentation.emphasis === 'muted' && styles.muted,
                 style,
             ]}
         >
-            <View style={[styles.dot, { backgroundColor: presentation.dotColor }]} />
+            {leading}
             <View style={styles.center}>
                 <Text
                     numberOfLines={1}
@@ -117,13 +124,15 @@ export const AgentListRow = React.memo(function AgentListRow({
                     {title}
                 </Text>
                 <View style={styles.meta}>
-                    <Text numberOfLines={1} style={[styles.statusLabel, { color: presentation.dotColor }]}>
+                    <StatusDot color={statusColor} isPulsing={presentation.animated} />
+                    <Text numberOfLines={1} style={[styles.statusLabel, { color: statusColor }]}>
                         {statusLabel}
                     </Text>
                     {subtitle ? <Text numberOfLines={1} style={styles.subtitle}>{subtitle}</Text> : null}
                 </View>
             </View>
             {trailing}
+            {showDivider ? <View style={[styles.divider, { left: dividerInset }]} /> : null}
         </Pressable>
     );
 });

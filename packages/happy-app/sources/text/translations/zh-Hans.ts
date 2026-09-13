@@ -27,7 +27,7 @@ export const zhHans: TranslationStructure = {
     tabs: {
         // Tab navigation labels
         inbox: '收件箱',
-        sessions: '会话',
+        agents: 'Agent',
         settings: '账户',
     },
 
@@ -291,7 +291,7 @@ export const zhHans: TranslationStructure = {
     },
 
     newSession: {
-        title: '开始新会话',
+        title: '新建 agent',
         machineOffline: '设备离线',
         switchMachinesHint: '• 点击上方的设备来切换设备',
     },
@@ -548,10 +548,10 @@ export const zhHans: TranslationStructure = {
     },
 
     sidebar: {
-        sessionsTitle: 'Happy',
+        agentsTitle: 'Agent',
         showArchived: '显示已归档',
         hideArchived: '隐藏已归档',
-        newSession: '新建会话',
+        newAgent: '新建 agent',
         projects: "项目",
     },
 
@@ -928,24 +928,6 @@ export const zhHans: TranslationStructure = {
         unknownTime: '未知时间',
     },
 
-    codex: {
-        // Codex permission dialog buttons
-        permissions: {
-            yesForSession: '是，并且本次会话不再询问',
-            stopAndExplain: '停止，并说明该做什么',
-        }
-    },
-
-    claude: {
-        // Claude permission dialog buttons
-        permissions: {
-            yesAllowAllEdits: '是，允许本次会话的所有编辑',
-            yesAllowEverything: '是，允许本次会话的所有操作',
-            yesForTool: '是，不再询问此工具',
-            noTellClaude: '否，提供反馈',
-        }
-    },
-
     textSelection: {
         // Text selection screen
         selectText: '选择文本范围',
@@ -1094,6 +1076,35 @@ export const zhHans: TranslationStructure = {
         extraInstructions: '追加说明',
         extraInstructionsPlaceholder: '这个 agent 需要一直记住的事',
         noAgentsTitle: '还没有 agent',
+        noAgentsDescription: "在一台已连接的电脑上新建一个。",
+        noComputersTitle: "还没有连接电脑",
+        noComputersDescription: "在要干活的那台电脑上装上这个应用。",
+        computerUnreachableTitle: "没有可用的电脑",
+        computerUnreachableDescription: "让一台电脑上线，才能新建 agent。",
+        troubleshoot: "排查",
+        emptyTranscriptTitle: "这里还是空的",
+        emptyTranscriptDescription: "说清任务，这个 agent 就开始干活。",
+    },
+
+    permissionRequest: {
+        allowOnce: "允许一次",
+        allowAlways: "始终允许",
+        deny: "拒绝",
+        runCommand: "执行命令",
+        readFile: "读取文件",
+        createFile: "新建文件",
+        changeFile: "修改文件",
+        searchFiles: "搜索文件",
+        fetchWeb: "打开网页",
+        searchWeb: "搜索网页",
+        startHelper: "启动辅助 agent",
+        startChanges: "开始改动",
+        useTool: "使用工具",
+        scopeFolder: "仅限它的工作目录",
+        scopeComputer: "这台电脑上",
+        scopeWeb: "这台电脑之外",
+        answeredAllowed: "你已允许。",
+        answeredDenied: "你已拒绝。",
     },
 
 } as const;

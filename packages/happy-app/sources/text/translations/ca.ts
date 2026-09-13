@@ -25,7 +25,7 @@ export const ca: TranslationStructure = {
     tabs: {
         // Tab navigation labels
         inbox: 'Safata',
-        sessions: 'Sessions',
+        agents: 'Agents',
         settings: 'Compte',
     },
 
@@ -290,7 +290,7 @@ export const ca: TranslationStructure = {
     },
 
     newSession: {
-        title: 'Iniciar nova sessió',
+        title: 'Nou agent',
         machineOffline: 'La màquina està fora de línia',
         switchMachinesHint: '• Canvia de màquina fent clic a la màquina de dalt',
     },
@@ -547,10 +547,10 @@ export const ca: TranslationStructure = {
     },
 
     sidebar: {
-        sessionsTitle: 'Happy',
+        agentsTitle: 'Agents',
         showArchived: 'Mostra arxivades',
         hideArchived: 'Amaga arxivades',
-        newSession: 'Nova sessió',
+        newAgent: 'Nou agent',
         projects: "Projectes",
     },
 
@@ -927,24 +927,6 @@ export const ca: TranslationStructure = {
         unknownTime: 'temps desconegut',
     },
 
-    codex: {
-        // Codex permission dialog buttons
-        permissions: {
-            yesForSession: 'Sí, i no preguntar per aquesta sessió',
-            stopAndExplain: 'Atura, i explica què fer',
-        }
-    },
-
-    claude: {
-        // Claude permission dialog buttons
-        permissions: {
-            yesAllowAllEdits: 'Sí, permet totes les edicions durant aquesta sessió',
-            yesAllowEverything: 'Sí, permet-ho tot durant aquesta sessió',
-            yesForTool: 'Sí, no tornis a preguntar per aquesta eina',
-            noTellClaude: 'No, proporciona comentaris',
-        }
-    },
-
     textSelection: {
         // Text selection screen
         selectText: 'Seleccionar rang de text',
@@ -1093,6 +1075,35 @@ export const ca: TranslationStructure = {
         extraInstructions: 'Instruccions addicionals',
         extraInstructionsPlaceholder: 'Allò que aquest agent ha de recordar sempre',
         noAgentsTitle: 'Encara no hi ha agents',
+        noAgentsDescription: "Inicia’n un en un ordinador que tinguis connectat.",
+        noComputersTitle: "No hi ha ordinadors connectats",
+        noComputersDescription: "Instal·la l’app a l’ordinador on vols que treballin els teus agents.",
+        computerUnreachableTitle: "Cap ordinador és accessible",
+        computerUnreachableDescription: "Engega un ordinador per iniciar un agent.",
+        troubleshoot: "Diagnostica",
+        emptyTranscriptTitle: "Encara no hi ha res",
+        emptyTranscriptDescription: "Descriu la tasca i aquest agent es posa a treballar.",
+    },
+
+    permissionRequest: {
+        allowOnce: "Permet una vegada",
+        allowAlways: "Permet sempre",
+        deny: "No ho permetis",
+        runCommand: "Executar una ordre",
+        readFile: "Llegir un fitxer",
+        createFile: "Crear un fitxer",
+        changeFile: "Canviar un fitxer",
+        searchFiles: "Cercar entre els fitxers",
+        fetchWeb: "Obrir una pàgina al web",
+        searchWeb: "Cercar al web",
+        startHelper: "Iniciar un agent auxiliar",
+        startChanges: "Començar a fer canvis",
+        useTool: "Fer servir una eina",
+        scopeFolder: "Dins la carpeta on treballa",
+        scopeComputer: "En aquest ordinador",
+        scopeWeb: "Fora d'aquest ordinador",
+        answeredAllowed: "Ho has permès.",
+        answeredDenied: "No ho has permès.",
     },
 
 } as const;

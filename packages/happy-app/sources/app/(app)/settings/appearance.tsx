@@ -15,12 +15,10 @@ import { t, getLanguageNativeName, SUPPORTED_LANGUAGES } from '@/text';
 import {
     normalizeUserMessageBubbleColor,
     resolveUserMessageBubbleColor,
-    resolveUserMessageBubbleGlassColor,
     USER_MESSAGE_BUBBLE_COLORS,
     type UserMessageBubbleColor,
 } from '@/utils/userMessageBubbleColor';
 import * as React from 'react';
-import { MobileGlassSurface } from '@/components/MobileGlass';
 import { AnimatedCollapsible } from '@/components/AnimatedOverlay';
 import { AvatarBrutalist } from '@/components/AvatarBrutalist';
 import { AvatarSkia } from '@/components/AvatarSkia';
@@ -125,26 +123,29 @@ function AvatarStyleOption(props: {
     );
 }
 
+/**
+ * The same opaque fill and edge `MessageBubble` paints in the transcript, from
+ * the same resolver — a preview that previewed something else would be worse
+ * than none.
+ */
 function BubbleColorPreview({ color }: { color: UserMessageBubbleColor }) {
     const { theme } = useUnistyles();
     const styles = stylesheet;
     const palette = resolveUserMessageBubbleColor(color, theme.dark);
-    const glassPalette = resolveUserMessageBubbleGlassColor(color, theme.dark);
 
     return (
-        <MobileGlassSurface
-            tintColor={glassPalette.tint}
+        <View
             style={[
                 styles.bubblePreview,
                 {
-                    backgroundColor: glassPalette.background,
-                    borderColor: glassPalette.border,
+                    backgroundColor: palette.background,
+                    borderColor: palette.border,
                 },
             ]}
         >
             <View style={[styles.bubblePreviewLine, { backgroundColor: palette.indicator, width: 18 }]} />
             <View style={[styles.bubblePreviewLine, { backgroundColor: palette.indicator, width: 26 }]} />
-        </MobileGlassSurface>
+        </View>
     );
 }
 

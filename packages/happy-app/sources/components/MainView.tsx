@@ -157,7 +157,7 @@ const styles = StyleSheet.create((theme) => ({
 
 // Tab header configuration
 const TAB_TITLES = {
-    sessions: 'tabs.sessions',
+    sessions: 'tabs.agents',
     settings: 'tabs.settings',
 } as const;
 

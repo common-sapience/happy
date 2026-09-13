@@ -241,7 +241,7 @@ function HeaderTitleWithSubtitle({ subtitle }: { subtitle?: string }) {
     return (
         <View style={styles.titleContainer}>
             <Text style={styles.titleText}>
-                {t('sidebar.sessionsTitle')}
+                {t('sidebar.agentsTitle')}
             </Text>
             {hasCustomSubtitle && (
                 <Text style={styles.subtitleText}>

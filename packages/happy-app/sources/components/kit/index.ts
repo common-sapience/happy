@@ -15,7 +15,6 @@ export {
     resolveKitAgentStatusPresentation,
     type KitAgentStatus,
     type KitAgentStatusPresentation,
-    type KitAgentStatusTokens,
 } from './kitAgentStatus';
 export {
     KIT_BUTTON_DISABLED_OPACITY,
