@@ -118,6 +118,12 @@ export const MachineMetadataSchema = z.object({
     opencode: z.boolean(),
     detectedAt: z.number(),
   }).optional(),
+  /**
+   * PERM-08 / DESK-17: the host's permission confirmation switch, published so a
+   * control end can render the setting without an RPC round trip. The settings
+   * file on the host stays the authority; this is a copy the daemon keeps current.
+   */
+  permissionConfirmationEnabled: z.boolean().optional(),
 })
 
 export type MachineMetadata = z.infer<typeof MachineMetadataSchema>
