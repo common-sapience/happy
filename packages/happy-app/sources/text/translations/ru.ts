@@ -37,7 +37,7 @@ export const ru: TranslationStructure = {
         // Tab navigation labels
         inbox: 'Входящие',
         sessions: 'Сессии',
-        settings: 'Настройки',
+        settings: 'Аккаунт',
     },
 
     inbox: {
@@ -88,7 +88,7 @@ export const ru: TranslationStructure = {
     },
 
     settings: {
-        title: 'Настройки',
+        title: 'Аккаунт',
         connectedAccounts: 'Подключенные аккаунты',
         connectAccount: 'Подключить аккаунт',
         github: 'GitHub',

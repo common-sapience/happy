@@ -29,7 +29,7 @@ export const ja: TranslationStructure = {
         // Tab navigation labels
         inbox: '受信トレイ',
         sessions: 'セッション',
-        settings: '設定',
+        settings: 'アカウント',
     },
 
     inbox: {
@@ -111,7 +111,7 @@ export const ja: TranslationStructure = {
     },
 
     settings: {
-        title: '設定',
+        title: 'アカウント',
         connectedAccounts: '接続済みアカウント',
         connectAccount: 'アカウントを接続',
         github: 'GitHub',

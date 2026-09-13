@@ -28,7 +28,7 @@ export const zhHans: TranslationStructure = {
         // Tab navigation labels
         inbox: '收件箱',
         sessions: '会话',
-        settings: '设置',
+        settings: '账户',
     },
 
     inbox: {
@@ -111,7 +111,7 @@ export const zhHans: TranslationStructure = {
     },
 
     settings: {
-        title: '设置',
+        title: '账户',
         connectedAccounts: '已连接账户',
         connectAccount: '连接账户',
         github: 'GitHub',

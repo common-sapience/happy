@@ -26,7 +26,7 @@ export const it: TranslationStructure = {
         // Tab navigation labels
         inbox: 'Posta',
         sessions: 'Sessioni',
-        settings: 'Impostazioni',
+        settings: 'Account',
     },
 
     inbox: {
@@ -108,7 +108,7 @@ export const it: TranslationStructure = {
     },
 
     settings: {
-        title: 'Impostazioni',
+        title: 'Account',
         connectedAccounts: 'Account collegati',
         connectAccount: 'Collega account',
         github: 'GitHub',

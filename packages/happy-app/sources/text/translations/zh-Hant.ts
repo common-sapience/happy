@@ -28,7 +28,7 @@ export const zhHant: TranslationStructure = {
         // Tab navigation labels
         inbox: '收件匣',
         sessions: '工作階段',
-        settings: '設定',
+        settings: '帳戶',
     },
 
     inbox: {
@@ -110,7 +110,7 @@ export const zhHant: TranslationStructure = {
     },
 
     settings: {
-        title: '設定',
+        title: '帳戶',
         connectedAccounts: '已連結帳戶',
         connectAccount: '連結帳戶',
         github: 'GitHub',

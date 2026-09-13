@@ -26,7 +26,7 @@ export const ca: TranslationStructure = {
         // Tab navigation labels
         inbox: 'Safata',
         sessions: 'Sessions',
-        settings: 'Configuració',
+        settings: 'Compte',
     },
 
     inbox: {
@@ -109,7 +109,7 @@ export const ca: TranslationStructure = {
     },
 
     settings: {
-        title: 'Configuració',
+        title: 'Compte',
         connectedAccounts: 'Comptes connectats',
         connectAccount: 'Connectar compte',
         github: 'GitHub',
