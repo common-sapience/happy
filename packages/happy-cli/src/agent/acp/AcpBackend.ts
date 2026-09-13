@@ -323,6 +323,22 @@ async function withRetry<T>(
 /**
  * ACP backend using the official @agentclientprotocol/sdk
  */
+/**
+ * How a finished engine process has to be reported, or null when it simply
+ * finished (HOST-01).
+ *
+ * A process killed by a signal carries no exit code, so treating "no code" as
+ * "nothing happened" is what leaves a session with a dead engine still being
+ * reported as running: the runner never learns the engine is gone and never
+ * closes the session. Every ending but a clean one is the engine dying.
+ */
+export function engineDeathDetail(code: number | null, signal: NodeJS.Signals | null): string | null {
+  if (code === 0 && signal === null) {
+    return null;
+  }
+  return signal ? `Killed by ${signal}` : `Exit code: ${code}`;
+}
+
 export class AcpBackend implements AgentBackend {
   private listeners: AgentMessageHandler[] = [];
   private process: ChildProcess | null = null;
@@ -482,11 +498,13 @@ export class AcpBackend implements AgentBackend {
       });
 
       this.process.on('exit', (code, signal) => {
-        if (!this.disposed && code !== 0 && code !== null) {
-          signalStartupFailure(new Error(`Exit code: ${code}`));
-          logger.debug(`[AcpBackend] Process exited with code ${code}, signal ${signal}`);
-          this.emit({ type: 'status', status: 'stopped', detail: `Exit code: ${code}` });
+        const detail = engineDeathDetail(code, signal);
+        if (this.disposed || !detail) {
+          return;
         }
+        signalStartupFailure(new Error(detail));
+        logger.debug(`[AcpBackend] Process exited with code ${code}, signal ${signal}`);
+        this.emit({ type: 'status', status: 'stopped', detail });
       });
 
       // Create Web Streams from Node streams
