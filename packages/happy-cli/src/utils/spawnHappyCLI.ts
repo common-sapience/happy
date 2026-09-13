@@ -56,6 +56,7 @@ import { projectPath } from '@/projectPath';
 import { logger } from '@/ui/logger';
 import { existsSync } from 'node:fs';
 import { isBun } from './runtime';
+import { isPackagedExecutable } from './packagedExecutable';
 
 /**
  * Spawn the Happy CLI with the given arguments in a cross-platform way.
@@ -69,6 +70,10 @@ import { isBun } from './runtime';
  * @returns ChildProcess instance
  */
 export function spawnHappyCLI(args: string[], options: SpawnOptions = {}): ChildProcess {
+  if (isPackagedExecutable()) {
+    return spawnPackagedExecutable(args, options);
+  }
+
   const projectRoot = projectPath();
   const entrypoint = join(projectRoot, 'dist', 'index.mjs');
 
@@ -107,6 +112,19 @@ export function spawnHappyCLI(args: string[], options: SpawnOptions = {}): Child
   // on Windows no longer falls back to appending `.exe`, producing ENOENT
   // even when node is on PATH (issue #1082).
   return crossSpawn(runtime, nodeArgs, {
+    windowsHide: true,
+    ...options,
+  });
+}
+
+/**
+ * Desktop installs ship the daemon as one compiled executable (DESK-09): there
+ * is no entrypoint on disk to hand to a runtime, so a new daemon or session
+ * process is this same executable run again.
+ */
+function spawnPackagedExecutable(args: string[], options: SpawnOptions): ChildProcess {
+  logger.debug(`[SPAWN HAPPY CLI] Spawning packaged executable: happy ${args.join(' ')}`);
+  return crossSpawn(process.execPath, args, {
     windowsHide: true,
     ...options,
   });

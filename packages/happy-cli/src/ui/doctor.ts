@@ -15,6 +15,9 @@ import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { projectPath } from '@/projectPath'
 import packageJson from '../../package.json'
+import { isPackagedExecutable } from '@/utils/packagedExecutable'
+import { resolveEngineCommand } from '@/agent/acp/acpAgentConfig'
+import { detectCLIAvailability } from '@/utils/detectCLI'
 
 /**
  * Get relevant environment information for debugging
@@ -188,6 +191,13 @@ export async function runDoctorCommand(): Promise<void> {
     } else {
         console.log(chalk.yellow('No log files found'));
     }
+
+    // Engine diagnostics: which engine a session would start, and where it came from
+    console.log(chalk.bold('\n⚙️  Engine'));
+    console.log(`Shipped With Desktop App: ${isPackagedExecutable() ? chalk.green('✓ Yes') : chalk.gray('No')}`);
+    console.log(`Daemon Executable: ${chalk.blue(process.execPath)}`);
+    console.log(`Engine Command: ${chalk.blue(resolveEngineCommand())}`);
+    console.log(`Engine Available: ${detectCLIAvailability().opencode ? chalk.green('✓ Yes') : chalk.red('❌ No')}`);
 
     // Daemon spawn diagnostics
     console.log(chalk.bold('\n🔧 Daemon Spawn Diagnostics'));

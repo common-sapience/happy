@@ -1,6 +1,8 @@
 import { execSync } from 'child_process';
+import { existsSync } from 'node:fs';
+import { isAbsolute } from 'node:path';
 import os from 'os';
-import { ENGINE_AGENT_NAME, ENGINE_ACP_COMMAND } from '@/agent/acp/acpAgentConfig';
+import { ENGINE_AGENT_NAME, resolveEngineCommand } from '@/agent/acp/acpAgentConfig';
 
 /**
  * The engine is the only agent this daemon can start (HOST-10), so the machine
@@ -13,12 +15,19 @@ export interface CLIAvailability {
 
 /**
  * Detects whether the engine is available on this machine.
- * Cross-platform: uses `command -v` on POSIX, `Get-Command` on Windows.
+ *
+ * A resolved absolute path comes from the desktop install or an explicit
+ * override, so its existence is the answer; a bare name has to be looked up the
+ * way a shell would. Cross-platform: `command -v` on POSIX, `Get-Command` on
+ * Windows.
  */
 export function detectCLIAvailability(): CLIAvailability {
-  const available = os.platform() === 'win32'
-    ? windowsCommandExists(ENGINE_ACP_COMMAND)
-    : posixCommandExists(ENGINE_ACP_COMMAND);
+  const command = resolveEngineCommand();
+  const available = isAbsolute(command)
+    ? existsSync(command)
+    : os.platform() === 'win32'
+      ? windowsCommandExists(command)
+      : posixCommandExists(command);
 
   return { [ENGINE_AGENT_NAME]: available, detectedAt: Date.now() };
 }

@@ -48,3 +48,27 @@ describe('HOST-10 machine capability report', () => {
     expect(String(mockedExecSync.mock.calls[0][0])).toContain('Get-Command opencode');
   });
 });
+
+describe('DESK-09 engine shipped with the desktop install', () => {
+  beforeEach(() => {
+    mockedExecSync.mockReset();
+  });
+
+  it('answers from the file itself when the engine path is explicit', () => {
+    vi.stubEnv('HAPPY_ENGINE_PATH', process.execPath);
+
+    expect(detectCLIAvailability().opencode).toBe(true);
+    expect(mockedExecSync).not.toHaveBeenCalled();
+
+    vi.unstubAllEnvs();
+  });
+
+  it('reports the engine missing when the explicit path does not exist', () => {
+    vi.stubEnv('HAPPY_ENGINE_PATH', '/nonexistent/opencode');
+
+    expect(detectCLIAvailability().opencode).toBe(false);
+    expect(mockedExecSync).not.toHaveBeenCalled();
+
+    vi.unstubAllEnvs();
+  });
+});
