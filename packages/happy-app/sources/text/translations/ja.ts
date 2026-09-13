@@ -790,7 +790,7 @@ export const ja: TranslationStructure = {
         subtitle: 'エンドツーエンド暗号化され、アカウントはデバイスにのみ保存されます。',
         createAccount: 'アカウントを作成',
         linkOrRestoreAccount: 'アカウントをリンクまたは復元',
-        loginWithMobileApp: '別のコンピューターからログイン',
+        loginWithMobileApp: '別のコンピューターで',
     },
 
     review: {

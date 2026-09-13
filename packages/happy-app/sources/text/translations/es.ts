@@ -789,7 +789,7 @@ export const es: TranslationStructure = {
         subtitle: 'Cifrado de extremo a extremo y tu cuenta se guarda solo en tu dispositivo.',
         createAccount: 'Crear cuenta',
         linkOrRestoreAccount: 'Vincular o restaurar cuenta',
-        loginWithMobileApp: 'Iniciar sesión desde otro ordenador',
+        loginWithMobileApp: 'Desde otro ordenador',
     },
 
     review: {

@@ -803,7 +803,7 @@ export const en: TranslationStructure = {
         subtitle: 'End-to-end encrypted and your account is stored only on your device.',
         createAccount: 'Create account',
         linkOrRestoreAccount: 'Link or restore account',
-        loginWithMobileApp: 'Log in from another computer',
+        loginWithMobileApp: 'Use another computer',
     },
 
     review: {

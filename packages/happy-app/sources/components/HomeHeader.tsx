@@ -42,10 +42,13 @@ const stylesheet = StyleSheet.create((theme) => ({
  * The secondary line of the agent list's bar. A healthy socket says nothing: the
  * line is there to report a problem, and the relay address owns it outright.
  */
-function useHomeHeaderSubtitle(customSubtitle?: string): string | undefined {
+function useHomeHeaderSubtitle(customSubtitle?: string, reportSocket = true): string | undefined {
     const socketStatus = useSocketStatus();
     if (customSubtitle) {
         return customSubtitle;
+    }
+    if (!reportSocket) {
+        return undefined;
     }
     if (!shouldShowHomeConnectionStatus(socketStatus.status as HomeSocketStatus)) {
         return undefined;
@@ -87,7 +90,10 @@ export const HomeHeader = React.memo(() => {
 export const HomeHeaderNotAuth = React.memo(() => {
     useSegments(); // Re-rendered automatically when screen navigates back
     const { theme } = useUnistyles();
-    const subtitle = useHomeHeaderSubtitle(getRelayLabel() ?? undefined);
+    // Before a relay is named there is nothing to be connected to, so the bar
+    // says nothing rather than reporting a socket that was never opened.
+    const relayLabel = getRelayLabel();
+    const subtitle = useHomeHeaderSubtitle(relayLabel ?? undefined, relayLabel !== null);
     return (
         <Header
             title={t('sidebar.agentsTitle')}

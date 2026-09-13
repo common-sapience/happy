@@ -56,7 +56,7 @@ const stylesheet = StyleSheet.create((theme) => ({
         backgroundColor: Platform.select({ web: theme.colors.input.background, default: 'transparent' }),
         padding: 16,
         borderRadius: 8,
-        fontFamily: 'IBMPlexMono-Regular',
+        ...Typography.mono(),
         fontSize: 14,
         minHeight: 120,
         textAlignVertical: 'top',

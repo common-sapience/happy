@@ -462,4 +462,25 @@ describe('secretKeyBackup', () => {
             expect(() => parseBackupSecretKey('AAAAA-BBBBB')).toThrow(/Invalid key length/);
         });
     });
+    describe('base64url keys that carry their own dashes', () => {
+        // The URL-safe alphabet uses '-' and '_', so roughly half of all keys
+        // look like a grouped backup key at a glance.
+        const dashed = new Uint8Array(32);
+        for (let i = 0; i < 32; i++) {
+            dashed[i] = (i * 31 + 251) % 256;
+        }
+        const dashedBase64 = encodeBase64(dashed, 'base64url');
+
+        it('produces a key containing a dash or underscore for this fixture', () => {
+            expect(/[-_]/.test(dashedBase64)).toBe(true);
+        });
+
+        it('normalizes it to itself instead of reading it as groups', () => {
+            expect(normalizeSecretKey(dashedBase64)).toBe(dashedBase64);
+        });
+
+        it('accepts it as valid', () => {
+            expect(isValidSecretKey(dashedBase64)).toBe(true);
+        });
+    });
 });

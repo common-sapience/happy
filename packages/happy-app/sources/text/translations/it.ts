@@ -787,7 +787,7 @@ export const it: TranslationStructure = {
         subtitle: 'Crittografia end-to-end e account memorizzato solo sul tuo dispositivo.',
         createAccount: 'Crea account',
         linkOrRestoreAccount: 'Collega o ripristina account',
-        loginWithMobileApp: 'Accedi da un altro computer',
+        loginWithMobileApp: 'Da un altro computer',
     },
 
     review: {

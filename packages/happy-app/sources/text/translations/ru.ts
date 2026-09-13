@@ -795,7 +795,7 @@ export const ru: TranslationStructure = {
         subtitle: 'Сквозное шифрование, аккаунт хранится только на вашем устройстве.',
         createAccount: 'Создать аккаунт',
         linkOrRestoreAccount: 'Связать или восстановить аккаунт',
-        loginWithMobileApp: 'Войти с другого компьютера',
+        loginWithMobileApp: 'С другого компьютера',
     },
 
     review: {

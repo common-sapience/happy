@@ -788,7 +788,7 @@ export const pt: TranslationStructure = {
         subtitle: 'Criptografado ponta a ponta e sua conta é armazenada apenas no seu dispositivo.',
         createAccount: 'Criar conta',
         linkOrRestoreAccount: 'Vincular ou restaurar conta',
-        loginWithMobileApp: 'Entrar a partir de outro computador',
+        loginWithMobileApp: 'De outro computador',
     },
 
     review: {

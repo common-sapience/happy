@@ -7,6 +7,8 @@ const socketStatus = vi.hoisted(() => ({
     status: 'disconnected' as 'disconnected' | 'connecting' | 'connected' | 'error',
 }));
 
+const relayLabel = vi.hoisted(() => ({ value: '192.168.0.108:3005' as string | null }));
+
 vi.mock('react-native', async () => {
     const ReactModule = await import('react');
     const host = (name: string) => (props: any) => ReactModule.createElement(name, props, props.children);
@@ -33,7 +35,7 @@ vi.mock('expo-router', () => ({
 }));
 
 vi.mock('@/sync/serverConfig', () => ({
-    getRelayLabel: () => '192.168.0.108:3005',
+    getRelayLabel: () => relayLabel.value,
 }));
 
 vi.mock('expo-image', async () => {
@@ -99,6 +101,7 @@ beforeAll(() => {
 afterAll(() => vi.restoreAllMocks());
 afterEach(() => {
     socketStatus.status = 'disconnected';
+    relayLabel.value = '192.168.0.108:3005';
 });
 
 function renderHeader(component: React.ReactElement) {
@@ -140,5 +143,11 @@ describe('home header connection status', () => {
     it('lets the relay address own the secondary line', () => {
         socketStatus.status = 'connected';
         expect(renderHeader(React.createElement(HomeHeaderNotAuth)).props.subtitle).toBe('192.168.0.108:3005');
+    });
+
+    it('says nothing about a socket before a relay is named', () => {
+        relayLabel.value = null;
+        socketStatus.status = 'disconnected';
+        expect(renderHeader(React.createElement(HomeHeaderNotAuth)).props.subtitle).toBeUndefined();
     });
 });

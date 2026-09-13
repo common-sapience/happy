@@ -789,7 +789,7 @@ export const ca: TranslationStructure = {
         subtitle: 'Xifrat punt a punt i el teu compte s\'emmagatzema només al teu dispositiu.',
         createAccount: 'Crea un compte',
         linkOrRestoreAccount: 'Enllaça o restaura un compte',
-        loginWithMobileApp: 'Inicia la sessió des d’un altre ordinador',
+        loginWithMobileApp: 'Des d’un altre ordinador',
     },
 
     review: {

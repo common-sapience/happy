@@ -805,7 +805,7 @@ export const pl: TranslationStructure = {
         subtitle: 'Szyfrowanie end-to-end, a Twoje konto jest przechowywane tylko na Twoim urządzeniu.',
         createAccount: 'Utwórz konto',
         linkOrRestoreAccount: 'Połącz lub przywróć konto',
-        loginWithMobileApp: 'Zaloguj się z innego komputera',
+        loginWithMobileApp: 'Z innego komputera',
     },
 
     review: {
