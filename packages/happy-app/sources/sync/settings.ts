@@ -38,11 +38,10 @@ export const SettingsSchema = z.object({
     // Resume is capability-driven; this legacy rollout key still protects the
     // newer fork/duplicate RPC on older daemons.
     expResumeSession: z.boolean().describe('Enable session fork and duplicate actions'),
-    // DESK-17: the sidebar and the compact activity row are product defaults, not
-    // choices — neither has a settings row, and both keep their default value.
+    // DESK-17: the sidebar is a product default, not a choice — it has no
+    // settings row and keeps its default value.
     fileDiffsSidebar: z.boolean().describe('Show the file changes sidebar next to the chat on desktop'),
     groupToolCalls: z.boolean().describe('Collapse consecutive tool calls into grouped containers in chat'),
-    compactToolCalls: z.boolean().describe('Render non-interactive tool calls as compact one-line rows'),
     reviewPromptAnswered: z.boolean().describe('Whether the review prompt has been answered'),
     reviewPromptLikedApp: z.boolean().nullish().describe('Whether user liked the app when asked'),
     voiceAssistantLanguage: z.string().nullable().describe('Preferred language for voice assistant (null for auto-detect)'),
@@ -112,9 +111,6 @@ export const settingsDefaults: Settings = {
     expResumeSession: true,
     fileDiffsSidebar: true,
     groupToolCalls: false,
-    // DESK-01: an activity record is one plain line by default; the raw tool
-    // call and its arguments are a tap away on the detail screen.
-    compactToolCalls: true,
     reviewPromptAnswered: false,
     reviewPromptLikedApp: null,
     voiceAssistantLanguage: null,

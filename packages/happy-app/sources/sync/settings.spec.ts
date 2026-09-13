@@ -196,7 +196,6 @@ describe('settings', () => {
                 expResumeSession: true,
                 fileDiffsSidebar: true,
                 groupToolCalls: false,
-                compactToolCalls: true,
                 reviewPromptAnswered: false,
                 reviewPromptLikedApp: null,
                 voiceAssistantLanguage: null,
