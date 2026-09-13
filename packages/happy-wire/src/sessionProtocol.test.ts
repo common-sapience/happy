@@ -4,6 +4,8 @@ import {
   createEnvelope,
   sessionEnvelopeSchema,
   sessionEventSchema,
+  summarizeToolCallResult,
+  TOOL_CALL_RESULT_SUMMARY_MAX_CHARS,
   type SessionEvent,
 } from './sessionProtocol';
 
@@ -22,6 +24,8 @@ describe('session protocol schemas', () => {
         args: { command: 'ls -la' },
       },
       { t: 'tool-call-end', call: 'call-1' },
+      { t: 'tool-call-end', call: 'call-1', result: 'total 12' },
+      { t: 'tool-call-end', call: 'call-1', result: 'No such file', isError: true },
       { t: 'file', ref: 'upload-1', name: 'report.txt', size: 1024, mimeType: 'text/plain' },
       {
         t: 'file',
@@ -51,6 +55,44 @@ describe('session protocol schemas', () => {
     expect(sessionEventSchema.safeParse({ t: 'start', title: 1 }).success).toBe(false);
     expect(sessionEventSchema.safeParse({ t: 'service' }).success).toBe(false);
     expect(sessionEventSchema.safeParse({ t: 'not-real' }).success).toBe(false);
+    expect(sessionEventSchema.safeParse({ t: 'tool-call-end', call: '1', isError: 'yes' }).success).toBe(false);
+    expect(sessionEventSchema.safeParse({ t: 'tool-call-end', call: '1', result: { ok: true } }).success).toBe(false);
+  });
+
+  // T-26: a step that failed has to be able to say so, and an end event written
+  // before the fields existed still has to parse.
+  describe('tool call results', () => {
+    it('keeps an end event without result or error flag valid', () => {
+      const parsed = sessionEventSchema.parse({ t: 'tool-call-end', call: 'call-1' });
+      expect(parsed).toEqual({ t: 'tool-call-end', call: 'call-1' });
+    });
+
+    it('summarizes a string result as itself', () => {
+      expect(summarizeToolCallResult('total 12')).toBe('total 12');
+      expect(summarizeToolCallResult('')).toBe('');
+    });
+
+    it('summarizes a structured result as json', () => {
+      expect(summarizeToolCallResult({ error: 'ENOENT', status: 'failed' }))
+        .toBe('{"error":"ENOENT","status":"failed"}');
+    });
+
+    it('has no summary for an absent result', () => {
+      expect(summarizeToolCallResult(undefined)).toBeUndefined();
+      expect(summarizeToolCallResult(null)).toBeUndefined();
+    });
+
+    it('truncates a result that would otherwise fill the envelope', () => {
+      const summary = summarizeToolCallResult('x'.repeat(TOOL_CALL_RESULT_SUMMARY_MAX_CHARS * 2));
+      expect(summary).toHaveLength(TOOL_CALL_RESULT_SUMMARY_MAX_CHARS + 1);
+      expect(summary?.endsWith('\u2026')).toBe(true);
+    });
+
+    it('has no summary for a value that cannot be serialized', () => {
+      const circular: Record<string, unknown> = {};
+      circular.self = circular;
+      expect(summarizeToolCallResult(circular)).toBeUndefined();
+    });
   });
 
   it('validates envelopes that include turn/subagent', () => {

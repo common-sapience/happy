@@ -10,15 +10,13 @@
 import { logger } from "@/ui/logger";
 import { ApiSessionClient } from "@/api/apiSession";
 import { AgentState } from "@/api/types";
+import type { PermissionAnswer } from "@slopus/happy-wire";
 
 /**
- * Permission response from the mobile app.
+ * Permission answer from a control end, as the protocol defines it: `id` is the
+ * tool call id the request was raised under.
  */
-export interface PermissionResponse {
-    id: string;
-    approved: boolean;
-    decision?: 'approved' | 'approved_for_session' | 'denied' | 'abort';
-}
+export type PermissionResponse = PermissionAnswer;
 
 /**
  * Pending permission request stored while awaiting user response.

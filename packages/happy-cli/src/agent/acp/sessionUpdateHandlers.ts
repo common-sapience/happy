@@ -454,6 +454,7 @@ export function failToolCall(
       ? { error: errorDetail, status }
       : { error: `Tool call ${status}`, status },
     callId: toolCallId,
+    isError: true,
   });
 
   // If no more active tool calls, emit idle

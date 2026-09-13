@@ -1,5 +1,10 @@
 import { createId } from '@paralleldrive/cuid2';
-import { createEnvelope, type CreateEnvelopeOptions, type SessionEnvelope } from '@slopus/happy-wire';
+import {
+  createEnvelope,
+  summarizeToolCallResult,
+  type CreateEnvelopeOptions,
+  type SessionEnvelope,
+} from '@slopus/happy-wire';
 import type { AgentMessage } from '@/agent/core';
 
 function turnOptions(turnId: string | null, time: number): CreateEnvelopeOptions {
@@ -20,9 +25,15 @@ function parseThinkingPayload(payload: unknown): { text: string; streaming: bool
   return { text, streaming };
 }
 
+/**
+ * Turns the backend's messages into session envelopes.
+ *
+ * A step keeps the identifier the engine gave it: the permission request for
+ * the same step is stored under that id too, so the control end can show one
+ * step as one row. Minting an id here would split the row in two.
+ */
 export class AcpSessionManager {
   private currentTurnId: string | null = null;
-  private readonly acpCallToSessionCall = new Map<string, string>();
 
   /** Monotonic clock: max(lastTime + 1, Date.now()) */
   private lastTime = 0;
@@ -34,17 +45,6 @@ export class AcpSessionManager {
   private nextTime(): number {
     this.lastTime = Math.max(this.lastTime + 1, Date.now());
     return this.lastTime;
-  }
-
-  private ensureSessionCallId(acpCallId: string): string {
-    const existing = this.acpCallToSessionCall.get(acpCallId);
-    if (existing) {
-      return existing;
-    }
-
-    const created = createId();
-    this.acpCallToSessionCall.set(acpCallId, created);
-    return created;
   }
 
   private flush(): SessionEnvelope[] {
@@ -71,7 +71,6 @@ export class AcpSessionManager {
     }
 
     this.currentTurnId = createId();
-    this.acpCallToSessionCall.clear();
     return [
       createEnvelope('agent', { t: 'turn-start' }, { turn: this.currentTurnId, time: this.nextTime() }),
     ];
@@ -85,7 +84,6 @@ export class AcpSessionManager {
 
     const turnId = this.currentTurnId;
     this.currentTurnId = null;
-    this.acpCallToSessionCall.clear();
     return [
       ...flushed,
       createEnvelope('agent', { t: 'turn-end', status }, { turn: turnId, time: this.nextTime() }),
@@ -147,7 +145,6 @@ export class AcpSessionManager {
 
     if (msg.type === 'tool-call') {
       const flushed = this.flush();
-      const call = this.ensureSessionCallId(msg.callId);
       return [
         ...flushed,
         // The name is the engine's tool category and the title its own one-line
@@ -155,7 +152,7 @@ export class AcpSessionManager {
         // controller writes the words a reader sees (DESK-01).
         createEnvelope('agent', {
           t: 'tool-call-start',
-          call,
+          call: msg.callId,
           name: msg.toolName,
           title: msg.title ?? '',
           description: '',
@@ -166,10 +163,15 @@ export class AcpSessionManager {
 
     if (msg.type === 'tool-result') {
       const flushed = this.flush();
-      const call = this.ensureSessionCallId(msg.callId);
+      const summary = summarizeToolCallResult(msg.result);
       return [
         ...flushed,
-        createEnvelope('agent', { t: 'tool-call-end', call }, turnOptions(this.currentTurnId, this.nextTime())),
+        createEnvelope('agent', {
+          t: 'tool-call-end',
+          call: msg.callId,
+          ...(summary === undefined ? {} : { result: summary }),
+          ...(msg.isError ? { isError: true } : {}),
+        }, turnOptions(this.currentTurnId, this.nextTime())),
       ];
     }
 

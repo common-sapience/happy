@@ -64,6 +64,8 @@ export interface ToolResultMessage {
   toolName: string;
   result: unknown;
   callId: ToolCallId;
+  /** True when the call failed or was cancelled, so a reader can show it failed. */
+  isError?: boolean;
 }
 
 /**

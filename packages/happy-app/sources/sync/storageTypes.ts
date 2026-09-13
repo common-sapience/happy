@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { RigBotSchema } from '@slopus/happy-wire';
+import { completedPermissionRequestSchema, permissionRequestSchema, RigBotSchema } from '@slopus/happy-wire';
 
 //
 // Agent states
@@ -339,32 +339,11 @@ export const AgentStateSchema = z.object({
     // Pending agent-to-user communications, keyed by request id.
     communications: z.record(z.string(), AgentCommunicationSchema).nullish(),
     completedCommunications: z.record(z.string(), CompletedAgentCommunicationSchema).nullish(),
-    requests: z.record(z.string(), z.object({
-        tool: z.string(),
-        arguments: z.any(),
-        createdAt: z.number().nullish(),
-        // Raw provider tool-use id when the request id is scoped (e.g. claude
-        // subagent ids are `agentID:toolUseID`); used to join the permission
-        // to its tool call, while the request id stays the response key.
-        toolUseId: z.string().nullish()
-    })).nullish(),
-    completedRequests: z.record(z.string(), z.object({
-        tool: z.string(),
-        arguments: z.any(),
-        createdAt: z.number().nullish(),
-        completedAt: z.number().nullish(),
-        status: z.enum(['canceled', 'denied', 'approved']),
-        reason: z.string().nullish(),
-        mode: z.string().nullish(),
-        allowedTools: z.array(z.string()).nullish(),
-        // The CLI completes a request by echoing the RPC's own field name,
-        // `allowTools`, so every deployed CLI reports the "don't ask again"
-        // grant under this key. Declared here so parsing keeps it; the
-        // reducer folds it into `allowedTools` when reading.
-        allowTools: z.array(z.string()).nullish(),
-        decision: z.enum(['approved', 'approved_for_session', 'denied', 'abort']).nullish(),
-        toolUseId: z.string().nullish()
-    })).nullish(),
+    // Permission requests and their answers, keyed by the tool call id the
+    // step's events carry, so the card and the activity line are one row. The
+    // shape is the protocol's (`permissionProtocol.ts` in the wire package).
+    requests: z.record(z.string(), permissionRequestSchema).nullish(),
+    completedRequests: z.record(z.string(), completedPermissionRequestSchema).nullish(),
     agentGoalStatus: AgentGoalStatusSchema.optional(),
 });
 

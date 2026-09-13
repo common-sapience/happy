@@ -42,6 +42,12 @@ export const sessionServiceMessageEventSchema = z.object({
   text: z.string(),
 });
 
+/**
+ * One step of a turn is one `call`: the identifier the engine gave the tool
+ * call. The permission request for the same step is keyed by that same value
+ * (see `permissionProtocol.ts`), so a producer must not mint an identifier of
+ * its own — a step that asks, is allowed and then ends is one row, not three.
+ */
 export const sessionToolCallStartEventSchema = z.object({
   t: z.literal('tool-call-start'),
   call: z.string(),
@@ -51,10 +57,49 @@ export const sessionToolCallStartEventSchema = z.object({
   args: z.record(z.string(), z.unknown()),
 });
 
+/**
+ * How much of a tool result travels in the envelope. The end event carries a
+ * summary so a reader can see what a step produced and whether it failed; the
+ * full output and the file changes are fetched separately rather than pushed
+ * through every session envelope.
+ */
+export const TOOL_CALL_RESULT_SUMMARY_MAX_CHARS = 2000;
+
 export const sessionToolCallEndEventSchema = z.object({
   t: z.literal('tool-call-end'),
   call: z.string(),
+  /** Summary of what the call produced, truncated to the cap above. */
+  result: z.string().optional(),
+  /** True when the call failed or was cancelled; absent reads as success. */
+  isError: z.boolean().optional(),
 });
+
+/**
+ * A tool result as the engine hands it over — a string, a content block, an
+ * error object — reduced to the summary the end event carries. Both ends read
+ * the same value, so the reduction belongs to the protocol rather than to one
+ * producer.
+ */
+export function summarizeToolCallResult(result: unknown): string | undefined {
+  if (result === undefined || result === null) {
+    return undefined;
+  }
+  const text = typeof result === 'string' ? result : safeStringify(result);
+  if (text === undefined) {
+    return undefined;
+  }
+  return text.length > TOOL_CALL_RESULT_SUMMARY_MAX_CHARS
+    ? `${text.slice(0, TOOL_CALL_RESULT_SUMMARY_MAX_CHARS)}\u2026`
+    : text;
+}
+
+function safeStringify(value: unknown): string | undefined {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return undefined;
+  }
+}
 
 export const sessionFileEventSchema = z.object({
   t: z.literal('file'),
