@@ -45,6 +45,19 @@ describe('MetadataSchema', () => {
 });
 
 describe('MachineMetadataSchema', () => {
+    it('reads the permission confirmation switch the daemon publishes (DESK-17)', () => {
+        const base = {
+            host: 'workstation',
+            platform: 'darwin',
+            happyCliVersion: '0.0.136',
+            happyHomeDir: '/Users/dev/.happy',
+            homeDir: '/Users/dev',
+        };
+        expect(MachineMetadataSchema.parse({ ...base, permissionConfirmationEnabled: true }).permissionConfirmationEnabled).toBe(true);
+        expect(MachineMetadataSchema.parse({ ...base, permissionConfirmationEnabled: false }).permissionConfirmationEnabled).toBe(false);
+        expect(MachineMetadataSchema.parse(base).permissionConfirmationEnabled).toBeUndefined();
+    });
+
     it('preserves the Rig creation catalog and future machine fields', () => {
         const metadata = MachineMetadataSchema.parse({
             host: 'workstation',

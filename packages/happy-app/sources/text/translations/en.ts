@@ -41,7 +41,7 @@ export const en: TranslationStructure = {
         // Tab navigation labels
         inbox: 'Inbox',
         sessions: 'Sessions',
-        settings: 'Settings',
+        settings: 'Account',
     },
 
     inbox: {
@@ -124,7 +124,7 @@ export const en: TranslationStructure = {
     },
 
     settings: {
-        title: 'Settings',
+        title: 'Account',
         connectedAccounts: 'Connected Accounts',
         connectAccount: 'Connect account',
         github: 'GitHub',
@@ -1091,6 +1091,24 @@ export const en: TranslationStructure = {
         friendRequestGeneric: 'New friend request',
         friendAccepted: ({ name }: { name: string }) => `You are now friends with ${name}`,
         friendAcceptedGeneric: 'Friend request accepted',
+    },
+
+    harness: {
+        stateRunning: 'running',
+        stateIdle: 'idle',
+        stateWaiting: 'waiting for your answer',
+        stateArchived: 'archived',
+        usedTool: 'used a tool',
+        profileLabel: 'Profile',
+        profileDefault: 'Default',
+        profileDefaultHint: 'everything switched on',
+        profilePlan: 'Plan',
+        profilePlanHint: 'thinks it through before changing anything',
+        profileBuild: 'Build',
+        profileBuildHint: 'writes code and runs commands',
+        extraInstructions: 'Extra instructions',
+        extraInstructionsPlaceholder: 'Anything this agent should always keep in mind',
+        noAgentsTitle: 'No agents yet',
     },
 
 } as const;

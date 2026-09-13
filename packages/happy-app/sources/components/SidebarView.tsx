@@ -13,12 +13,11 @@ import { ShortcutHintBadge, useShortcutHints } from './ShortcutHints';
 import { useHasArchivedSessions } from '@/hooks/useVisibleSessionListViewData';
 
 const stylesheet = StyleSheet.create((theme) => ({
+    // The shell around this view is the glass layer (SidebarNavigator), so the
+    // sidebar paints no ground of its own and no box of its own: the material
+    // shows through and the shell owns the single edge facing the content pane.
     container: {
         flex: 1,
-        borderStyle: 'solid',
-        backgroundColor: theme.colors.groupped.background,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: theme.colors.divider,
     },
     topControls: {
         flexDirection: 'row',

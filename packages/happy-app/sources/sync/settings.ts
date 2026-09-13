@@ -10,11 +10,6 @@ import { DEFAULT_USER_MESSAGE_BUBBLE_COLOR } from '../utils/userMessageBubbleCol
 export const SUPPORTED_SCHEMA_VERSION = 2;
 
 
-// How the home session list lays out: one activity-sorted flat list, or the
-// project-card hierarchy grouped by machine and repository.
-export const SESSION_LIST_GROUPING_MODES = ['flat', 'project'] as const;
-export type SessionListGrouping = typeof SESSION_LIST_GROUPING_MODES[number];
-
 export const SettingsSchema = z.object({
     // Schema version for compatibility detection
     schemaVersion: z.number().default(SUPPORTED_SCHEMA_VERSION).describe('Settings schema version for compatibility checks'),
@@ -34,7 +29,6 @@ export const SettingsSchema = z.object({
     // normalizeAvatarStyle so unknown values fall back to brutalist.
     avatarStyle: z.string().describe('Generated avatar style: brutalist, pixelated, or gradient'),
     avatarMonochrome: z.boolean().describe('Render generated avatars in black and white'),
-    sessionListGrouping: z.enum(SESSION_LIST_GROUPING_MODES).describe('Home session list layout: flat activity list or grouped by project'),
     // Keep the legacy key for synced settings compatibility. It controls the
     // harness badges in the session list.
     showFlavorIcons: z.boolean().describe('Whether to show harness icons in the session list'),
@@ -119,7 +113,6 @@ export const settingsDefaults: Settings = {
     agentInputEnterToSend: true,
     avatarStyle: 'brutalist',
     avatarMonochrome: false,
-    sessionListGrouping: 'flat',
     showFlavorIcons: false,
     showHarnessIconInSessionHeader: true,
     userMessageBubbleColor: DEFAULT_USER_MESSAGE_BUBBLE_COLOR,
@@ -130,8 +123,9 @@ export const settingsDefaults: Settings = {
     expResumeSession: true,
     fileDiffsSidebar: false,
     groupToolCalls: false,
-    // Full tool views by default: edit diffs render inline in the chat.
-    compactToolCalls: false,
+    // DESK-01: an activity record is one plain line by default; the raw tool
+    // call and its arguments are a tap away on the detail screen.
+    compactToolCalls: true,
     reviewPromptAnswered: false,
     reviewPromptLikedApp: null,
     voiceAssistantLanguage: null,

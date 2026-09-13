@@ -182,11 +182,16 @@ export const MetadataSchema = z.object({
     parentSessionId: z.string().optional(),
     forkedFromMessageId: z.string().optional(),
     /**
-     * Marks this session as a hidden "side chat" forked from `parentSessionId`.
-     * Side chats never appear in the top-level session list — they render only
-     * inside the parent session's sidebar panel (see `useSideChatSession`).
+     * The agent profile this session was created under (ENG-17), written by the
+     * daemon at session start.
      */
-    isSideChat: z.boolean().optional(),
+    agentProfile: z.string().optional(),
+    /**
+     * The host's own session rather than one the user started — today the
+     * background memory consolidation run. Never listed and never counted as an
+     * agent (DESK-11).
+     */
+    internal: z.boolean().optional(),
     /**
      * Per-session permission / model / effort picks made in any client.
      * Synced through session metadata so every device shows the same
@@ -450,6 +455,10 @@ export const MachineMetadataSchema = z.object({
     username: z.string().optional(),
     arch: z.string().optional(),
     displayName: z.string().optional(), // Custom display name for the machine
+    // PERM-08, DESK-17: the permission confirmation switch as the daemon last published it. The
+    // host owns the value; this copy is what a control end reads so the switch renders without
+    // having to reach the computer first.
+    permissionConfirmationEnabled: z.boolean().optional(),
     // Daemon status fields
     daemonLastKnownStatus: z.enum(['running', 'shutting-down']).optional(),
     daemonLastKnownPid: z.number().optional(),

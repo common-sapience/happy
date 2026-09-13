@@ -29,7 +29,7 @@ export default function RootLayout() {
                     : theme.colors.groupped.background,
             }}
         >
-            <MobileGlassBackdrop enabled={!isDesktop} />
+            <MobileGlassBackdrop />
         <Stack
             initialRouteName='index'
             screenOptions={{
@@ -143,6 +143,25 @@ export default function RootLayout() {
                 name="settings/account"
                 options={{
                     headerTitle: t('settings.account'),
+                }}
+            />
+            {/* The four management boards of the account page (D-16, DESK-13 to DESK-16). */}
+            <Stack.Screen
+                name="settings/archived"
+                options={{
+                    headerTitle: 'Archived agents',
+                }}
+            />
+            <Stack.Screen
+                name="settings/connectors"
+                options={{
+                    headerTitle: 'Connected services',
+                }}
+            />
+            <Stack.Screen
+                name="settings/add-computer"
+                options={{
+                    headerTitle: 'Add a computer',
                 }}
             />
             <Stack.Screen

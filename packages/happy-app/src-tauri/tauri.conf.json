@@ -24,7 +24,13 @@
           "x": 22,
           "y": 22
         },
-        "hiddenTitle": true
+        "hiddenTitle": true,
+        "shadow": true,
+        "windowEffects": {
+          "effects": ["mica", "underWindowBackground"],
+          "state": "followsWindowActiveState",
+          "radius": 12
+        }
       }
     ],
     "security": {

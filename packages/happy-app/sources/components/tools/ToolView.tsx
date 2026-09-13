@@ -15,7 +15,6 @@ import { PermissionFooter } from './PermissionFooter';
 import { parseToolUseError } from '@/utils/toolErrorParser';
 import { t } from '@/text';
 import {
-    formatMCPTitle,
     getToolActivityLabel,
     getToolDisplayTitle,
     getToolSummaryCategory,
@@ -85,9 +84,9 @@ export const ToolView = React.memo<ToolViewProps>((props) => {
     // Handle optional title and function type
     let toolTitle = getToolDisplayTitle(tool);
     
-    // Special handling for MCP tools
+    // DESK-01: an MCP tool keeps the plain-language label; its server and method
+    // name are part of the technical detail, not of the activity row.
     if (tool.name.startsWith('mcp__')) {
-        toolTitle = formatMCPTitle(tool.name);
         icon = <Ionicons name="extension-puzzle-outline" size={18} color={theme.colors.textSecondary} />;
         minimal = true;
     } else if (knownTool?.title) {

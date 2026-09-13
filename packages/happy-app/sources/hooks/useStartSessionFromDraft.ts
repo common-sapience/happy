@@ -1,6 +1,5 @@
 import * as React from 'react';
-import { useAllMachines, useSessions, useSetting } from '@/sync/storage';
-import { getCodeAgentDefaults, resolveAgentDefaultConfig } from '@/sync/agentDefaults';
+import { useAllMachines, useSessions } from '@/sync/storage';
 import {
     machineSpawnNewSession,
     machineStopSession,
@@ -14,14 +13,6 @@ import { useNavigateToSession } from '@/hooks/useNavigateToSession';
 import { isMachineOnline } from '@/utils/machineUtils';
 import { resolveAbsolutePath } from '@/utils/pathUtils';
 import { createWorktree } from '@/utils/worktree';
-import {
-    getEffortLevelsForModel,
-    getHardcodedModelModes,
-    getHardcodedPermissionModes,
-    filterPermissionModesForCli,
-    getSupportsWorktree,
-    includeConfiguredModel,
-} from '@/components/modelModeOptions';
 import { Modal } from '@/modal';
 import { t } from '@/text';
 import {
@@ -33,22 +24,21 @@ import {
 } from '@/sync/machineChoices';
 import { delay } from '@/utils/time';
 import {
-    buildRigSpawnConfiguration,
-    getRigMachineSessionCreation,
-    resolveRigPendingRetryDelayMs,
-} from '@/sync/rigSessionCreation';
-import {
     buildSpawnRequestSignature,
     completeSpawnRequest,
     resolveSpawnRequestId,
 } from '@/sync/spawnRequestId';
-import { ENGINE_DEFAULT_AGENT_PROFILE } from '@/utils/harnessCatalog';
+import { resolveAgentProfile } from '@/utils/harnessCatalog';
+import { buildFirstMessage } from '@/sync/firstMessage';
 import type { NewSessionStartPhase } from '@/components/newSessionProgress';
 import type { Session } from '@/sync/storageTypes';
 import { collectSessionPlaces, collectSessionWorkspaces } from '@/sync/agentSessionPlaces';
 import { resolveHappyAgentSpawnTarget } from '@/sync/happyAgentSpawn';
 
-const MAX_RIG_PENDING_RESULTS = 3;
+// A daemon that answers "still starting" is polled a few times before the
+// composer gives up and says so, rather than waiting indefinitely.
+const MAX_PENDING_RESULTS = 3;
+const PENDING_RETRY_DELAY_MS = 400;
 
 // Stop has to be felt at once. A request already on its way to the machine
 // cannot be recalled, and the machine may never answer it at all, so the flow
@@ -85,22 +75,9 @@ function beginRun(): StartRun {
     return run;
 }
 
-function resolveOption<T extends { key: string }>(
-    options: T[],
-    preferredKeys: Array<string | null | undefined>,
-): T | null {
-    for (const key of preferredKeys) {
-        if (!key) continue;
-        const option = options.find((candidate) => candidate.key === key);
-        if (option) return option;
-    }
-    return options[0] ?? null;
-}
-
 export function useStartSessionFromDraft() {
     const machines = useAllMachines({ includeOffline: true });
     const sessions = useSessions();
-    const defaultOverrides = useSetting('agentDefaultOverrides');
     const navigateToSession = useNavigateToSession();
     // The composer stays on screen for the whole flow, so what it is waiting on
     // is state rather than a bare boolean: creating a worktree, asking the
@@ -156,7 +133,6 @@ export function useStartSessionFromDraft() {
         // at launch time so a stale Claude selection cannot spawn Claude while
         // the selected computer only reports Codex (the Android 1.7.0 regression).
         const agentType = resolveChoiceAgent(choice, draft.agentType);
-        const agentChanged = agentType !== draft.agentType;
         const machine = resolveAgentMachine(choice, agentType);
         if (!machine) {
             Modal.alert(
@@ -172,43 +148,19 @@ export function useStartSessionFromDraft() {
             );
             return false;
         }
-        const defaults = resolveAgentDefaultConfig(defaultOverrides, agentType, machine.metadata?.happyCliVersion);
-        const permission = resolveOption<{ key: string }>(
-            // The daemon machine's CLI is what will parse the mode; older CLIs
-            // drop the whole prompt on modes they do not know (e.g. `auto`).
-            filterPermissionModesForCli(
-                getHardcodedPermissionModes(agentType, t),
-                machine.metadata?.happyCliVersion,
-            ),
-            // The code default last: when the saved and configured modes were
-            // both filtered out for an old CLI, land there rather than on
-            // whichever mode happens to lead the list.
-            agentChanged
-                ? [defaults.permissionMode, getCodeAgentDefaults(agentType, machine.metadata?.happyCliVersion).permissionMode]
-                : [draft.permissionMode, defaults.permissionMode, getCodeAgentDefaults(agentType, machine.metadata?.happyCliVersion).permissionMode],
-        );
-        const model = resolveOption<{ key: string }>(
-            includeConfiguredModel(
-                agentType,
-                getHardcodedModelModes(agentType, t),
-                defaults.modelMode,
-            ),
-            agentChanged
-                ? [defaults.modelMode]
-                : [draft.modelMode, defaults.modelMode],
-        );
-        const effort = resolveOption<{ key: string }>(
-            getEffortLevelsForModel(agentType, model?.key ?? 'default'),
-            agentChanged
-                ? [defaults.effortLevel]
-                : [draft.effortLevel, defaults.effortLevel],
-        );
-        if (!permission || !model) {
-            Modal.alert(t('common.error'), 'The selected agent configuration is unavailable');
-            return false;
-        }
+        // HOST-12: the profile carries the tool and skill allow-list, so it is
+        // what the host needs at creation time. A draft made before a profile
+        // was renamed falls back to the everything-on one rather than sending a
+        // name the engine may not define.
+        const agentProfile = resolveAgentProfile(draft.permissionMode);
 
-        const prompt = draft.input.trim();
+        // DESK-10: the daemon's spawn has no field for extra instructions, so
+        // they ride in front of the first message. Reported as an extension
+        // point the host still owes us.
+        const prompt = buildFirstMessage({
+            prompt: draft.input,
+            systemPromptAddition: draft.systemPromptAddition,
+        });
         const attachments = draft.attachments;
         const selectedPath = draft.selectedPath?.trim() || '~';
         const absolutePath = resolveAbsolutePath(selectedPath, machine.metadata?.homeDir);
@@ -227,11 +179,7 @@ export function useStartSessionFromDraft() {
         const requestedWorktree = draft.sessionType === 'worktree'
             ? draft.worktreeKey ?? '__new__'
             : '__none__';
-        const worktreeCreationMachine = resolveWorktreeCreationMachine(
-            choice,
-            agentType,
-            getSupportsWorktree(agentType),
-        );
+        const worktreeCreationMachine = resolveWorktreeCreationMachine(choice, agentType, true);
         // Without the Git RPC a stale draft safely falls back to the main tree.
         const worktreeSelection = !worktreeCreationMachine
             && requestedWorktree === '__new__'
@@ -244,9 +192,7 @@ export function useStartSessionFromDraft() {
             agent: agentType,
             directory: selectedPath,
             worktree: worktreeSelection,
-            modelKey: model.key,
-            permissionMode: permission.key,
-            effort: effort?.key ?? null,
+            agentProfile,
         }));
 
         const run = beginRun();
@@ -305,16 +251,13 @@ export function useStartSessionFromDraft() {
                     approvedNewDirectoryCreation,
                     agent: agentType,
                     clientRequestId,
-                    // HOST-12: the profile carries the tool and skill allow-list, so it is what the
-                    // host needs at creation. Until the picker lands (DESK-10) every session starts
-                    // on the engine's built-in profile, which has everything switched on.
-                    agentProfile: ENGINE_DEFAULT_AGENT_PROFILE,
+                    agentProfile,
                 };
                 let result = await machineSpawnNewSession(spawnOptions);
                 let pendingResults = 0;
-                while (result.type === 'pending' && pendingResults < MAX_RIG_PENDING_RESULTS) {
+                while (result.type === 'pending' && pendingResults < MAX_PENDING_RESULTS) {
                     pendingResults += 1;
-                    await delay(resolveRigPendingRetryDelayMs(result.retryAfterMs, undefined));
+                    await delay(result.retryAfterMs ?? PENDING_RETRY_DELAY_MS);
                     if (!isMountedRef.current || run.canceled) return null;
                     result = await machineSpawnNewSession(spawnOptions);
                 }
@@ -367,16 +310,9 @@ export function useStartSessionFromDraft() {
                 return false;
             }
 
-            {
-                // Pin the actual launch selection to this session. Keeping
-                // defaults as null lets a later settings change rewrite an
-                // existing session's displayed and transmitted mode/model.
-                sessionSetAgentModes(sessionId, {
-                    permissionMode: permission.key,
-                    modelMode: model.key,
-                    effortLevel: effort?.key ?? null,
-                });
-            }
+            // Pin the profile this agent was actually launched under, so the
+            // conversation shows what it runs on rather than a later default.
+            sessionSetAgentModes(sessionId, { permissionMode: agentProfile });
 
             // Last look before anything becomes irreversible. Past this line the
             // prompt is cleared, the screen changes, and the message goes out —
@@ -419,7 +355,7 @@ export function useStartSessionFromDraft() {
                 if (isMountedRef.current) setPhase(null);
             }
         }
-    }, [defaultOverrides, machines, navigateToSession, sessions]);
+    }, [machines, navigateToSession, sessions]);
 
     return { isStarting: phase !== null, phase, startSession, cancelStart };
 }

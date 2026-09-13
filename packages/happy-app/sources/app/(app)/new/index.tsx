@@ -35,7 +35,8 @@ import { useHeaderHeight } from '@/utils/responsive';
 import { t } from '@/text';
 import { useAllMachines, useLocalSetting, useSessions, useSetting, storage } from '@/sync/storage';
 import type { NewSessionAgentType } from '@/sync/persistence';
-import { ENGINE_AGENT, getHarnessName } from '@/utils/harnessCatalog';
+import { ENGINE_AGENT, getHarnessName, resolveAgentProfile } from '@/utils/harnessCatalog';
+import { buildFirstMessage } from '@/sync/firstMessage';
 import { sync } from '@/sync/sync';
 import { isMachineOnline } from '@/utils/machineUtils';
 import { machineSpawnNewSession, sessionSetAgentModes } from '@/sync/ops';
@@ -59,15 +60,8 @@ import {
     resolveWorktreeCreationMachine,
 } from '@/sync/machineChoices';
 import {
-    filterPermissionModesForCli,
-    getHardcodedPermissionModes,
-    getHardcodedModelModes,
-    getEffortLevelsForModel,
-    getSupportsWorktree,
-    includeConfiguredModel,
+    getAvailablePermissionModes,
     type PermissionMode,
-    type ModelMode,
-    type EffortLevel,
 } from '@/components/modelModeOptions';
 import { isRunningOnMac } from '@/utils/platform';
 import { getNewSessionSidebarLayout } from '@/utils/newSessionSidebarLayout';
@@ -77,13 +71,7 @@ import {
     cancelPendingPickerOpenState,
     resolvePickerToggleAction,
 } from '@/utils/newSessionPickerInteraction';
-import { getCodeAgentDefaults, resolveAgentDefaultConfig } from '@/sync/agentDefaults';
 import { delay } from '@/utils/time';
-import {
-    buildRigSpawnConfiguration,
-    getRigMachineSessionCreation,
-    resolveRigPendingRetryDelayMs,
-} from '@/sync/rigSessionCreation';
 import {
     buildSpawnRequestSignature,
     completeSpawnRequest,
@@ -111,19 +99,23 @@ const ALL_AGENTS: { key: AgentKey; label: string }[] = [
 
 type PickerItem = { key: string; label: string; subtitle?: string; dimmed?: boolean; section?: string };
 
-type PickerType = 'machine' | 'path' | 'worktree' | 'model' | 'effort' | 'permission' | 'settings';
+// One agent, one engine: the only agent setting on this screen is the profile
+// (DESK-10). The engine publishes no models until a session exists, and it has
+// no effort scale, so neither has a picker here.
+type PickerType = 'machine' | 'path' | 'worktree' | 'permission' | 'settings';
 
 const NATIVE_PICKER_TOP: Record<PickerType, number> = {
     machine: 48,
     path: 96,
-    model: 144,
-    effort: 144,
-    permission: 192,
+    permission: 144,
     settings: 144,
     worktree: 144,
 };
 const NATIVE_PICKER_ESTIMATED_HEIGHT = 264;
-const MAX_RIG_PENDING_RESULTS = 3;
+// A daemon that answers "still starting" is polled a few times before the
+// screen gives up and says so, rather than waiting indefinitely.
+const MAX_PENDING_RESULTS = 3;
+const PENDING_RETRY_DELAY_MS = 400;
 const NATIVE_COMPOSER_RESERVED_HEIGHT = 98;
 
 function findPreferredModeIndex<T extends { key: string }>(
@@ -389,7 +381,7 @@ function PickerContent({
     );
 }
 
-type ComposerSettingPickerType = Extract<PickerType, 'model' | 'effort' | 'permission'>;
+type ComposerSettingPickerType = Extract<PickerType, 'permission'>;
 
 function ComposerSettingsContent({
     items,
@@ -757,10 +749,8 @@ function NewSessionScreen() {
         setAgentType: s.setAgentType,
         permissionMode: s.permissionMode,
         setPermissionMode: s.setPermissionMode,
-        modelMode: s.modelMode,
-        setModelMode: s.setModelMode,
-        effortLevel: s.effortLevel,
-        setEffortLevel: s.setEffortLevel,
+        systemPromptAddition: s.systemPromptAddition,
+        setSystemPromptAddition: s.setSystemPromptAddition,
         sessionType: s.sessionType,
         setSessionType: s.setSessionType,
         worktreeKey: s.worktreeKey,
@@ -783,8 +773,6 @@ function NewSessionScreen() {
 
     // Local-only UI state (not persisted)
     const [permissionIndex, setPermissionIndex] = React.useState(0);
-    const [modelIndex, setModelIndex] = React.useState(0);
-    const [effortIndex, setEffortIndex] = React.useState(0);
     const [isSpawning, setIsSpawning] = React.useState(false);
     const [activePicker, setActivePicker] = React.useState<PickerType | null>(null);
     const [composerSettingsPage, setComposerSettingsPage] = React.useState<ComposerSettingPickerType | null>(null);
@@ -843,7 +831,7 @@ function NewSessionScreen() {
     }, [draftAgent, selectedAgent, setSelectedAgent]);
 
     const happyCliVersion = selectedChoice?.happyMachine?.metadata?.happyCliVersion;
-    const supportsWorktree = getSupportsWorktree(selectedAgent);
+    const supportsWorktree = true;
     const selectedHomeDir = selectedChoice?.happyMachine?.metadata?.homeDir;
 
     // Build machine picker items: online first, then offline
@@ -981,82 +969,19 @@ function NewSessionScreen() {
         { key: '__none__', label: picksWorkspaces ? 'Main' : 'no worktree' },
     ], [canCreateWorktree, picksWorkspaces]);
 
-    // Derive options from agent type. The CLI daemon on the picked computer is
-    // what will parse the mode; older CLIs drop the whole prompt on modes they
-    // do not know (`auto`), so those are not offered.
+    // There is no session to ask yet, so the profiles on offer are the ones the
+    // product names (ENG-17); the everything-on one leads and is what you get
+    // without choosing anything.
     const permissionModes = React.useMemo<PermissionMode[]>(
-        () => filterPermissionModesForCli(
-            getHardcodedPermissionModes(selectedAgent, t),
-            happyCliVersion,
-        ),
-        [happyCliVersion, selectedAgent],
+        () => getAvailablePermissionModes(null),
+        [],
     );
-    const effectiveAgentDefaults = React.useMemo(
-        () => resolveAgentDefaultConfig(agentDefaultOverrides, selectedAgent, happyCliVersion),
-        [agentDefaultOverrides, happyCliVersion, selectedAgent],
-    );
-    const modelModes = React.useMemo<ModelMode[]>(
-        () => includeConfiguredModel(
-            selectedAgent,
-            getHardcodedModelModes(selectedAgent, t),
-            effectiveAgentDefaults.modelMode,
-        ),
-        [selectedAgent, effectiveAgentDefaults.modelMode],
-    );
-
-    const currentModel = resolveSelectedOption(modelModes, modelIndex);
-    const currentModelKey = currentModel?.key ?? 'default';
-
-    const effortLevels = React.useMemo<EffortLevel[]>(
-        () => getEffortLevelsForModel(selectedAgent, currentModelKey),
-        [selectedAgent, currentModelKey],
-    );
-    const effectiveEffortDefault = effectiveAgentDefaults.effortLevel;
-    const showModel = modelModes.length > 1;
-    const showEffort = effortLevels.length > 0;
     const showPermission = permissionModes.length > 1;
 
-    // Reset indices when agent/default settings change.
     React.useEffect(() => {
-        setPermissionIndex(findPreferredModeIndex(permissionModes, [
-            draft.permissionMode,
-            effectiveAgentDefaults.permissionMode,
-            // When the saved and default modes were both filtered out for an
-            // old CLI, land on the flavor's code default rather than whichever
-            // mode happens to lead the list.
-            getCodeAgentDefaults(selectedAgent, happyCliVersion).permissionMode,
-        ]));
-
-        setModelIndex(findPreferredModeIndex(modelModes, [
-            draft.modelMode,
-            effectiveAgentDefaults.modelMode,
-        ]));
-
+        setPermissionIndex(findPreferredModeIndex(permissionModes, [draft.permissionMode]));
         if (!canPickWorktree) setWorktreeKey('__none__');
-    }, [
-        permissionModes,
-        modelModes,
-        canPickWorktree,
-        supportsWorktree,
-        draft.permissionMode,
-        draft.modelMode,
-        effectiveAgentDefaults.permissionMode,
-        effectiveAgentDefaults.modelMode,
-        happyCliVersion,
-        selectedAgent,
-    ]);
-
-    // Reset effort when model changes
-    React.useEffect(() => {
-        if (effortLevels.length === 0) {
-            setEffortIndex(0);
-            return;
-        }
-        setEffortIndex(findPreferredModeIndex(effortLevels, [
-            draft.effortLevel,
-            effectiveEffortDefault,
-        ]));
-    }, [draft.effortLevel, effectiveEffortDefault, currentModelKey, effortLevels]);
+    }, [permissionModes, canPickWorktree, draft.permissionMode]);
 
     // The reference keeps the context controls visible while the keyboard is
     // open. Preserve that on mobile and let users collapse them explicitly.
@@ -1128,10 +1053,7 @@ function NewSessionScreen() {
         ? 'Happy Agent is offline on this computer'
         : t('machine.offlineHelp');
     const agent = ALL_AGENTS.find((candidate) => candidate.key === selectedAgent) ?? ALL_AGENTS[0];
-    // A Rig machine can publish an empty catalog, so every current pick is
-    // nullable — the composer hides the picker instead of rendering a pick.
     const currentPermission = resolveSelectedOption(permissionModes, permissionIndex);
-    const currentEffort = resolveSelectedOption(effortLevels, effortIndex);
     const permissionStyle = resolvePermissionStyle(currentPermission);
     const composerSettingsItems = React.useMemo(() => {
         const items: Array<{
@@ -1144,30 +1066,14 @@ function NewSessionScreen() {
         if (showPermission && currentPermission) {
             items.push({
                 key: 'permission',
-                label: t('agentInput.permissionMode.title'),
+                label: t('harness.profileLabel'),
                 value: currentPermission.name,
-                icon: permissionStyle?.icon ?? 'shield-outline',
-            });
-        }
-        if (showModel && currentModel) {
-            items.push({
-                key: 'model',
-                label: t('agentInput.model.title'),
-                value: currentModel.name,
-                icon: 'cube-outline',
-            });
-        }
-        if (showEffort && currentEffort) {
-            items.push({
-                key: 'effort',
-                label: t('agentInput.effort.title'),
-                value: currentEffort.name,
-                icon: 'speedometer-outline',
+                icon: permissionStyle?.icon ?? 'sparkles-outline',
             });
         }
 
         return items;
-    }, [currentEffort, currentModel, currentPermission, permissionStyle?.icon, selectedAgent, showEffort, showModel, showPermission]);
+    }, [currentPermission, permissionStyle?.icon, showPermission]);
 
     // Display values
     const machineName = selectedChoice?.name ?? 'Select machine';
@@ -1188,24 +1094,16 @@ function NewSessionScreen() {
                 return { title: 'Machine', items: machineItems, selectedKey: selectedMachineKey, searchPlaceholder: 'search machines...' };
             case 'worktree':
                 return { title: picksWorkspaces ? 'Workspace' : 'Worktree', fixedItems: worktreeFixedItems, items: worktreeItems, selectedKey: worktreeKey, searchPlaceholder: picksWorkspaces ? 'search workspaces...' : 'search worktrees...' };
-            case 'model':
-                return { title: 'Model', items: getModePickerItems(modelModes), selectedKey: currentModelKey, searchPlaceholder: 'search models...' };
-            case 'effort':
-                return { title: 'Effort', items: getModePickerItems(effortLevels), selectedKey: currentEffort?.key ?? null, searchPlaceholder: 'search efforts...' };
             case 'permission':
-                return { title: 'Permissions', items: getModePickerItems(permissionModes), selectedKey: currentPermission?.key ?? null, searchPlaceholder: 'search permissions...' };
+                return { title: t('harness.profileLabel'), items: getModePickerItems(permissionModes), selectedKey: currentPermission?.key ?? null, searchPlaceholder: 'search profiles...' };
             default:
                 return null;
         }
     }, [
         activePicker,
-        currentEffort?.key,
-        currentModelKey,
         currentPermission?.key,
-        effortLevels,
         machineItems,
         selectedMachineKey,
-        modelModes,
         permissionModes,
         picksWorkspaces,
         selectedAgent,
@@ -1217,28 +1115,16 @@ function NewSessionScreen() {
 
     const composerSettingsPickerData = React.useMemo(() => {
         switch (composerSettingsPage) {
-            case 'model':
-                return {
-                    title: t('agentInput.model.title'),
-                    items: getModePickerItems(modelModes),
-                    selectedKey: currentModelKey,
-                };
-            case 'effort':
-                return {
-                    title: t('agentInput.effort.title'),
-                    items: getModePickerItems(effortLevels),
-                    selectedKey: currentEffort?.key ?? null,
-                };
             case 'permission':
                 return {
-                    title: t('agentInput.permissionMode.title'),
+                    title: t('harness.profileLabel'),
                     items: getModePickerItems(permissionModes),
                     selectedKey: currentPermission?.key ?? null,
                 };
             default:
                 return null;
         }
-    }, [composerSettingsPage, currentEffort?.key, currentModelKey, currentPermission?.key, effortLevels, modelModes, permissionModes, selectedAgent]);
+    }, [composerSettingsPage, currentPermission?.key, permissionModes]);
 
     const handlePickerSelect = React.useCallback((key: string) => {
         switch (activePicker) {
@@ -1248,22 +1134,6 @@ function NewSessionScreen() {
             case 'worktree':
                 setWorktreeKey(key);
                 break;
-            case 'model': {
-                const next = modelModes.findIndex((mode) => mode.key === key);
-                if (next >= 0) {
-                    setModelIndex(next);
-                    draft.setModelMode(modelModes[next]?.key ?? 'default');
-                }
-                break;
-            }
-            case 'effort': {
-                const next = effortLevels.findIndex((level) => level.key === key);
-                if (next >= 0) {
-                    setEffortIndex(next);
-                    draft.setEffortLevel(effortLevels[next]?.key ?? key);
-                }
-                break;
-            }
             case 'permission': {
                 const next = permissionModes.findIndex((mode) => mode.key === key);
                 if (next >= 0) {
@@ -1277,11 +1147,7 @@ function NewSessionScreen() {
     }, [
         activePicker,
         closePicker,
-        draft.setEffortLevel,
-        draft.setModelMode,
         draft.setPermissionMode,
-        effortLevels,
-        modelModes,
         permissionModes,
         setSelectedAgent,
         setSelectedMachineId,
@@ -1289,35 +1155,16 @@ function NewSessionScreen() {
     ]);
 
     const handleComposerSettingsPickerSelect = React.useCallback((key: string) => {
-        switch (composerSettingsPage) {
-            case 'model': {
-                const next = modelModes.findIndex((mode) => mode.key === key);
-                if (next >= 0) {
-                    setModelIndex(next);
-                    draft.setModelMode(modelModes[next]?.key ?? 'default');
-                }
-                break;
-            }
-            case 'effort': {
-                const next = effortLevels.findIndex((level) => level.key === key);
-                if (next >= 0) {
-                    setEffortIndex(next);
-                    draft.setEffortLevel(effortLevels[next]?.key ?? key);
-                }
-                break;
-            }
-            case 'permission': {
-                const next = permissionModes.findIndex((mode) => mode.key === key);
-                if (next >= 0) {
-                    setPermissionIndex(next);
-                    draft.setPermissionMode(permissionModes[next]?.key ?? 'default');
-                }
-                break;
+        if (composerSettingsPage === 'permission') {
+            const next = permissionModes.findIndex((mode) => mode.key === key);
+            if (next >= 0) {
+                setPermissionIndex(next);
+                draft.setPermissionMode(permissionModes[next]?.key ?? 'default');
             }
         }
         setNativePickerMeasuredHeight(null);
         setComposerSettingsPage(null);
-    }, [composerSettingsPage, draft.setEffortLevel, draft.setModelMode, draft.setPermissionMode, effortLevels, modelModes, permissionModes]);
+    }, [composerSettingsPage, draft.setPermissionMode, permissionModes]);
 
     // Spawn session handler
     const handleSend = React.useCallback(async (
@@ -1346,7 +1193,7 @@ function NewSessionScreen() {
             );
             return;
         }
-        const agentSupportsWorktree = getSupportsWorktree(agentType);
+        const agentSupportsWorktree = true;
         const requestedWorktree = canPickWorktree ? worktreeKey : '__none__';
         const creationMachine = resolveWorktreeCreationMachine(
             choice,
@@ -1361,20 +1208,20 @@ function NewSessionScreen() {
         try {
             const pathToUse = trimPathInput(selectedPath) || '~';
             const absolutePath = resolveAbsolutePath(pathToUse, machine.metadata?.homeDir);
-            const permissionKey = currentPermission?.key ?? null;
+            // HOST-12: the profile carries the tool and skill allow-list, so it
+            // is what the host needs at creation time.
+            const agentProfile = resolveAgentProfile(currentPermission?.key);
             // Same key for every retry of this request (directory approval,
-            // pending polling, or the user pressing Start again) so Rig dedupes
-            // instead of spawning a second session. Built from what the user
-            // picked, not from the resolved worktree path, so retrying a "new
-            // worktree" spawn still lands on the session Rig already created.
+            // pending polling, or the user pressing Start again) so the daemon
+            // dedupes instead of spawning a second session. Built from what the
+            // user picked, not from the resolved worktree path, so retrying a
+            // "new worktree" spawn still lands on the session already created.
             const clientRequestId = resolveSpawnRequestId(buildSpawnRequestSignature({
                 machineId: machine.id,
                 agent: agentType,
                 directory: pathToUse,
                 worktree: worktreeSelection,
-                modelKey: currentModelKey,
-                permissionMode: permissionKey,
-                effort: currentEffort?.key ?? null,
+                agentProfile,
             }));
 
             // Handle worktree selection
@@ -1403,15 +1250,13 @@ function NewSessionScreen() {
                 approvedNewDirectoryCreation,
                 agent: agentType,
                 clientRequestId,
-                permissionMode: permissionKey && permissionKey !== 'default' ? permissionKey : undefined,
-                modelMode: currentModelKey !== 'default' ? currentModelKey : undefined,
-                effortLevel: currentEffort?.key,
+                agentProfile,
             };
             let result = await machineSpawnNewSession(spawnOptions);
             let pendingResults = 0;
-            while (result.type === 'pending' && pendingResults < MAX_RIG_PENDING_RESULTS) {
+            while (result.type === 'pending' && pendingResults < MAX_PENDING_RESULTS) {
                 pendingResults += 1;
-                await delay(resolveRigPendingRetryDelayMs(result.retryAfterMs, undefined));
+                await delay(result.retryAfterMs ?? PENDING_RETRY_DELAY_MS);
                 if (!isMountedRef.current) return;
                 result = await machineSpawnNewSession(spawnOptions);
             }
@@ -1423,21 +1268,20 @@ function NewSessionScreen() {
                     completeSpawnRequest();
                     await sync.refreshSessions();
 
-                    const currentEffortKey = currentEffort?.key ?? null;
-                    // Pin the actual launch selection to this session. A
-                    // later settings/default change must not silently rewrite
-                    // an existing session's permission, model, or effort.
-                    sessionSetAgentModes(result.sessionId, {
-                        permissionMode: permissionKey,
-                        modelMode: currentModelKey,
-                        effortLevel: currentEffortKey,
-                    });
+                    // Pin the profile this agent was actually launched under, so
+                    // a later default change cannot rewrite what it runs on.
+                    sessionSetAgentModes(result.sessionId, { permissionMode: agentProfile });
 
                     // Pull live prompt and clear it. We read via getState() so this
                     // callback doesn't have to subscribe to `input` (which would
                     // re-render the screen on every keystroke).
                     const draftState = useNewSessionDraft.getState();
-                    const trimmedPrompt = draftState.input.trim();
+                    // DESK-10: the daemon's spawn has no field for extra
+                    // instructions, so they ride in front of the first message.
+                    const trimmedPrompt = buildFirstMessage({
+                        prompt: draftState.input,
+                        systemPromptAddition: draftState.systemPromptAddition,
+                    });
                     const attachments = draftState.attachments;
                     draftState.setInput('');
                     draftState.setAttachments([]);
@@ -1469,7 +1313,7 @@ function NewSessionScreen() {
                 case 'pending':
                     Modal.alert(
                         t('common.error'),
-                        'Rig created the session, but it is still syncing with Happy. It should appear shortly.',
+                        'The agent was created, but it is still syncing. It should appear shortly.',
                     );
                     break;
             }
@@ -1481,7 +1325,7 @@ function NewSessionScreen() {
         } finally {
             if (isMountedRef.current) setIsSpawning(false);
         }
-    }, [agentWorkspaces, allMachines, canPickWorktree, currentEffort?.key, currentModelKey, currentPermission?.key, effectiveAgentDefaults.effortLevel, effectiveAgentDefaults.modelMode, effectiveAgentDefaults.permissionMode, navigateToSession, picksWorkspaces, router, selectedAgent, selectedMachineId, selectedPath, selectedProjectId, worktreeKey]);
+    }, [agentWorkspaces, allMachines, canPickWorktree, currentPermission?.key, navigateToSession, picksWorkspaces, router, selectedAgent, selectedMachineId, selectedPath, selectedProjectId, worktreeKey]);
 
     const canSend = selectedMachineId && selectedMachine && isMachineOnline(selectedMachine) && !isSpawning;
     React.useEffect(() => {
@@ -1637,9 +1481,7 @@ function NewSessionScreen() {
             );
         }
         if (
-            activePicker === 'model'
-            || activePicker === 'effort'
-            || activePicker === 'permission'
+            activePicker === 'permission'
         ) {
             const optionCount = (pickerData?.items.length ?? 0) + (pickerData?.fixedItems?.length ?? 0);
             const searchHeight = optionCount > 4 ? 44 : 0;
@@ -1659,8 +1501,6 @@ function NewSessionScreen() {
         const composerTop = windowHeight - safeArea.bottom - mobileComposerHeight;
         if (
             activePicker === 'settings'
-            || activePicker === 'model'
-            || activePicker === 'effort'
             || activePicker === 'permission'
         ) {
             const pickerHeight = nativePickerMeasuredHeight ?? nativeComposerPickerEstimatedHeight;
@@ -1752,33 +1592,6 @@ function NewSessionScreen() {
 
                             {!isNativeMobile && (
                                 <>
-                                    <View style={styles.configRow}>
-                                        {showModel && (
-                                            <>
-                                                <BubblePressable scaleFeedback={false} onPress={() => togglePicker('model')} style={(p) => [styles.configInlineField, p.pressed && styles.configRowPressed]}>
-                                                    <Text style={[styles.configLabel, styles.configInlineText, { color: theme.colors.textSecondary }]} numberOfLines={1}>
-                                                        {currentModel?.name}
-                                                    </Text>
-                                                    <Ionicons name="chevron-down" size={12} color={theme.colors.textSecondary} />
-                                                </BubblePressable>
-                                            </>
-                                        )}
-
-                                        {showEffort && (
-                                            <>
-                                                <Text style={[styles.configLabel, { color: theme.colors.textSecondary }]}>·</Text>
-                                                <BubblePressable scaleFeedback={false} onPress={() => togglePicker('effort')} style={(p) => [styles.configInlineField, p.pressed && styles.configRowPressed]}>
-                                                    <Text style={[styles.configLabel, styles.configInlineText, { color: theme.colors.textSecondary }]} numberOfLines={1}>
-                                                        {currentEffort?.name}
-                                                    </Text>
-                                                    <Ionicons name="chevron-down" size={12} color={theme.colors.textSecondary} />
-                                                </BubblePressable>
-                                            </>
-                                        )}
-                                    </View>
-                                    {renderActivePickerPopover('model')}
-                                    {renderActivePickerPopover('effort')}
-
                                     {showPermission && (
                                         <BubblePressable
                                             scaleFeedback={false}
@@ -1786,7 +1599,7 @@ function NewSessionScreen() {
                                             onPress={() => togglePicker('permission')}
                                         >
                                             <Ionicons
-                                                name={permissionStyle?.icon ?? 'shield-outline'}
+                                                name={permissionStyle?.icon ?? 'sparkles-outline'}
                                                 size={15}
                                                 color={theme.colors.textSecondary}
                                             />
@@ -1797,6 +1610,22 @@ function NewSessionScreen() {
                                         </BubblePressable>
                                     )}
                                     {renderActivePickerPopover('permission')}
+
+                                    {/* DESK-10: an optional addition to what this
+                                        agent is told, folded into its first message
+                                        until the host exposes a field for it. */}
+                                    <View style={styles.configRow}>
+                                        <Ionicons name="document-text-outline" size={15} color={theme.colors.textSecondary} />
+                                        <TextInput
+                                            value={draft.systemPromptAddition ?? ''}
+                                            onChangeText={(text) => draft.setSystemPromptAddition(text || null)}
+                                            placeholder={t('harness.extraInstructionsPlaceholder')}
+                                            placeholderTextColor={theme.colors.textSecondary}
+                                            accessibilityLabel={t('harness.extraInstructions')}
+                                            multiline
+                                            style={[styles.configLabel, styles.configValueText, { flex: 1, color: theme.colors.text }]}
+                                        />
+                                    </View>
                                 </>
                             )}
 

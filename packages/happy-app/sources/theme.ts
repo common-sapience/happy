@@ -19,6 +19,9 @@ const sharedSpacing = {
         lg: 10,  // Input fields (matches "new session panel input fields")
         xl: 12,  // Cards, containers (20 uses)
         xxl: 16, // Main containers
+        xxxl: 20, // Chrome containers: toolbars, docks, floating bars
+        x4l: 28, // Sheets and the largest floating panels
+        pill: 9999, // Fully rounded controls
     },
 
     // Icon sizes (based on actual usage patterns)
@@ -27,6 +30,75 @@ const sharedSpacing = {
         medium: 16, // Section headers, add buttons
         large: 20,  // Action buttons (delete, duplicate, edit) - most common
         xlarge: 24, // Main section icons (desktop, folder)
+    },
+
+    // Smallest allowed hit target. Icon buttons may draw smaller than this as
+    // long as their pressable area reaches it.
+    minTouchTarget: 44,
+
+    // Type scale. Five steps only — title, subtitle, body, caption and mono —
+    // with mono reserved for paths, commands and code. Apple platforms take the
+    // system face (SF Pro); everywhere else falls back to a stack with the same
+    // metrics so line breaks do not move between platforms.
+    typography: {
+        family: {
+            system: Platform.select({
+                ios: 'System',
+                web: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif',
+                default: 'sans-serif',
+            }),
+            mono: Platform.select({
+                ios: 'Menlo',
+                web: 'ui-monospace, "SF Mono", SFMono-Regular, Menlo, "IBM Plex Mono", monospace',
+                default: 'monospace',
+            }),
+        },
+        title: { fontSize: 22, lineHeight: 28, fontWeight: '600' as const },
+        subtitle: { fontSize: 17, lineHeight: 22, fontWeight: '600' as const },
+        body: { fontSize: 15, lineHeight: 20, fontWeight: '400' as const },
+        caption: { fontSize: 13, lineHeight: 18, fontWeight: '400' as const },
+        mono: { fontSize: 13, lineHeight: 18, fontWeight: '400' as const },
+    },
+
+    // Motion. Durations in milliseconds, curves as cubic-bezier control
+    // points so native and web read the same four numbers.
+    motion: {
+        duration: {
+            instant: 90,
+            fast: 140,
+            base: 220,
+            slow: 320,
+        },
+        easing: {
+            standard: [0.4, 0, 0.2, 1] as const,
+            decelerate: [0.16, 1, 0.3, 1] as const,
+        },
+    },
+} as const;
+
+// Glass material metrics. Identical in both themes — only the tints, borders
+// and shadows below differ — so they live here and are spread into each
+// theme's `glass` group, which stays the single source for glass values.
+const sharedGlassMaterial = {
+    // CSS backdrop-filter is the web/desktop backend (T-18): blur plus a
+    // saturation lift stands in for refraction. SVG displacement filters and
+    // WebGL shaders are deliberately not used.
+    blur: {
+        liquid: 32,
+        static: 20,
+        frosted: 44,
+    },
+    saturate: {
+        liquid: 1.8,
+        static: 1.4,
+        frosted: 1.2,
+    },
+    // Hairline edge of a glass surface, and the soft drop that separates it
+    // from the content it floats over.
+    borderWidth: 1,
+    elevation: {
+        offset: 8,
+        radius: 24,
     },
 } as const;
 
@@ -39,8 +111,10 @@ export const lightTheme = {
         //
 
         text: '#000000',
-        textDestructive: Platform.select({ ios: '#FF3B30', default: '#F44336' }),
-        textSecondary: Platform.select({ ios: '#8E8E93', default: '#49454F' }),
+        // Desktop is the iOS design, not the Material one: the web build is the
+        // desktop shell, so it takes the iOS branch of every platform palette.
+        textDestructive: Platform.select({ ios: '#FF3B30', web: '#FF3B30', default: '#F44336' }),
+        textSecondary: Platform.select({ ios: '#8E8E93', web: '#8E8E93', default: '#49454F' }),
         textLink: '#2BACCC',
         deleteAction: '#FF6B6B', // Delete/remove button color
         warningCritical: '#FF3B30',
@@ -49,16 +123,17 @@ export const lightTheme = {
         surface: '#ffffff',
         surfaceRipple: 'rgba(0, 0, 0, 0.08)',
         surfacePressed: '#f0f0f2',
-        surfaceSelected: Platform.select({ ios: '#C6C6C8', default: '#eaeaea' }),
-        surfacePressedOverlay: Platform.select({ ios: '#D1D1D6', default: 'transparent' }),
+        surfaceSelected: Platform.select({ ios: '#C6C6C8', web: '#C6C6C8', default: '#eaeaea' }),
+        surfacePressedOverlay: Platform.select({ ios: '#D1D1D6', web: '#D1D1D6', default: 'transparent' }),
         surfaceHigh: '#F8F8F8',
         surfaceHighest: '#f0f0f0',
-        divider: Platform.select({ ios: '#eaeaea', default: '#eaeaea' }),
+        divider: '#eaeaea',
         shadow: {
             color: Platform.select({ default: '#000000', web: 'rgba(0, 0, 0, 0.1)' }),
             opacity: 0.1,
         },
         glass: {
+            ...sharedGlassMaterial,
             background: 'rgba(255, 255, 255, 0.68)',
             backgroundStrong: 'rgba(255, 255, 255, 0.84)',
             backgroundSubtle: 'rgba(255, 255, 255, 0.42)',
@@ -69,6 +144,14 @@ export const lightTheme = {
             highlight: 'rgba(255, 255, 255, 0.94)',
             shadow: 'rgba(39, 47, 54, 0.16)',
             tint: 'rgba(255, 255, 255, 0.14)',
+            // Opaque stand-in when the material is switched off — reduced
+            // transparency, increased contrast, or a browser without
+            // backdrop-filter. Slightly off the page so chrome still separates.
+            opaque: '#F7F7FA',
+            // The sheen a glass surface carries on its own, bright at the top
+            // left and again at the bottom right, so foreground text keeps its
+            // contrast whatever scrolls underneath.
+            sheen: ['rgba(255,255,255,0.72)', 'rgba(255,255,255,0.10)', 'rgba(255,255,255,0.40)'] as readonly [string, string, string],
             // Plain white, mirroring the dark theme's plain black: the tinted
             // gradient + colored glows read as a stain behind white surfaces.
             backdrop: ['#FFFFFF', '#FFFFFF', '#FFFFFF'] as readonly [string, string, string],
@@ -81,9 +164,9 @@ export const lightTheme = {
         //
 
         groupped: {
-            background: Platform.select({ ios: '#F2F2F7', default: '#F5F5F5' }),
-            chevron: Platform.select({ ios: '#C7C7CC', default: '#49454F' }),
-            sectionTitle: Platform.select({ ios: '#8E8E93', default: '#49454F' }),
+            background: Platform.select({ ios: '#F2F2F7', web: '#F2F2F7', default: '#F5F5F5' }),
+            chevron: Platform.select({ ios: '#C7C7CC', web: '#C7C7CC', default: '#49454F' }),
+            sectionTitle: Platform.select({ ios: '#8E8E93', web: '#8E8E93', default: '#49454F' }),
         },
         header: {
             background: '#ffffff',
@@ -91,7 +174,7 @@ export const lightTheme = {
         },
         switch: {
             track: {
-                active: Platform.select({ ios: '#34C759', default: '#1976D2' }),
+                active: Platform.select({ ios: '#34C759', web: '#34C759', default: '#1976D2' }),
                 inactive: '#dddddd',
             },
             thumb: {
@@ -294,28 +377,29 @@ export const darkTheme = {
         //
 
         text: '#ffffff',
-        textDestructive: Platform.select({ ios: '#FF453A', default: '#F48FB1' }),
-        textSecondary: Platform.select({ ios: '#8E8E93', default: '#CAC4D0' }),
+        textDestructive: Platform.select({ ios: '#FF453A', web: '#FF453A', default: '#F48FB1' }),
+        textSecondary: Platform.select({ ios: '#8E8E93', web: '#8E8E93', default: '#CAC4D0' }),
         textLink: '#2BACCC',
         deleteAction: '#FF6B6B', // Delete/remove button color (same in both themes)
         warningCritical: '#FF453A',
         warning: '#8E8E93',
         success: '#32D74B',
-        // Keep the established desktop palette while using the new neutral
-        // graphite elevation scale for the native glass redesign.
-        surface: Platform.select({ web: '#212121', default: '#161616' }),
-        surfaceRipple: Platform.select({ web: 'rgba(255, 255, 255, 0.08)', default: 'rgba(255, 255, 255, 0.07)' }),
-        surfacePressed: Platform.select({ web: '#2C2C2E', default: '#242424' }),
-        surfaceSelected: Platform.select({ web: '#2C2C2E', default: '#242424' }),
-        surfacePressedOverlay: Platform.select({ web: 'transparent', default: '#242424' }),
-        surfaceHigh: Platform.select({ web: '#171717', default: '#1E1E1E' }),
-        surfaceHighest: Platform.select({ web: '#292929', default: '#282828' }),
-        divider: Platform.select({ web: '#292929', default: '#2A2A2A' }),
+        // One neutral graphite elevation scale on every platform: desktop runs
+        // the same glass design as iOS, so it cannot keep a separate dark ramp.
+        surface: '#161616',
+        surfaceRipple: 'rgba(255, 255, 255, 0.07)',
+        surfacePressed: '#242424',
+        surfaceSelected: '#242424',
+        surfacePressedOverlay: '#242424',
+        surfaceHigh: '#1E1E1E',
+        surfaceHighest: '#282828',
+        divider: '#2A2A2A',
         shadow: {
             color: Platform.select({ default: '#000000', web: 'rgba(0, 0, 0, 0.1)' }),
             opacity: 0.1,
         },
         glass: {
+            ...sharedGlassMaterial,
             background: 'rgba(22, 22, 22, 0.44)',
             backgroundStrong: 'rgba(28, 28, 28, 0.68)',
             backgroundSubtle: 'rgba(255, 255, 255, 0.07)',
@@ -326,6 +410,8 @@ export const darkTheme = {
             highlight: 'rgba(255, 255, 255, 0.22)',
             shadow: 'rgba(0, 0, 0, 0.55)',
             tint: 'rgba(16, 16, 16, 0.08)',
+            opaque: '#1E1E1E',
+            sheen: ['rgba(255,255,255,0.14)', 'rgba(255,255,255,0.02)', 'rgba(255,255,255,0.06)'] as readonly [string, string, string],
             backdrop: ['#000000', '#000000', '#000000'] as readonly [string, string, string],
             glowPrimary: 'transparent',
             glowSecondary: 'transparent',
@@ -336,13 +422,13 @@ export const darkTheme = {
         //
 
         header: {
-            background: Platform.select({ web: '#212121', default: '#000000' }),
+            background: '#000000',
             tint: '#ffffff'
         },
         switch: {
             track: {
-                active: Platform.select({ ios: '#34C759', default: '#1976D2' }),
-                inactive: Platform.select({ web: '#3a393f', default: '#363636' }),
+                active: Platform.select({ ios: '#34C759', web: '#34C759', default: '#1976D2' }),
+                inactive: '#363636',
             },
             thumb: {
                 active: '#FFFFFF',
@@ -350,9 +436,9 @@ export const darkTheme = {
             },
         },
         groupped: {
-            background: Platform.select({ web: '#1e1e1e', default: '#000000' }),
-            chevron: Platform.select({ ios: '#505050', default: '#CAC4D0' }),
-            sectionTitle: Platform.select({ ios: '#8E8E93', default: '#CAC4D0' }),
+            background: '#000000',
+            chevron: Platform.select({ ios: '#505050', web: '#505050', default: '#CAC4D0' }),
+            sectionTitle: Platform.select({ ios: '#8E8E93', web: '#8E8E93', default: '#CAC4D0' }),
         },
         fab: {
             background: '#FFFFFF',
@@ -378,7 +464,7 @@ export const darkTheme = {
             }
         },
         input: {
-            background: Platform.select({ web: '#303030', default: '#1E1E1E' }),
+            background: '#1E1E1E',
             text: '#FFFFFF',
             placeholder: '#8E8E93',
         },

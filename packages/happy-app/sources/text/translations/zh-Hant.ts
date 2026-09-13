@@ -28,7 +28,7 @@ export const zhHant: TranslationStructure = {
         // Tab navigation labels
         inbox: '收件匣',
         sessions: '工作階段',
-        settings: '設定',
+        settings: '帳戶',
     },
 
     inbox: {
@@ -110,7 +110,7 @@ export const zhHant: TranslationStructure = {
     },
 
     settings: {
-        title: '設定',
+        title: '帳戶',
         connectedAccounts: '已連結帳戶',
         connectAccount: '連結帳戶',
         github: 'GitHub',
@@ -1077,4 +1077,22 @@ export const zhHant: TranslationStructure = {
         friendAccepted: ({ name }: { name: string }) => `您現在與 ${name} 成為了好友`,
         friendAcceptedGeneric: '好友請求已接受',
     },
+    harness: {
+        stateRunning: '執行中',
+        stateIdle: '空閒',
+        stateWaiting: '待回答',
+        stateArchived: '已歸檔',
+        usedTool: '使用了工具',
+        profileLabel: '檔案',
+        profileDefault: '預設',
+        profileDefaultHint: '全部工具與技能可用',
+        profilePlan: '規劃',
+        profilePlanHint: '先想清楚，不改動任何東西',
+        profileBuild: '建置',
+        profileBuildHint: '寫程式、執行命令',
+        extraInstructions: '追加說明',
+        extraInstructionsPlaceholder: '這個 agent 需要一直記住的事',
+        noAgentsTitle: '還沒有 agent',
+    },
+
 } as const;

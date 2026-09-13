@@ -4,7 +4,6 @@ import { BlurView } from 'expo-blur';
 import { GlassView, isGlassEffectAPIAvailable, type GlassStyle } from 'expo-glass-effect';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUnistyles } from 'react-native-unistyles';
-import { isRunningOnMac } from '@/utils/platform';
 import Animated, {
     Easing,
     useAnimatedStyle,
@@ -13,8 +12,15 @@ import Animated, {
     withTiming,
 } from 'react-native-reanimated';
 import { getNativeGlassInteractivity } from './glassInteractionPolicy';
+import {
+    resolveConcentricRadius,
+    resolveWebGlassSurface,
+    supportsBackdropFilter,
+    useGlassAccessibilityPreferences,
+    type GlassMaterial,
+} from './glassWebMaterial';
 
-type MobileGlassMaterial = 'liquid' | 'static' | 'frosted';
+type MobileGlassMaterial = GlassMaterial;
 
 type MobileGlassSurfaceProps = ViewProps & {
     enabled?: boolean;
@@ -47,10 +53,104 @@ export function MobileGlassSurface(props: MobileGlassSurfaceProps) {
     // Scaling a native static GlassView during a press or native-stack push
     // produces a large refractive blob on iOS 26. Static chrome uses stable
     // material blur and lets its surrounding Pressable own the interaction.
-    if (props.interactive && props.material !== 'static' && Platform.OS !== 'web' && !isRunningOnMac()) {
+    // The web backend never takes this path: the press bubble is a native
+    // material animation, and on desktop the Pressable already owns feedback.
+    if (props.interactive && props.material !== 'static' && Platform.OS !== 'web') {
         return <InteractiveMobileGlassSurface {...props} />;
     }
     return <MobileGlassSurfaceBase {...props} />;
+}
+
+/**
+ * The web/desktop backend (T-18): CSS `backdrop-filter` for the blur and the
+ * saturation lift, glass tokens for the tint, hairline and shadow, and an inner
+ * sheen so foreground text keeps its contrast over whatever scrolls underneath.
+ *
+ * Material styles are applied after the caller's style on purpose. Geometry —
+ * size, radius, padding — belongs to the call site; the material belongs here,
+ * and most call sites still carry a `Platform.select({ web: … })` background
+ * from the years this backend did not exist.
+ */
+function WebGlassSurface({
+    nativeEffect,
+    material,
+    style,
+    animated,
+    children,
+    ...props
+}: ViewProps & {
+    nativeEffect: boolean;
+    material: MobileGlassMaterial;
+    animated: boolean;
+    style?: StyleProp<ViewStyle>;
+}) {
+    const { theme } = useUnistyles();
+    const preferences = useGlassAccessibilityPreferences();
+    const Container = animated ? Animated.View : View;
+
+    // Glass is a functional layer: navigation, toolbars, floating panels and
+    // control-bearing cards. Content surfaces stay opaque.
+    if (!nativeEffect) {
+        return (
+            <Container {...props} style={[{ backgroundColor: theme.colors.surface }, style]}>
+                {children}
+            </Container>
+        );
+    }
+
+    const surface = resolveWebGlassSurface({
+        material,
+        tokens: theme.colors.glass,
+        preferences,
+        opaqueBorderColor: theme.colors.divider,
+        supportsBackdropFilter: supportsBackdropFilter(),
+    });
+    const flattened = RNStyleSheet.flatten(style) ?? {};
+    const outerRadius = typeof flattened.borderRadius === 'number' ? flattened.borderRadius : 0;
+    const sheenRadius = resolveConcentricRadius(outerRadius, surface.borderWidth);
+
+    return (
+        <Container
+            {...props}
+            // Merged, not replaced: callers put their own data attributes here,
+            // the Tauri drag-region opt-out among them. The material's own
+            // attribute is what an end-to-end test asserts a glass layer by.
+            {...({
+                dataSet: {
+                    ...((props as { dataSet?: Record<string, unknown> }).dataSet ?? {}),
+                    happyGlass: material,
+                },
+            } as object)}
+            style={[
+                style,
+                {
+                    backgroundColor: surface.backgroundColor,
+                    borderWidth: surface.borderWidth,
+                    borderColor: surface.borderColor,
+                    borderStyle: 'solid',
+                },
+                surface.backdropFilter
+                    ? {
+                        backdropFilter: surface.backdropFilter,
+                        WebkitBackdropFilter: surface.backdropFilter,
+                    }
+                    : null,
+                { boxShadow: surface.boxShadow },
+            ] as StyleProp<ViewStyle>}
+        >
+            {surface.sheen && (
+                <LinearGradient
+                    pointerEvents="none"
+                    colors={surface.sheen}
+                    locations={[0, 0.48, 1]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={[RNStyleSheet.absoluteFill, { borderRadius: sheenRadius }]}
+                />
+            )}
+            {children}
+        </Container>
+    );
 }
 
 function InteractiveMobileGlassSurface({
@@ -102,7 +202,7 @@ function InteractiveMobileGlassSurface({
 }
 
 function MobileGlassSurfaceBase({
-    enabled = Platform.OS !== 'web' && !isRunningOnMac(),
+    enabled = true,
     intensity = 72,
     interactive = false,
     nativeEffect = interactive,
@@ -118,7 +218,7 @@ function MobileGlassSurfaceBase({
     const usesStaticMaterial = nativeEffect && material === 'static';
     const usesFrostedMaterial = nativeEffect && material === 'frosted';
 
-    if (!enabled || Platform.OS === 'web' || isRunningOnMac()) {
+    if (!enabled) {
         return animated ? (
             <Animated.View
                 {...props}
@@ -128,6 +228,21 @@ function MobileGlassSurfaceBase({
             </Animated.View>
         ) : (
             <View {...props} style={style}>{children}</View>
+        );
+    }
+
+    // Web covers the desktop shell too: Tauri reports Platform.OS === 'web'.
+    if (Platform.OS === 'web') {
+        return (
+            <WebGlassSurface
+                {...props}
+                nativeEffect={nativeEffect}
+                material={material}
+                style={style}
+                animated={animated}
+            >
+                {children}
+            </WebGlassSurface>
         );
     }
 
@@ -274,10 +389,10 @@ function MobileGlassSurfaceBase({
     );
 }
 
-export function MobileGlassBackdrop({ enabled = Platform.OS !== 'web' && !isRunningOnMac() }: { enabled?: boolean }) {
+export function MobileGlassBackdrop({ enabled = true }: { enabled?: boolean }) {
     const { theme } = useUnistyles();
 
-    if (!enabled || isRunningOnMac()) {
+    if (!enabled) {
         return null;
     }
 

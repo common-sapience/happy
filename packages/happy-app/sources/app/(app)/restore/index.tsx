@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Platform, View, Text, TextInput, ScrollView, ActivityIndicator } from 'react-native';
+import { Platform, View, Text, TextInput, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/auth/AuthContext';
 import { RoundButton } from '@/components/RoundButton';
 import { Typography } from '@/constants/Typography';
+import * as Clipboard from 'expo-clipboard';
 import { encodeBase64 } from '@/encryption/base64';
 import { generateAuthKeyPair, authQRStart } from '@/auth/authQRStart';
 import { authQRWait } from '@/auth/authQRWait';
@@ -61,6 +62,20 @@ const stylesheet = StyleSheet.create((theme) => ({
         textAlignVertical: 'top',
         color: theme.colors.input.text,
     },
+    codeLabel: {
+        fontSize: 13,
+        color: theme.colors.textSecondary,
+        marginBottom: 8,
+        textAlign: 'center',
+        ...Typography.default(),
+    },
+    code: {
+        fontSize: 13,
+        lineHeight: 20,
+        color: theme.colors.text,
+        textAlign: 'center',
+        ...Typography.mono(),
+    },
 }));
 
 export default function Restore() {
@@ -76,6 +91,14 @@ export default function Restore() {
 
     // Memoize keypair generation to prevent re-creating on re-renders
     const keypair = React.useMemo(() => generateAuthKeyPair(), []);
+    const requestCode = React.useMemo(() => encodeBase64(keypair.publicKey, 'base64url'), [keypair]);
+    const [codeCopied, setCodeCopied] = useState(false);
+
+    const handleCopyCode = React.useCallback(async () => {
+        await Clipboard.setStringAsync(requestCode);
+        setCodeCopied(true);
+        setTimeout(() => setCodeCopied(false), 2000);
+    }, [requestCode]);
 
     // Start QR authentication when component mounts
     useEffect(() => {
@@ -136,22 +159,34 @@ export default function Restore() {
         <ScrollView style={styles.scrollView} contentContainerStyle={{ flexGrow: 1 }}>
             <View style={styles.container}>
 
+                {/* DESK-06: this computer is the one asking to join. A computer already signed in
+                    approves it — by reading the code below, since desktops have no camera. */}
                 <View style={{justifyContent: 'flex-end' }}>
                     <Text style={styles.secondInstructionText}>
-                        1. Open Happy on your mobile device{'\n'}
-                        2. Go to Settings → Account{'\n'}
-                        3. Tap "Link New Device"{'\n'}
-                        4. Scan this QR code
+                        On a computer or phone that is already signed in:{'\n'}
+                        1. Open the account page{'\n'}
+                        2. Under Computers, choose "Add a computer"{'\n'}
+                        3. Paste the code below, or scan this square
                     </Text>
                 </View>
+                {authReady && (
+                    <Pressable onPress={handleCopyCode} style={{ width: '100%', maxWidth: layout.maxWidth, paddingBottom: 24 }}>
+                        <Text style={styles.codeLabel}>
+                            {codeCopied ? 'Code copied' : 'Your one-time code (tap to copy)'}
+                        </Text>
+                        <Text style={styles.code} selectable>
+                            {requestCode}
+                        </Text>
+                    </Pressable>
+                )}
                 {!authReady && (
-                    <MobileGlassSurface enabled={Platform.OS !== 'web'} intensity={68} style={{ width: 200, height: 200, backgroundColor: Platform.select({ web: theme.colors.surface, android: theme.colors.glass.backgroundStrong, default: 'transparent' }), alignItems: 'center', justifyContent: 'center', borderRadius: Platform.select({ web: 0, default: 24 }), overflow: 'hidden', borderWidth: Platform.OS === 'web' ? 0 : 0.5, borderColor: theme.colors.glass.border }}>
+                    <MobileGlassSurface intensity={68} style={{ width: 200, height: 200, backgroundColor: Platform.select({ android: theme.colors.glass.backgroundStrong, default: 'transparent' }), alignItems: 'center', justifyContent: 'center', borderRadius: 24, overflow: 'hidden', borderWidth: 0.5, borderColor: theme.colors.glass.border }}>
                         <ActivityIndicator size="small" color={theme.colors.text} />
                     </MobileGlassSurface>
                 )}
                 {authReady && (
                     <QRCode
-                        data={'happy:///account?' + encodeBase64(keypair.publicKey, 'base64url')}
+                        data={'happy:///account?' + requestCode}
                         size={300}
                         foregroundColor={'black'}
                         backgroundColor={'white'}

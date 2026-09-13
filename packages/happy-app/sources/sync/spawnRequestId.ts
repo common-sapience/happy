@@ -27,9 +27,8 @@ export type SpawnRequestSignatureInput = {
     /** Directory as the user picked it, before any worktree resolution. */
     directory: string;
     worktree: string | null;
-    modelKey: string | null;
-    permissionMode: string | null;
-    effort: string | null;
+    /** The agent profile the session is to be created under (ENG-17). */
+    agentProfile: string;
 };
 
 let pendingRequest: { signature: string; clientRequestId: string } | null = null;
@@ -41,9 +40,7 @@ export function buildSpawnRequestSignature(input: SpawnRequestSignatureInput): s
         input.agent,
         input.directory,
         input.worktree ?? '',
-        input.modelKey ?? '',
-        input.permissionMode ?? '',
-        input.effort ?? '',
+        input.agentProfile,
     ]);
 }
 

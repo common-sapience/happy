@@ -47,11 +47,11 @@ const styles = StyleSheet.create((theme) => ({
         letterSpacing: 0.1,
     },
     sessionCard: {
-        backgroundColor: Platform.select({ web: theme.colors.surface, android: theme.colors.glass.backgroundStrong, default: 'transparent' }),
+        backgroundColor: Platform.select({ android: theme.colors.glass.backgroundStrong, default: 'transparent' }),
         marginHorizontal: 16,
         marginBottom: 1,
         overflow: 'hidden',
-        borderWidth: Platform.select({ web: 0, default: StyleSheet.hairlineWidth }),
+        borderWidth: StyleSheet.hairlineWidth,
         borderColor: theme.colors.glass.border,
     },
     sessionPressable: {
@@ -62,16 +62,16 @@ const styles = StyleSheet.create((theme) => ({
         width: '100%',
     },
     sessionCardFirst: {
-        borderTopLeftRadius: Platform.select({ web: 12, default: 18 }),
-        borderTopRightRadius: Platform.select({ web: 12, default: 18 }),
+        borderTopLeftRadius: 18,
+        borderTopRightRadius: 18,
     },
     sessionCardLast: {
-        borderBottomLeftRadius: Platform.select({ web: 12, default: 18 }),
-        borderBottomRightRadius: Platform.select({ web: 12, default: 18 }),
+        borderBottomLeftRadius: 18,
+        borderBottomRightRadius: 18,
         marginBottom: 12,
     },
     sessionCardSingle: {
-        borderRadius: Platform.select({ web: 12, default: 18 }),
+        borderRadius: 18,
         marginBottom: 12,
     },
     sessionContent: {
@@ -209,7 +209,6 @@ export default function SessionHistory() {
             
             return (
                 <MobileGlassSurface
-                    enabled={Platform.OS !== 'web'}
                     intensity={64}
                     style={[
                         styles.sessionCard,

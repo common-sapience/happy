@@ -7,6 +7,7 @@ import { Command } from './types';
 import { useGlobalKeyboard } from '@/hooks/useGlobalKeyboard';
 import { useAuth } from '@/auth/AuthContext';
 import { storage, useAllMachines } from '@/sync/storage';
+import { isInternalSession } from '@/sync/agentListView';
 import { useShallow } from 'zustand/react/shallow';
 import { useNavigateToSession } from '@/hooks/useNavigateToSession';
 import { ShortcutHintsProvider } from '@/components/ShortcutHints';
@@ -33,11 +34,10 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
         typeof navigator === 'undefined' ? undefined : navigator
     ), []);
     const browserSafeShortcuts = useMemo(() => Platform.OS === 'web' && !isTauri(), []);
-    const visibleSessionShortcutIds = useMemo(() => getSessionShortcutIdsInDisplayOrder(
-        sessionListViewData,
-        machines,
-        t('status.unknown'),
-    ), [machines, sessionListViewData]);
+    const visibleSessionShortcutIds = useMemo(
+        () => getSessionShortcutIdsInDisplayOrder(sessionListViewData),
+        [sessionListViewData],
+    );
 
     // Define available commands
     const commands = useMemo((): Command[] => {
@@ -97,8 +97,10 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
             },
         ];
 
-        // Add session-specific commands
+        // Add session-specific commands. The host's own sessions are not the user's agents and are
+        // not offered for switching to.
         const recentSessions = Object.values(sessions)
+            .filter((session) => !isInternalSession(session))
             .sort((a, b) => b.updatedAt - a.updatedAt)
             .slice(0, 5);
 

@@ -38,10 +38,23 @@ vi.mock('react-native-unistyles', () => {
             text: 'text', textSecondary: 'secondary', surface: 'surface', divider: 'divider',
             gitAddedText: 'green', gitRemovedText: 'red',
             header: { tint: 'tint', background: 'background' },
-            glass: { border: 'border', backgroundStrong: 'glass', shadow: 'shadow' },
+            glass: {
+                border: 'border', backgroundStrong: 'glass', shadow: 'shadow', divider: 'glass-divider',
+                borderWidth: 1, elevation: { offset: 8, radius: 24 },
+            },
             groupped: { background: 'background', chevron: 'chevron' },
             shadow: { color: 'shadow', opacity: 1, offset: { width: 0, height: 1 }, radius: 2 },
         },
+        typography: {
+            title: { fontSize: 22, lineHeight: 28, fontWeight: '600' },
+            subtitle: { fontSize: 17, lineHeight: 22, fontWeight: '600' },
+            body: { fontSize: 15, lineHeight: 20, fontWeight: '400' },
+            caption: { fontSize: 13, lineHeight: 18, fontWeight: '400' },
+            mono: { fontSize: 13, lineHeight: 18, fontWeight: '400' },
+        },
+        margins: { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24 },
+        borderRadius: { sm: 4, md: 8, lg: 10, xl: 12, xxl: 16, xxxl: 20, x4l: 28, pill: 9999 },
+        minTouchTarget: 44,
     };
     return {
         useUnistyles: () => ({ theme }),
@@ -114,7 +127,6 @@ vi.mock('@/utils/versionUtils', () => ({ isVersionSupported: () => true, MINIMUM
 import { ChatHeaderView } from './ChatHeaderView';
 import { Header, createPlainHeader } from './navigation/Header';
 import { GitLineChanges } from './GitLineChanges';
-import { RigGitLineChanges } from './RigGitLineChanges';
 import SessionInfo from '@/app/(app)/session/[id]/info';
 
 const renderers: ReturnType<typeof create>[] = [];
@@ -180,14 +192,10 @@ describe('chat header', () => {
 });
 
 describe('session details', () => {
-    it('puts Changes and Happy Agent stats first, without the duplicate title/status card', () => {
+    it('puts Changes first, without the duplicate title/status card', () => {
         state.session = {
             id: 'session-id', createdAt: 1, updatedAt: 1, seq: 1,
-            metadata: {
-                path: '/repo', host: 'machine',
-                client: { id: 'rig', name: 'Happy Agent', version: '1' },
-                git: { changedFiles: 5, insertions: 120, deletions: 34, countsExact: true },
-            },
+            metadata: { path: '/repo', host: 'machine' },
         } as Session;
         const renderer = render(React.createElement(SessionInfo));
         const groups = renderer.root.findAllByType('ItemGroup');
@@ -195,11 +203,9 @@ describe('session details', () => {
         const items = renderer.root.findAllByType('Item');
         expect(items[0].props.title).toBe('files.changes');
         expect(items[0].props.subtitle).toBeUndefined();
-        expect(texts(renderer)).toEqual(['5 changed files', '+120', '-34']);
         expect(items.some((item: any) => item.props.title === 'sessionInfo.connectionStatus')).toBe(true);
         expect(renderer.root.findAllByType('Glass')).toHaveLength(0);
         expect(renderer.root.findByType('StackScreen').props.options.headerTitleAlign).toBe('center');
-        expectCountTypography(renderer);
         act(() => items[0].props.onPress());
         expect(state.push).toHaveBeenCalledWith('/session/session-id/changes');
     });
@@ -267,11 +273,8 @@ function expectCountTypography(renderer: ReturnType<typeof create>) {
 describe('shared git-count typography', () => {
     const changes = { approximate: false, insertions: 120, deletions: 34 };
 
-    it('uses the grouped project font in the shared counts and flat-list adapter', () => {
+    it('uses one font for the shared counts', () => {
         expectCountTypography(render(React.createElement(GitLineChanges, { changes })));
-        expectCountTypography(render(React.createElement(RigGitLineChanges, {
-            changedFiles: 2, countsExact: true, insertions: 120, deletions: 34,
-        })));
     });
 
     it('keeps the same font in the chat subtitle', () => {

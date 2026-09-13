@@ -27,7 +27,6 @@ import { layout } from './layout';
 import { t } from '@/text';
 import { useNewSessionDraft } from '@/hooks/useNewSessionDraft';
 import { useAllMachines, useSessions, useSetting } from '@/sync/storage';
-import { getCodeAgentDefaults, resolveAgentDefaultConfig } from '@/sync/agentDefaults';
 import { formatLastSeen, formatPathRelativeToHome } from '@/utils/sessionUtils';
 import { isMachineOnline } from '@/utils/machineUtils';
 import { resolveAbsolutePath } from '@/utils/pathUtils';
@@ -41,13 +40,7 @@ import {
 } from '@/sync/machineChoices';
 import type { Session } from '@/sync/storageTypes';
 import {
-    getEffortLevelsForModel,
-    getHardcodedModelModes,
-    getHardcodedPermissionModes,
-    filterPermissionModesForCli,
-    getSupportsWorktree,
-    groupModelModesByProvider,
-    includeConfiguredModel,
+    getAvailablePermissionModes,
     type ModeOption,
 } from './modelModeOptions';
 import type { NewSessionAgentType } from '@/sync/persistence';
@@ -91,13 +84,13 @@ import {
 export const MOBILE_HOME_DOCK_CONTENT_INSET = 108;
 
 type EnvironmentSetting = 'machine' | 'project' | 'worktree';
-type AgentSetting = 'model' | 'permission' | 'effort';
+// The profile is the only agent setting the composer has: the engine publishes
+// no models until a session exists, and it has no effort scale (DESK-10).
+type AgentSetting = 'permission';
 type PickerPage = EnvironmentSetting | AgentSetting;
 
 const CUSTOM_PROJECT_PATH_KEY = '__custom_project_path__';
 
-const MOBILE_MODEL_MENU_GEOMETRY = resolveMobileComposerMenuGeometry('model');
-const MOBILE_EFFORT_MENU_GEOMETRY = resolveMobileComposerMenuGeometry('effort');
 const MOBILE_PERMISSION_MENU_GEOMETRY = resolveMobileComposerMenuGeometry('permission');
 const MOBILE_ACTION_ROW_GEOMETRY = resolveMobileComposerActionRowGeometry();
 const MOBILE_ICON_ACTION_GEOMETRY = resolveMobileComposerActionGeometry('icon');
@@ -282,22 +275,12 @@ const styles = StyleSheet.create((theme) => ({
         paddingBottom: MOBILE_COMPOSER_METRICS.inputPaddingBottom,
     },
     focusedComposerActions: MOBILE_ACTION_ROW_GEOMETRY,
-    nativeModeMenu: MOBILE_MODEL_MENU_GEOMETRY.frame,
-    focusedModeButton: MOBILE_MODEL_MENU_GEOMETRY.content,
-    nativeEffortMenu: MOBILE_EFFORT_MENU_GEOMETRY.frame,
-    focusedEffortButton: MOBILE_EFFORT_MENU_GEOMETRY.content,
     nativePermissionMenu: MOBILE_PERMISSION_MENU_GEOMETRY.frame,
     focusedPermissionButton: MOBILE_PERMISSION_MENU_GEOMETRY.content,
     focusedModeText: {
         flexShrink: 1,
         minWidth: 0,
         color: theme.colors.text,
-        fontSize: 14,
-        ...Typography.default(),
-    },
-    focusedModeSeparator: {
-        flexShrink: 0,
-        color: theme.colors.textSecondary,
         fontSize: 14,
         ...Typography.default(),
     },
@@ -680,8 +663,6 @@ export const HomeDock = React.memo(({
     const sessionType = useNewSessionDraft((state) => state.sessionType);
     const worktreeKey = useNewSessionDraft((state) => state.worktreeKey);
     const permissionMode = useNewSessionDraft((state) => state.permissionMode);
-    const modelMode = useNewSessionDraft((state) => state.modelMode);
-    const effortLevel = useNewSessionDraft((state) => state.effortLevel);
     const setMachineId = useNewSessionDraft((state) => state.setMachineId);
     const renameMachineId = useNewSessionDraft((state) => state.renameMachineId);
     const setAgentType = useNewSessionDraft((state) => state.setAgentType);
@@ -689,9 +670,6 @@ export const HomeDock = React.memo(({
     const setSessionType = useNewSessionDraft((state) => state.setSessionType);
     const setWorktreeKey = useNewSessionDraft((state) => state.setWorktreeKey);
     const setPermissionMode = useNewSessionDraft((state) => state.setPermissionMode);
-    const setModelMode = useNewSessionDraft((state) => state.setModelMode);
-    const setEffortLevel = useNewSessionDraft((state) => state.setEffortLevel);
-    const defaultOverrides = useSetting('agentDefaultOverrides');
     const machines = useAllMachines({ includeOffline: true });
     const sessions = useSessions();
     // A person picks a computer, not a daemon. Happy CLI and Happy Agent each register a machine
@@ -719,8 +697,7 @@ export const HomeDock = React.memo(({
         selectedChoice?.id ?? selectedMachineId,
         machineOptions.map((machine) => machine.key),
     );
-    const selectedHomeDir = selectedChoice?.happyMachine?.metadata?.homeDir
-        ?? selectedChoice?.rigMachine?.metadata?.homeDir;
+    const selectedHomeDir = selectedChoice?.happyMachine?.metadata?.homeDir;
 
     React.useEffect(() => {
         if (resolvedMachineId !== selectedMachineId) {
@@ -767,7 +744,7 @@ export const HomeDock = React.memo(({
     // Happy Agent's half of this computer, and only this computer's: a session asked for here is
     // never handed to a daemon somewhere else because that one happened to be reachable.
     const happyCliVersion = selectedChoice?.happyMachine?.metadata?.happyCliVersion;
-    const supportsWorktree = getSupportsWorktree(agentType);
+    const supportsWorktree = true;
     const selectedWorktreeKey = sessionType === 'worktree'
         ? worktreeKey ?? '__new__'
         : '__none__';
@@ -844,41 +821,11 @@ export const HomeDock = React.memo(({
         return options;
     }, [agentType, canCreateWorktree, existingWorktrees, picksWorkspaces, supportsWorktree, worktreeKey]);
     const currentWorktree = resolveOption(worktreeOptions, [selectedWorktreeKey]);
-    const defaults = React.useMemo(
-        () => resolveAgentDefaultConfig(defaultOverrides, agentType, happyCliVersion),
-        [agentType, defaultOverrides, happyCliVersion],
-    );
-    const permissionOptions = React.useMemo(
-        // The CLI daemon on the picked computer is what will parse the mode;
-        // older CLIs drop the whole prompt on modes they do not know (`auto`).
-        () => filterPermissionModesForCli(
-            getHardcodedPermissionModes(agentType, t),
-            happyCliVersion,
-        ),
-        [agentType, happyCliVersion],
-    );
-    const modelOptions = React.useMemo(
-        () => includeConfiguredModel(
-            agentType,
-            getHardcodedModelModes(agentType, t),
-            defaults.modelMode,
-        ),
-        [agentType, defaults.modelMode],
-    );
-    // The code default last: when the saved and configured modes were both
-    // filtered out for an old CLI, land there rather than on whichever mode
-    // happens to lead the list.
-    const currentPermission = resolveOption(permissionOptions, [
-        permissionMode,
-        defaults.permissionMode,
-        getCodeAgentDefaults(agentType, happyCliVersion).permissionMode,
-    ]);
-    const currentModel = resolveOption(modelOptions, [modelMode, defaults.modelMode]);
-    const effortOptions = React.useMemo(
-        () => getEffortLevelsForModel(agentType, currentModel?.key ?? 'default'),
-        [agentType, currentModel?.key],
-    );
-    const currentEffort = resolveOption(effortOptions, [effortLevel, defaults.effortLevel]);
+    // There is no session to ask yet, so the profiles on offer are the ones the
+    // product names (ENG-17); the everything-on one leads and is what you get
+    // without choosing.
+    const permissionOptions = React.useMemo(() => getAvailablePermissionModes(null), []);
+    const currentPermission = resolveOption(permissionOptions, [permissionMode]);
     const currentAgent = { key: ENGINE_AGENT, name: getHarnessName(ENGINE_AGENT) };
     const permissionLabel = getPermissionModeShortLabel(currentPermission);
     const focusedPromptPlaceholder = resolveHomeDockPromptPlaceholder(currentAgent.key, currentAgent.name);
@@ -1131,11 +1078,9 @@ export const HomeDock = React.memo(({
             icon: 'git-branch-outline',
         },
     ];
-    const agentRows: SettingsRow[] = [
-        ...(currentModel ? [{ page: 'model', label: t('agentInput.model.title'), value: currentModel.name, icon: 'cube-outline' as const }] : []),
-        ...(currentPermission ? [{ page: 'permission', label: t('agentInput.permissionMode.title'), value: permissionLabel ?? currentPermission.name, icon: 'shield-outline' as const }] : []),
-        ...(currentEffort ? [{ page: 'effort', label: t('agentInput.effort.title'), value: currentEffort.name, icon: 'speedometer-outline' as const }] : []),
-    ];
+    const agentRows: SettingsRow[] = currentPermission
+        ? [{ page: 'permission', label: t('harness.profileLabel'), value: permissionLabel ?? currentPermission.name, icon: 'sparkles-outline' as const }]
+        : [];
 
     type PickerConfig = {
         title: string;
@@ -1201,48 +1146,30 @@ export const HomeDock = React.memo(({
         };
     };
 
-    const getAgentPickerConfig = (setting: AgentSetting): PickerConfig => {
-        if (setting === 'model') {
-            return { title: t('agentInput.model.title'), options: modelOptions, selectedKey: currentModel?.key, onSelect: setModelMode };
-        }
-        if (setting === 'permission') {
-            return { title: t('agentInput.permissionMode.title'), options: permissionOptions, selectedKey: currentPermission?.key, onSelect: setPermissionMode };
-        }
-        return { title: t('agentInput.effort.title'), options: effortOptions, selectedKey: currentEffort?.key, onSelect: setEffortLevel };
-    };
+    const getAgentPickerConfig = (_setting: AgentSetting): PickerConfig => ({
+        title: t('harness.profileLabel'),
+        options: permissionOptions,
+        selectedKey: currentPermission?.key,
+        onSelect: setPermissionMode,
+    });
 
-    const agentSettingsGroups: NativeSettingsMenuGroup[] = agentRows.flatMap((row) => {
+    const agentSettingsGroups: NativeSettingsMenuGroup[] = agentRows.map((row) => {
         const config = getAgentPickerConfig(row.page as AgentSetting);
-        const sections = row.page === 'model'
-            ? groupModelModesByProvider(modelOptions).map((providerGroup) => ({
-                key: `model:${providerGroup.key}`,
-                title: providerGroup.title ?? config.title,
-                options: providerGroup.models,
-            }))
-            : [{ key: row.page, title: config.title, options: config.options }];
-        return sections.map((section) => ({
-            key: section.key,
+        return {
+            key: row.page,
             label: row.value || config.title,
-            title: section.title,
-            systemImage: {
-                agent: 'cpu',
-                model: 'cube',
-                permission: 'shield',
-                effort: 'bolt',
-            }[row.page],
-            options: section.options.map((option) => ({
+            title: config.title,
+            systemImage: 'sparkles',
+            options: config.options.map((option) => ({
                 key: option.key,
-                // The permission menu spells the mode out; only its chip is
-                // short on space. Model and effort read fine on their own.
-                label: row.page === 'permission' ? getPermissionModeMenuLabel(option) : option.name,
+                // The menu spells the profile out; only its chip is short on space.
+                label: getPermissionModeMenuLabel(option),
                 disabled: option.disabled,
             })),
             selectedKey: config.selectedKey,
             onSelect: config.onSelect,
-        }));
+        };
     });
-    const modelSettingsGroups = agentSettingsGroups.filter((group) => group.key.startsWith('model:'));
-    const effortSettingsGroup = agentSettingsGroups.find((group) => group.key === 'effort');
     const permissionSettingsGroup = agentSettingsGroups.find((group) => group.key === 'permission');
 
     const getPickerConfig = (page: PickerPage): PickerConfig => (
@@ -1419,13 +1346,7 @@ export const HomeDock = React.memo(({
     // Only reached with a page selected: `sheetVisible` gates the whole sheet.
     const renderSettingsSheet = (page: PickerPage) => {
         const config = getPickerConfig(page);
-        const optionSections = page === 'model'
-            ? groupModelModesByProvider(modelOptions).map((providerGroup) => ({
-                key: providerGroup.key,
-                title: providerGroup.title,
-                options: providerGroup.models,
-            }))
-            : [{ key: page, title: null, options: config.options }];
+        const optionSections = [{ key: page, title: null as string | null, options: config.options }];
         return (
             <View style={styles.settingsStack}>
                 <MobileGlassSurface
@@ -1668,16 +1589,16 @@ export const HomeDock = React.memo(({
                                 />
                             </BubblePressable>
                         </RefusableControl>
-                        {/* The permission mode reads out in words instead of
-                            hiding behind a gear: it is the one setting here that
-                            changes what the agent is allowed to do to your
-                            machine, so it is worth the width. */}
+                        {/* The profile reads out in words instead of hiding
+                            behind a gear: it is the one setting here that changes
+                            what the agent may do to your machine, so it is worth
+                            the width. */}
                         {permissionSettingsGroup && permissionLabel && renderMenuControl({
                             page: 'permission',
                             groups: [permissionSettingsGroup],
                             flat: true,
                             style: styles.nativePermissionMenu,
-                            accessibilityLabel: t('agentInput.permissionMode.title'),
+                            accessibilityLabel: t('harness.profileLabel'),
                             triggerLabel: permissionLabel,
                             // Centered to agree with the React Native chip this
                             // stands in for on iOS: the frame is sized by that
@@ -1692,56 +1613,9 @@ export const HomeDock = React.memo(({
                                 </View>
                             ),
                         })}
-                        {/* Pushes model/effort right so the pair sits against the
-                            send button instead of drifting when a label changes. */}
+                        {/* Pushes the send button to the edge so the row does
+                            not drift when the profile label changes. */}
                         <View style={{ flex: 1 }} />
-                        {modelSettingsGroups.length > 0 ? (
-                            renderMenuControl({
-                                page: 'model',
-                                groups: modelSettingsGroups,
-                                style: styles.nativeModeMenu,
-                                accessibilityLabel: t('agentInput.model.title'),
-                                triggerLabel: currentModel?.name ?? currentAgent.name,
-                                triggerAlignment: 'trailing',
-                                children: (
-                                    <View style={styles.focusedModeButton}>
-                                        <Text style={styles.focusedModeText} numberOfLines={1}>
-                                            {currentModel?.name ?? currentAgent.name}
-                                        </Text>
-                                    </View>
-                                ),
-                            })
-                        ) : (
-                            <View style={styles.nativeModeMenu}>
-                                <View style={styles.focusedModeButton}>
-                                    <Text style={styles.focusedModeText} numberOfLines={1}>
-                                        {currentAgent.name}
-                                    </Text>
-                                </View>
-                            </View>
-                        )}
-                        {/* The separator is its own element rather than part of the
-                            effort label, which would wrap it onto a second line
-                            inside the narrow trigger. */}
-                        {effortSettingsGroup && (
-                            <Text style={styles.focusedModeSeparator}>·</Text>
-                        )}
-                        {effortSettingsGroup && renderMenuControl({
-                            page: 'effort',
-                            groups: [effortSettingsGroup],
-                            flat: true,
-                            style: styles.nativeEffortMenu,
-                            accessibilityLabel: t('agentInput.effort.title'),
-                            triggerLabel: currentEffort?.name ?? t('agentInput.effort.title'),
-                            triggerAlignment: 'leading',
-                            children: (
-                                <View style={styles.focusedEffortButton}>
-                                    <Text style={styles.focusedModeText} numberOfLines={1}>
-                                        {currentEffort?.name ?? t('agentInput.effort.title')}
-                                    </Text>
-                                </View>
-                            ),
-                        })}
                         {/* Nothing covers this row as a whole: each control
                             beside Stop refuses its own presses, which leaves
                             Stop itself reachable without having to be painted

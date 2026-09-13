@@ -1,5 +1,4 @@
 import * as z from 'zod';
-import { compareVersionsWithPrerelease, isWellFormedVersion } from '@/utils/versionUtils';
 
 export const agentKeys = ['opencode'] as const;
 export type AgentKey = typeof agentKeys[number];
@@ -28,80 +27,29 @@ const codeAgentDefaults: Record<AgentKey, AgentDefaultConfig> = {
     // The engine's own profile owns the real model and tool settings; these are
     // only the composer's starting values. A user override is kept separate and
     // is never rewritten here.
-    opencode: { permissionMode: 'auto', modelMode: 'default', effortLevel: null },
+    opencode: { permissionMode: 'default', modelMode: 'default', effortLevel: null },
 };
-
-// `auto` first shipped in happy-cli 1.2.1-beta.2, for Claude and Codex alike.
-// Keep this with the code-default resolver so every spawn/send consumer uses
-// the same compatibility boundary as the picker catalog.
-export const CLI_VERSION_WITH_AUTO = '1.2.1-beta.2';
-
-function resolveCodeDefaultPermissionMode(
-    permissionMode: string,
-    cliVersion: string | null | undefined,
-): string {
-    if (permissionMode !== 'auto' || !cliVersion) {
-        return permissionMode;
-    }
-    if (!isWellFormedVersion(cliVersion)) {
-        return 'default';
-    }
-    return compareVersionsWithPrerelease(cliVersion, CLI_VERSION_WITH_AUTO) >= 0
-        ? permissionMode
-        : 'default';
-}
 
 export function normalizeAgentKey(_flavor: string | null | undefined): AgentKey {
     return 'opencode';
 }
 
-export function getCodeAgentDefaults(
-    flavor: string | null | undefined,
-    cliVersion?: string | null,
-): AgentDefaultConfig {
-    const defaults = codeAgentDefaults[normalizeAgentKey(flavor)];
-    const permissionMode = resolveCodeDefaultPermissionMode(defaults.permissionMode, cliVersion);
-    return permissionMode === defaults.permissionMode
-        ? defaults
-        : { ...defaults, permissionMode };
-}
-
-/**
- * Permission keys that were offered once and are no longer accepted, mapped to
- * what they meant. `dontAsk` never passed the CLI's message schema, so it was
- * already dropped on the wire; it is retired here so a saved copy cannot make
- * the composer show one mode while sending another.
- */
-const RETIRED_PERMISSION_MODES: Record<string, string> = {
-    dontAsk: 'acceptEdits',
-};
-
-/**
- * Maps a stored permission mode onto one the CLI still accepts. Applies to
- * flavor-based agents only: a harness that publishes its own catalog owns its
- * codes, and none of them collide with a retired Claude key.
- */
-export function retirePermissionMode<T extends string | null | undefined>(mode: T): T | string {
-    return mode ? RETIRED_PERMISSION_MODES[mode] ?? mode : mode;
+export function getCodeAgentDefaults(flavor: string | null | undefined): AgentDefaultConfig {
+    return codeAgentDefaults[normalizeAgentKey(flavor)];
 }
 
 export function getAgentDefaultOverride(
     overrides: AgentDefaultOverrides | null | undefined,
     flavor: string | null | undefined,
 ): AgentDefaultOverride {
-    const override = overrides?.[normalizeAgentKey(flavor)] ?? {};
-    const permissionMode = retirePermissionMode(override.permissionMode);
-    return permissionMode === override.permissionMode
-        ? override
-        : { ...override, permissionMode };
+    return overrides?.[normalizeAgentKey(flavor)] ?? {};
 }
 
 export function resolveAgentDefaultConfig(
     overrides: AgentDefaultOverrides | null | undefined,
     flavor: string | null | undefined,
-    cliVersion?: string | null,
 ): AgentDefaultConfig {
-    const codeDefaults = getCodeAgentDefaults(flavor, cliVersion);
+    const codeDefaults = getCodeAgentDefaults(flavor);
     const userOverride = getAgentDefaultOverride(overrides, flavor);
     return {
         permissionMode: userOverride.permissionMode ?? codeDefaults.permissionMode,

@@ -1,0 +1,106 @@
+import * as React from 'react';
+import { ActivityIndicator, Platform, Pressable } from 'react-native';
+import { Text } from '@/components/StyledText';
+import { Item } from '@/components/Item';
+import { ItemGroup } from '@/components/ItemGroup';
+import { ItemList } from '@/components/ItemList';
+import { MOBILE_GLASS_HEADER_HEIGHT } from '@/components/navigation/headerMetrics';
+import { useAllMachines, useAllSessions } from '@/sync/storage';
+import { sessionArchive } from '@/sync/ops';
+import { Modal } from '@/modal';
+import { getSessionName } from '@/utils/sessionUtils';
+import { useNavigateToSession } from '@/hooks/useNavigateToSession';
+import { useUnistyles } from 'react-native-unistyles';
+import {
+    buildArchivedAgentRows,
+    canRestoreArchivedAgent,
+    describeRestoreBlockedReason,
+    type ArchivedAgentRow,
+} from '@/components/account/archivedAgents';
+
+/**
+ * DESK-14: archived agents.
+ *
+ * Reading one is always possible — the transcript is already here, so the row opens the agent's
+ * history whether or not its computer is on. Bringing one back is a write the host owns (RL-07), so
+ * it is offered only while that computer is reachable, and the row says why when it is not.
+ */
+function rowSubtitle(row: ArchivedAgentRow): string {
+    const blocked = describeRestoreBlockedReason(row);
+    if (blocked) return blocked;
+    return `On ${row.computerName}`;
+}
+
+export default function ArchivedAgentsScreen() {
+    const { theme } = useUnistyles();
+    const sessions = useAllSessions();
+    const machines = useAllMachines({ includeOffline: true });
+    const navigateToSession = useNavigateToSession();
+    const [restoringSessionId, setRestoringSessionId] = React.useState<string | null>(null);
+
+    const rows = React.useMemo(
+        () => buildArchivedAgentRows(sessions, machines),
+        [sessions, machines],
+    );
+
+    const restore = React.useCallback(async (row: ArchivedAgentRow) => {
+        setRestoringSessionId(row.session.id);
+        try {
+            const result = await sessionArchive(row.session.id, false);
+            if (!result.success) {
+                Modal.alert('Could not bring it back', result.message ?? 'That computer did not answer.');
+            }
+        } finally {
+            setRestoringSessionId(null);
+        }
+    }, []);
+
+    return (
+        <ItemList
+            containerStyle={{ paddingTop: Platform.OS === 'ios' ? MOBILE_GLASS_HEADER_HEIGHT : 0 }}
+        >
+            {rows.length === 0 ? (
+                <ItemGroup footer="An agent you archive from its conversation shows up here.">
+                    <Item
+                        title="Nothing archived"
+                        subtitle="Agents you put away will be listed here"
+                        showChevron={false}
+                    />
+                </ItemGroup>
+            ) : (
+                <ItemGroup footer="Opening an archived agent shows its history. Bringing it back needs its computer to be on.">
+                    {rows.map((row) => {
+                        const restorable = canRestoreArchivedAgent(row);
+                        const isRestoring = restoringSessionId === row.session.id;
+                        return (
+                            <Item
+                                key={row.session.id}
+                                title={getSessionName(row.session)}
+                                subtitle={rowSubtitle(row)}
+                                onPress={() => navigateToSession(row.session.id)}
+                                showChevron={!restorable}
+                                rightElement={restorable ? (
+                                    isRestoring ? (
+                                        <ActivityIndicator size="small" color={theme.colors.textSecondary} />
+                                    ) : (
+                                        <Pressable
+                                            accessibilityRole="button"
+                                            accessibilityLabel={`Bring back ${getSessionName(row.session)}`}
+                                            hitSlop={10}
+                                            onPress={() => void restore(row)}
+                                            disabled={restoringSessionId !== null}
+                                        >
+                                            <Text style={{ fontSize: 15, color: theme.colors.header.tint }}>
+                                                Bring back
+                                            </Text>
+                                        </Pressable>
+                                    )
+                                ) : undefined}
+                            />
+                        );
+                    })}
+                </ItemGroup>
+            )}
+        </ItemList>
+    );
+}

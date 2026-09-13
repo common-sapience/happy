@@ -10,7 +10,6 @@ import { Switch } from '@/components/Switch';
 import { Appearance, Platform, Pressable, Text, View } from 'react-native';
 import * as SystemUI from 'expo-system-ui';
 import { darkTheme, lightTheme } from '@/theme';
-import { type SessionListGrouping } from '@/sync/settings';
 import { t, getLanguageNativeName, SUPPORTED_LANGUAGES } from '@/text';
 import {
     normalizeUserMessageBubbleColor,
@@ -125,31 +124,20 @@ function AvatarStyleOption(props: {
     );
 }
 
-const getSessionListGroupingLabel = (mode: SessionListGrouping): string => {
-    switch (mode) {
-        case 'flat':
-            return t('sessionsFilter.flatList');
-        case 'project':
-            return t('sessionsFilter.groupByProject');
-    }
-};
-
 function BubbleColorPreview({ color }: { color: UserMessageBubbleColor }) {
     const { theme } = useUnistyles();
     const styles = stylesheet;
     const palette = resolveUserMessageBubbleColor(color, theme.dark);
     const glassPalette = resolveUserMessageBubbleGlassColor(color, theme.dark);
-    const glassEnabled = Platform.OS !== 'web';
 
     return (
         <MobileGlassSurface
-            enabled={glassEnabled}
-            tintColor={glassEnabled ? glassPalette.tint : undefined}
+            tintColor={glassPalette.tint}
             style={[
                 styles.bubblePreview,
                 {
-                    backgroundColor: glassEnabled ? glassPalette.background : palette.background,
-                    borderColor: glassEnabled ? glassPalette.border : palette.border,
+                    backgroundColor: glassPalette.background,
+                    borderColor: glassPalette.border,
                 },
             ]}
         >
@@ -226,7 +214,6 @@ export default function AppearanceSettingsScreen() {
     const [preferredLanguage] = useSettingMutable('preferredLanguage');
     const [avatarStyleSetting, setAvatarStyle] = useSettingMutable('avatarStyle');
     const [avatarMonochrome, setAvatarMonochrome] = useSettingMutable('avatarMonochrome');
-    const [sessionListGrouping, setSessionListGrouping] = useSettingMutable('sessionListGrouping');
     const [agentInputEnterToSend, setAgentInputEnterToSend] = useSettingMutable('agentInputEnterToSend');
     const [commandPaletteEnabled, setCommandPaletteEnabled] = useLocalSettingMutable('commandPaletteEnabled');
     const [fileDiffsSidebar, setFileDiffsSidebar] = useSettingMutable('fileDiffsSidebar');
@@ -469,16 +456,6 @@ export default function AppearanceSettingsScreen() {
             </ItemGroup>
 
             <ItemGroup title={t('settingsAppearance.display')} footer={t('settingsAppearance.displayDescription')}>
-                {/* Same setting the home filter menu drives; two values, so a
-                    tap flips between them like the theme row does. */}
-                <Item
-                    title={t('sessionsFilter.groupingTitle')}
-                    icon={<Ionicons name="list-outline" size={29} color="#5856D6" />}
-                    detail={getSessionListGroupingLabel(sessionListGrouping === 'project' ? 'project' : 'flat')}
-                    onPress={() => {
-                        setSessionListGrouping(sessionListGrouping === 'project' ? 'flat' : 'project');
-                    }}
-                />
                 <Item
                     title={t('settingsAppearance.compactToolCalls')}
                     subtitle={t('settingsAppearance.compactToolCallsDescription')}

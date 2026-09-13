@@ -12,6 +12,28 @@ export const ENGINE_AGENT: NewSessionAgentType = 'opencode';
  */
 export const ENGINE_DEFAULT_AGENT_PROFILE = 'default';
 
+/**
+ * The engine's own consolidation profile. The daemon starts those sessions by
+ * itself (`run-dream`) and marks them `metadata.internal`, so the product never
+ * offers it as a choice and never lists the sessions it produces.
+ */
+export const ENGINE_INTERNAL_AGENT_PROFILE = 'dream';
+
+/**
+ * The agent profiles the product offers, in the order it offers them (ENG-17).
+ * The engine publishes its profiles as ACP modes; this is the subset the product
+ * names. The internal profile is deliberately absent. Their words live in
+ * `agentProfiles.ts`, which is the only place allowed to name them.
+ */
+export const AGENT_PROFILE_KEYS = [ENGINE_DEFAULT_AGENT_PROFILE, 'plan', 'build'] as const;
+
+/** Falls back to the everything-on profile rather than sending a name the engine may not define. */
+export function resolveAgentProfile(key: string | null | undefined): string {
+    return AGENT_PROFILE_KEYS.some((profile) => profile === key)
+        ? key!
+        : ENGINE_DEFAULT_AGENT_PROFILE;
+}
+
 export const HARNESS_NAMES: Record<NewSessionAgentType, string> = {
     opencode: 'Agent',
 };

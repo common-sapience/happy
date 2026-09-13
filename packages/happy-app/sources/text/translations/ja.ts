@@ -29,7 +29,7 @@ export const ja: TranslationStructure = {
         // Tab navigation labels
         inbox: '受信トレイ',
         sessions: 'セッション',
-        settings: '設定',
+        settings: 'アカウント',
     },
 
     inbox: {
@@ -111,7 +111,7 @@ export const ja: TranslationStructure = {
     },
 
     settings: {
-        title: '設定',
+        title: 'アカウント',
         connectedAccounts: '接続済みアカウント',
         connectAccount: 'アカウントを接続',
         github: 'GitHub',
@@ -1078,5 +1078,23 @@ export const ja: TranslationStructure = {
         friendRequestGeneric: '新しい友達リクエスト',
         friendAccepted: ({ name }: { name: string }) => `${name}さんと友達になりました`,
         friendAcceptedGeneric: '友達リクエストが承認されました',
-    }
+    },
+    harness: {
+        stateRunning: '実行中',
+        stateIdle: '待機中',
+        stateWaiting: '返答待ち',
+        stateArchived: 'アーカイブ済み',
+        usedTool: 'ツールを使いました',
+        profileLabel: 'プロファイル',
+        profileDefault: '標準',
+        profileDefaultHint: 'すべて有効',
+        profilePlan: '計画',
+        profilePlanHint: '先に考え、何も変更しません',
+        profileBuild: '作業',
+        profileBuildHint: 'コードを書き、コマンドを実行します',
+        extraInstructions: '追加の指示',
+        extraInstructionsPlaceholder: 'このエージェントが常に覚えておくこと',
+        noAgentsTitle: 'エージェントはまだありません',
+    },
+
 } as const;

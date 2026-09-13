@@ -44,7 +44,6 @@ export function buildOfflineMachineTroubleshooting(
         || projectNameFromPath(session?.metadata?.path)
         || 'Happy';
     const happyHomeDir = choice?.happyMachine?.metadata?.happyHomeDir?.trim()
-        || choice?.rigMachine?.metadata?.happyHomeDir?.trim()
         || session?.metadata?.happyHomeDir?.trim()
         || '~/.happy';
     const aiPrompt = `In ${happyHomeDir}, diagnose why Happy cannot reach "${machineName}" for project "${projectName}".`;

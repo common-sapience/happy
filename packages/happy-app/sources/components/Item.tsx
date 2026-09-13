@@ -67,9 +67,9 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
     },
     title: {
         ...Typography.default('regular'),
-        fontSize: Platform.select({ ios: 17, default: 16 }),
-        lineHeight: Platform.select({ ios: 22, default: 24 }),
-        letterSpacing: Platform.select({ ios: -0.41, default: 0.15 }),
+        fontSize: Platform.select({ android: 16, default: theme.typography.subtitle.fontSize }),
+        lineHeight: Platform.select({ android: 24, default: theme.typography.subtitle.lineHeight }),
+        letterSpacing: Platform.select({ android: 0.15, default: -0.41 }),
     },
     titleNormal: {
         color: theme.colors.text,
@@ -83,10 +83,10 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
     subtitle: {
         ...Typography.default('regular'),
         color: theme.colors.textSecondary,
-        fontSize: Platform.select({ ios: 15, default: 14 }),
-        lineHeight: 20,
-        letterSpacing: Platform.select({ ios: -0.24, default: 0.1 }),
-        marginTop: Platform.select({ ios: 2, default: 0 }),
+        fontSize: Platform.select({ android: 14, default: theme.typography.body.fontSize }),
+        lineHeight: theme.typography.body.lineHeight,
+        letterSpacing: Platform.select({ android: 0.1, default: -0.24 }),
+        marginTop: Platform.select({ android: 0, default: 2 }),
     },
     rightSection: {
         flexDirection: 'row',
@@ -96,12 +96,14 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
     detail: {
         ...Typography.default('regular'),
         color: theme.colors.textSecondary,
-        fontSize: 17,
+        fontSize: theme.typography.subtitle.fontSize,
         letterSpacing: -0.41,
     },
     divider: {
-        height: Platform.select({ ios: 0.33, default: 0 }),
-        backgroundColor: Platform.select({ web: theme.colors.divider, default: theme.colors.glass.divider }),
+        // The iOS hairline applies on desktop too; Android keeps its own
+        // separator-less list.
+        height: Platform.select({ android: 0, default: 0.33 }),
+        backgroundColor: theme.colors.glass.divider,
     },
     pressablePressed: {
         backgroundColor: theme.colors.surfacePressedOverlay,

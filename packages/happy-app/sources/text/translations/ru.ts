@@ -37,7 +37,7 @@ export const ru: TranslationStructure = {
         // Tab navigation labels
         inbox: 'Входящие',
         sessions: 'Сессии',
-        settings: 'Настройки',
+        settings: 'Аккаунт',
     },
 
     inbox: {
@@ -88,7 +88,7 @@ export const ru: TranslationStructure = {
     },
 
     settings: {
-        title: 'Настройки',
+        title: 'Аккаунт',
         connectedAccounts: 'Подключенные аккаунты',
         connectAccount: 'Подключить аккаунт',
         github: 'GitHub',
@@ -1107,6 +1107,24 @@ export const ru: TranslationStructure = {
         friendRequestGeneric: 'Новый запрос в друзья',
         friendAccepted: ({ name }: { name: string }) => `Вы теперь друзья с ${name}`,
         friendAcceptedGeneric: 'Запрос в друзья принят',
+    },
+
+    harness: {
+        stateRunning: 'работает',
+        stateIdle: 'свободен',
+        stateWaiting: 'ждёт вашего ответа',
+        stateArchived: 'в архиве',
+        usedTool: 'использовал инструмент',
+        profileLabel: 'Профиль',
+        profileDefault: 'Обычный',
+        profileDefaultHint: 'включено всё',
+        profilePlan: 'План',
+        profilePlanHint: 'сначала продумывает, ничего не меняет',
+        profileBuild: 'Сборка',
+        profileBuildHint: 'пишет код и выполняет команды',
+        extraInstructions: 'Дополнительные указания',
+        extraInstructionsPlaceholder: 'То, что агент должен помнить всегда',
+        noAgentsTitle: 'Агентов пока нет',
     },
 
 } as const;

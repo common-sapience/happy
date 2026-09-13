@@ -26,7 +26,7 @@ export const es: TranslationStructure = {
         // Tab navigation labels
         inbox: 'Bandeja',
         sessions: 'Sesiones',
-        settings: 'Configuración',
+        settings: 'Cuenta',
     },
 
     inbox: {
@@ -109,7 +109,7 @@ export const es: TranslationStructure = {
     },
 
     settings: {
-        title: 'Configuración',
+        title: 'Cuenta',
         connectedAccounts: 'Cuentas conectadas',
         connectAccount: 'Conectar cuenta',
         github: 'GitHub',
@@ -1077,6 +1077,24 @@ export const es: TranslationStructure = {
         friendRequestGeneric: 'Nueva solicitud de amistad',
         friendAccepted: ({ name }: { name: string }) => `Ahora eres amigo de ${name}`,
         friendAcceptedGeneric: 'Solicitud de amistad aceptada',
+    },
+
+    harness: {
+        stateRunning: 'trabajando',
+        stateIdle: 'libre',
+        stateWaiting: 'espera tu respuesta',
+        stateArchived: 'archivado',
+        usedTool: 'usó una herramienta',
+        profileLabel: 'Perfil',
+        profileDefault: 'Predeterminado',
+        profileDefaultHint: 'todo activado',
+        profilePlan: 'Plan',
+        profilePlanHint: 'piensa antes de cambiar nada',
+        profileBuild: 'Construir',
+        profileBuildHint: 'escribe código y ejecuta comandos',
+        extraInstructions: 'Instrucciones adicionales',
+        extraInstructionsPlaceholder: 'Lo que este agente debe recordar siempre',
+        noAgentsTitle: 'Aún no hay agentes',
     },
 
 } as const;

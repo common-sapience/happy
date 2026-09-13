@@ -37,7 +37,7 @@ export const pl: TranslationStructure = {
         // Tab navigation labels
         inbox: 'Skrzynka',
         sessions: 'Sesje',
-        settings: 'Ustawienia',
+        settings: 'Konto',
     },
 
     inbox: {
@@ -120,7 +120,7 @@ export const pl: TranslationStructure = {
     },
 
     settings: {
-        title: 'Ustawienia',
+        title: 'Konto',
         connectedAccounts: 'Połączone konta',
         connectAccount: 'Połącz konto',
         github: 'GitHub',
@@ -1106,6 +1106,24 @@ export const pl: TranslationStructure = {
         friendRequestGeneric: 'Nowe zaproszenie do znajomych',
         friendAccepted: ({ name }: { name: string }) => `Jesteś teraz znajomym z ${name}`,
         friendAcceptedGeneric: 'Zaproszenie do znajomych zaakceptowane',
+    },
+
+    harness: {
+        stateRunning: 'pracuje',
+        stateIdle: 'bezczynny',
+        stateWaiting: 'czeka na twoją odpowiedź',
+        stateArchived: 'zarchiwizowany',
+        usedTool: 'użył narzędzia',
+        profileLabel: 'Profil',
+        profileDefault: 'Domyślny',
+        profileDefaultHint: 'wszystko włączone',
+        profilePlan: 'Plan',
+        profilePlanHint: 'najpierw przemyśli, nic nie zmienia',
+        profileBuild: 'Budowa',
+        profileBuildHint: 'pisze kod i uruchamia komendy',
+        extraInstructions: 'Dodatkowe wskazówki',
+        extraInstructionsPlaceholder: 'To, o czym agent ma zawsze pamiętać',
+        noAgentsTitle: 'Brak agentów',
     },
 
 } as const;

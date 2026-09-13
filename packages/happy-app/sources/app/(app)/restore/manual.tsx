@@ -65,8 +65,8 @@ const stylesheet = StyleSheet.create((theme) => ({
     inputGlass: {
         borderRadius: 16,
         overflow: 'hidden',
-        backgroundColor: Platform.select({ web: 'transparent', android: theme.colors.glass.backgroundStrong, default: 'transparent' }),
-        borderWidth: Platform.select({ web: 0, default: StyleSheet.hairlineWidth }),
+        backgroundColor: Platform.select({ android: theme.colors.glass.backgroundStrong, default: 'transparent' }),
+        borderWidth: StyleSheet.hairlineWidth,
         borderColor: theme.colors.glass.border,
         marginBottom: 24,
     },
@@ -123,7 +123,7 @@ export default function Restore() {
                         Enter your secret key to restore access to your account.
                     </Text>
 
-                    <MobileGlassSurface enabled={Platform.OS !== 'web'} intensity={68} style={styles.inputGlass}>
+                    <MobileGlassSurface intensity={68} style={styles.inputGlass}>
                     <TextInput
                         style={styles.textInput}
                         placeholder="XXXXX-XXXXX-XXXXX..."

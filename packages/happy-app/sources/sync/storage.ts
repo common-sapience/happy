@@ -6,7 +6,6 @@ import { useDeepEqual } from './storeSelectors';
 import { Session, Machine, GitStatus, SessionAgentModesPatch } from "./storageTypes";
 import type { GitStatusFiles } from "./gitStatusFiles";
 import type { ProjectFilesList } from "./projectFiles";
-import { buildPathProjectGroups, buildProjectGroups, isProjectSession, type ProjectGroupData } from "./projectGroups";
 import {
     selectAgentFormCommunication,
     selectPendingCommunications,
@@ -28,8 +27,8 @@ import { loadSessionLastMessageSentAt, saveSessionLastMessageSentAt } from "./pe
 import React from "react";
 import { sync } from "./sync";
 import { isMutableTool } from "@/components/tools/knownTools";
-import { getRigActivityIndicators, getRigGitSummary, getRigIdentity, isRigMetadata } from './rig';
 import { isSessionArchived } from './sessionArchived';
+import { buildAgentListEntries, isInternalSession } from './agentListView';
 import { indexSessionsById } from './sessionIdentity';
 import { t } from '@/text';
 import type { Project } from './projectTypes';
@@ -92,31 +91,18 @@ interface SessionMessages {
 
 // Display-only row data — all primitives, cheap to deep-equal
 export interface SessionRowData {
-    botId?: string | null;
-    botUsername?: string | null;
     id: string;
     name: string;
     subtitle: string;
     avatarId: string;
-    flavor: string | null;
-    clientId: string | null;
-    identityLine: string | null;
-    providerKind: string | null;
-    modelName: string | null;
-    activitySummary: string | null;
-    gitChangedFiles: number | null;
-    gitCountsExact: boolean;
-    gitDeletions: number | null;
-    gitInsertions: number | null;
     state: SessionState;
     // Only present on inactive sessions — active sessions never show "last seen"
     // and activeAt updates on every heartbeat, causing needless deep-equal diffs
     activeAt?: number;
     createdAt: number;
     // Last meaningful message, falling back to this device's sent-message
-    // record and then creation — see getSessionActivityAt. Grouping the list by
-    // project loses the global ordering the sessions were sorted into, so the
-    // flat list re-sorts on these two keys instead.
+    // record and then creation — see getSessionActivityAt. The list is one
+    // column ordered by this, split into date headings.
     lastActivityAt: number;
     hasDraft: boolean;
     active: boolean;
@@ -133,8 +119,6 @@ export interface SessionRowData {
     completedTodosCount: number;
     totalTodosCount: number;
     hasUnread: boolean;
-    // Native project identity supplied by Rig. Happy CLI project cards derive
-    // their identity from machineId + path instead.
     projectId: string | null;
     projectName: string | null;
     // Names the git worktree this session runs in; null in the primary tree.
@@ -158,9 +142,6 @@ function buildSessionRowData(
         isOnline,
     });
 
-    const rigIdentity = getRigIdentity(session.metadata);
-    const rigActivity = getRigActivityIndicators(session.metadata);
-    const rigGit = getRigGitSummary(session.metadata);
     const machineId = session.metadata?.machineId ?? null;
     const machine = machineId ? machines?.[machineId] : undefined;
     const projectId = getSessionProjectId(session);
@@ -169,23 +150,9 @@ function buildSessionRowData(
     const projectAvatar = isHappyAgentSession(session) ? linkedProject?.avatar : null;
     return {
         id: session.id,
-        botId: session.metadata?.bot?.id ?? null,
-        botUsername: session.metadata?.bot?.username ?? null,
         name: getSessionName(session),
         subtitle: getSessionSubtitle(session),
         avatarId: getSessionAvatarId(session),
-        flavor: session.metadata?.flavor ?? null,
-        clientId: session.metadata?.client?.id ?? null,
-        identityLine: rigIdentity ? `${rigIdentity.clientName} · ${rigIdentity.providerName}` : null,
-        providerKind: session.metadata?.provider?.kind ?? null,
-        modelName: rigIdentity?.modelName ?? null,
-        activitySummary: rigActivity.length > 0
-            ? rigActivity.map((item) => `${item.count}${item.queued ? `+${item.queued}` : ''} ${item.key}`).join(' · ')
-            : null,
-        gitChangedFiles: rigGit?.changedFiles ?? null,
-        gitCountsExact: rigGit?.countsExact ?? true,
-        gitDeletions: rigGit?.deletions ?? null,
-        gitInsertions: rigGit?.insertions ?? null,
         state,
         createdAt: session.createdAt,
         lastActivityAt: getSessionActivityAt(session),
@@ -211,17 +178,15 @@ function buildSessionRowData(
 }
 
 
-// Unified list item type for SessionsList component
+/**
+ * The agent list is one column (DESK-11): date headings and agent rows, nothing
+ * else. There is no project hierarchy, no machine grouping and no second list
+ * shape to choose between.
+ */
 export type SessionListViewItem =
-    | { type: 'bots'; sessions: SessionRowData[] }
     | { type: 'header'; title: string }
-    | { type: 'active-sessions'; sessions: SessionRowData[] }
-    | { type: 'project-group'; displayPath: string; machine: Machine }
-    | { type: 'projects-header'; source: 'rig' | 'happy' }
-    | { type: 'project'; source: 'rig' | 'happy'; project: ProjectGroupData }
     | { type: 'session'; session: SessionRowData };
 
-export type { ProjectGroupData, ProjectWorkspaceGroup } from './projectGroups';
 
 
 // Legacy type for backward compatibility - to be removed
@@ -283,7 +248,10 @@ interface StorageState {
     setCurrentViewingSession: (sessionId: string | null) => void;
 }
 
-// Helper function to build unified list view data from sessions and machines
+/**
+ * Builds the agent list (DESK-11). The rule — which agents, in what order, under
+ * which date headings — lives in `agentListView.ts`; this only supplies the rows.
+ */
 function buildSessionListViewData(
     sessions: Record<string, Session>,
     // Required on purpose: an omitted set silently rebuilds the list with
@@ -294,104 +262,11 @@ function buildSessionListViewData(
     machines: Record<string, Machine>,
     projects: Record<string, Project> = {},
 ): SessionListViewItem[] {
-    const rigProjectSessions: Session[] = [];
-    const botSessions: Session[] = [];
-    const rigPathSessions: Session[] = [];
-    const happySessions: Session[] = [];
-    const archivedSessions: Session[] = [];
-
-    Object.values(sessions).forEach(session => {
-        // Side chats are hidden children of another session — they render only
-        // inside the parent's sidebar panel, never in the top-level list.
-        if (session.metadata?.isSideChat) {
-            return;
-        }
-        // The archive is a flat chronological tail, not part of any project.
-        if (isSessionArchived(session)) {
-            archivedSessions.push(session);
-            return;
-        }
-        if (session.metadata?.bot) {
-            botSessions.push(session);
-            return;
-        }
-        if (isRigMetadata(session.metadata)) {
-            if (isProjectSession(session)) {
-                rigProjectSessions.push(session);
-            } else {
-                rigPathSessions.push(session);
-            }
-        } else {
-            happySessions.push(session);
-        }
+    return buildAgentListEntries({
+        sessions: Object.values(sessions),
+        toRow: (session) => buildSessionRowData(session, unreadSessionIds, machines, projects),
+        dayTitle: relativeDayTitle,
     });
-
-    // Chat lists always sort by last activity. Activity keys off the last
-    // meaningful message, not updatedAt: updatedAt
-    // bumps on every background agent update, which would make the list jump while
-    // several sessions stream at once.
-    const sortKey = getSessionActivityAt;
-    const sortProjectSessions = (items: Session[]) => items.sort((a, b) => {
-        const activeDelta = Number(isSessionActive(b)) - Number(isSessionActive(a));
-        return activeDelta !== 0 ? activeDelta : sortKey(b) - sortKey(a);
-    });
-    sortProjectSessions(rigProjectSessions);
-    sortProjectSessions(rigPathSessions);
-    sortProjectSessions(happySessions);
-    archivedSessions.sort((a, b) => sortKey(b) - sortKey(a));
-
-    const listData: SessionListViewItem[] = [];
-    const toRow = (session: Session) => buildSessionRowData(session, unreadSessionIds, machines, projects);
-
-    if (botSessions.length > 0) {
-        botSessions.sort((a, b) => {
-            const machineOrder = (a.metadata?.machineId ?? '').localeCompare(b.metadata?.machineId ?? '');
-            if (machineOrder !== 0) return machineOrder;
-            const aKey = a.metadata!.bot!.orderKey;
-            const bKey = b.metadata!.bot!.orderKey;
-            return aKey < bKey ? -1 : aKey > bKey ? 1 : a.id.localeCompare(b.id);
-        });
-        listData.push({ type: 'bots', sessions: botSessions.map(toRow) });
-    }
-
-    const rigProjects = [
-        ...buildProjectGroups(rigProjectSessions, toRow, isSessionActive),
-        ...buildPathProjectGroups(rigPathSessions, toRow, isSessionActive, 'rig'),
-    ];
-    if (rigProjects.length > 0) {
-        listData.push({ type: 'projects-header', source: 'rig' });
-        for (const project of rigProjects) {
-            listData.push({ type: 'project', source: 'rig', project });
-        }
-    }
-
-    const happyProjects = buildPathProjectGroups(
-        happySessions,
-        toRow,
-        isSessionActive,
-        'happy',
-    );
-    if (happyProjects.length > 0) {
-        listData.push({ type: 'projects-header', source: 'happy' });
-        for (const project of happyProjects) {
-            listData.push({ type: 'project', source: 'happy', project });
-        }
-    }
-
-    // The archive trails everything as plain rows, newest first, split by the
-    // day they were last worked on.
-    let currentDay: number | null = null;
-    for (const session of archivedSessions) {
-        const timestamp = sortKey(session);
-        const day = new Date(timestamp).setHours(0, 0, 0, 0);
-        if (day !== currentDay) {
-            currentDay = day;
-            listData.push({ type: 'header', title: relativeDayTitle(timestamp) });
-        }
-        listData.push({ type: 'session', session: toRow(session) });
-    }
-
-    return listData;
 }
 
 export const storage = create<StorageState>()((set, get) => {
@@ -505,10 +380,11 @@ export const storage = create<StorageState>()((set, get) => {
             const activeSessions: Session[] = [];
             const inactiveSessions: Session[] = [];
 
-            // Process all sessions from merged set
+            // Process all sessions from merged set. The host's own sessions are left out here too,
+            // so every consumer of this list — the dock, a machine's recent agents, the new-agent
+            // screen — is spared them without having to know they exist.
             Object.values(mergedSessions).forEach(session => {
-                // Side chats are hidden children — never in any session list.
-                if (session.metadata?.isSideChat) {
+                if (isInternalSession(session)) {
                     return;
                 }
                 if (activeSet.has(session.id)) {
@@ -608,6 +484,7 @@ export const storage = create<StorageState>()((set, get) => {
             sessions.forEach(session => {
                 const oldSession = state.sessions[session.id];
                 if (!oldSession) return;
+                if (isInternalSession(oldSession)) return;
                 const wasActive = oldSession.thinking === true
                     || (oldSession.agentState?.requests && Object.keys(oldSession.agentState.requests).length > 0);
                 const newSession = mergedSessions[session.id];
@@ -1217,38 +1094,6 @@ export function useSessionProjectAvatar(sessionId: string): Project['avatar'] {
     }));
 }
 
-/**
- * Resolve the live "side chat" sessions belonging to a given parent session.
- * A side chat is a forked child flagged `metadata.isSideChat` whose
- * `metadata.parentSessionId` points at the parent. A parent can have several;
- * closing one archives it (`lifecycleState === 'archived'`), which drops it
- * from this list so the sidebar panel only shows open side chats. Sorted
- * oldest-first so tab order stays stable as new ones are created. Empty when
- * none are open (the panel then offers to start one).
- */
-export function useSideChatSessions(parentSessionId: string | null): Session[] {
-    return storage(useShallow((state) => {
-        if (!parentSessionId) {
-            return emptyArray as Session[];
-        }
-        const result: Session[] = [];
-        for (const session of Object.values(state.sessions)) {
-            if (
-                session.metadata?.isSideChat
-                && session.metadata?.parentSessionId === parentSessionId
-                && session.metadata?.lifecycleState !== 'archived'
-            ) {
-                result.push(session);
-            }
-        }
-        if (result.length === 0) {
-            return emptyArray as Session[];
-        }
-        result.sort((a, b) => a.createdAt - b.createdAt);
-        return result;
-    }));
-}
-
 const emptyArray: unknown[] = [];
 
 export function useSessionMessages(sessionId: string): {
@@ -1322,9 +1167,8 @@ export function useSessionListViewData(): SessionListViewItem[] | null {
 export function useAllSessions(): Session[] {
     return storage(useShallow((state) => {
         if (!state.isDataReady) return [];
-        // Side chats are hidden children — exclude them from every list.
         return Object.values(state.sessions)
-            .filter((s) => !s.metadata?.isSideChat)
+            .filter((s) => !isInternalSession(s))
             .sort((a, b) => b.updatedAt - a.updatedAt);
     }));
 }
