@@ -14,6 +14,10 @@ import { apiSocket } from '@/sync/apiSocket';
  *
  * A reply in any other shape is a refusal, not a "no": treating an unreadable answer as "off" would
  * tell the user no confirmations are coming when the computer may well be asking for them.
+ *
+ * The daemon also publishes the settled value into its machine metadata, which is how the switch
+ * renders before any RPC round trip and how a change made from another control end arrives here.
+ * The RPC read stays as the fallback for a daemon that has not published the field yet.
  */
 export const GET_PERMISSION_CONFIRMATION_RPC = 'get-permission-confirmation';
 export const SET_PERMISSION_CONFIRMATION_RPC = 'set-permission-confirmation';
@@ -45,4 +49,15 @@ export async function machineSetPermissionConfirmation(machineId: string, enable
         { enabled },
     );
     return parsePermissionConfirmationReply(reply);
+}
+
+/**
+ * The switch as the computer last published it, or null when it has published nothing readable.
+ * Null is not "off": an unread value must never claim that no confirmations are coming.
+ */
+export function readPublishedPermissionConfirmation(
+    metadata: { permissionConfirmationEnabled?: unknown } | null | undefined,
+): boolean | null {
+    const enabled = metadata?.permissionConfirmationEnabled;
+    return typeof enabled === 'boolean' ? enabled : null;
 }

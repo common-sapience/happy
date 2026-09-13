@@ -22,6 +22,7 @@ import { Switch } from '@/components/Switch';
 import {
     machineGetPermissionConfirmation,
     machineSetPermissionConfirmation,
+    readPublishedPermissionConfirmation,
 } from '@/components/account/machinePermissionConfirmation';
 
 export default function MachineDetailScreen() {
@@ -54,42 +55,50 @@ export default function MachineDetailScreen() {
 
     /**
      * DESK-17, PERM-08: the permission confirmation switch belongs to this computer, not to the
-     * control end, so it is read from and written to the computer itself. Null means "not known
-     * yet or the computer did not answer" — it is never shown as "off", because claiming no
-     * confirmations are coming when the computer may be asking for them is the unsafe reading.
+     * control end. The displayed value is the one the computer published in its metadata; writing
+     * goes over the machine RPC and renders the value the computer settled on, which holds until
+     * the published copy catches up with it. Null means "not known yet or the computer did not
+     * answer" — it is never shown as "off", because claiming no confirmations are coming when the
+     * computer may be asking for them is the unsafe reading.
      */
-    const [confirmationEnabled, setConfirmationEnabled] = useState<boolean | null>(null);
+    const publishedConfirmation = readPublishedPermissionConfirmation(machine?.metadata);
+    const [settledConfirmation, setSettledConfirmation] = useState<boolean | null>(null);
     const [confirmationError, setConfirmationError] = useState<string | null>(null);
     const [isChangingConfirmation, setIsChangingConfirmation] = useState(false);
     const machineIsOnline = machine ? isMachineOnline(machine) : false;
+    const confirmationEnabled = settledConfirmation ?? publishedConfirmation;
 
     React.useEffect(() => {
-        if (!machineId || !machineIsOnline) {
-            setConfirmationEnabled(null);
-            return;
+        if (settledConfirmation !== null && publishedConfirmation === settledConfirmation) {
+            setSettledConfirmation(null);
         }
+    }, [publishedConfirmation, settledConfirmation]);
+
+    // Only asked over RPC when the computer has published nothing to read: an older daemon, or one
+    // whose first metadata write has not landed yet.
+    React.useEffect(() => {
+        if (!machineId || !machineIsOnline) return;
+        if (publishedConfirmation !== null || settledConfirmation !== null) return;
         let cancelled = false;
-        setConfirmationError(null);
         machineGetPermissionConfirmation(machineId)
             .then((enabled) => {
-                if (!cancelled) setConfirmationEnabled(enabled);
+                if (!cancelled) setSettledConfirmation(enabled);
             })
             .catch((error: unknown) => {
                 if (cancelled) return;
-                setConfirmationEnabled(null);
                 setConfirmationError(error instanceof Error ? error.message : 'This computer did not answer.');
             });
         return () => { cancelled = true; };
-    }, [machineId, machineIsOnline]);
+    }, [machineId, machineIsOnline, publishedConfirmation, settledConfirmation]);
 
     const handleConfirmationChange = async (next: boolean) => {
         if (!machineId) return;
         setIsChangingConfirmation(true);
         setConfirmationError(null);
         try {
-            setConfirmationEnabled(await machineSetPermissionConfirmation(machineId, next));
+            setSettledConfirmation(await machineSetPermissionConfirmation(machineId, next));
         } catch (error) {
-            setConfirmationEnabled(null);
+            setSettledConfirmation(null);
             setConfirmationError(error instanceof Error ? error.message : 'This computer did not answer.');
         } finally {
             setIsChangingConfirmation(false);
@@ -340,17 +349,15 @@ export default function MachineDetailScreen() {
                         ? `This computer did not report the setting: ${confirmationError}`
                         : machineOnline
                             ? 'While this is on, the agent stops and asks before deleting or overwriting your files, reaching outside the folders you allowed, sending anything out, paying, or installing software. While it is off, it works without asking. Reading sensitive files is refused either way.'
-                            : 'Turn this computer on to read or change the setting.'}
+                            : 'Turn this computer on to change the setting.'}
                 >
                     <Item
                         title="Ask before risky steps"
-                        subtitle={!machineOnline
-                            ? 'This computer is off'
-                            : confirmationEnabled === null
-                                ? 'Not reported by this computer'
-                                : confirmationEnabled
-                                    ? 'On for this computer'
-                                    : 'Off for this computer'}
+                        subtitle={confirmationEnabled === null
+                            ? 'Not reported by this computer'
+                            : confirmationEnabled
+                                ? machineOnline ? 'On for this computer' : 'On when this computer was last seen'
+                                : machineOnline ? 'Off for this computer' : 'Off when this computer was last seen'}
                         showChevron={false}
                         rightElement={isChangingConfirmation ? (
                             <ActivityIndicator size="small" color={theme.colors.textSecondary} />

@@ -455,6 +455,10 @@ export const MachineMetadataSchema = z.object({
     username: z.string().optional(),
     arch: z.string().optional(),
     displayName: z.string().optional(), // Custom display name for the machine
+    // PERM-08, DESK-17: the permission confirmation switch as the daemon last published it. The
+    // host owns the value; this copy is what a control end reads so the switch renders without
+    // having to reach the computer first.
+    permissionConfirmationEnabled: z.boolean().optional(),
     // Daemon status fields
     daemonLastKnownStatus: z.enum(['running', 'shutting-down']).optional(),
     daemonLastKnownPid: z.number().optional(),
