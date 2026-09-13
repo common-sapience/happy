@@ -3,6 +3,7 @@
  */
 
 import { spawn as crossSpawn } from 'cross-spawn';
+import { existsSync } from 'node:fs';
 import { projectPath } from '@/projectPath';
 import { join, resolve } from 'path';
 
@@ -23,10 +24,15 @@ export interface RipgrepOptions {
  * @returns Promise with exit code, stdout and stderr
  */
 export function run(args: string[], options?: RipgrepOptions): Promise<RipgrepResult> {
-    const RUNNER_PATH = resolve(join(projectPath(), 'scripts', 'ripgrep_launcher.cjs'));
+    const launcher = ripgrepLauncherPath();
+    // Desktop installs ship the daemon as one compiled executable, so the
+    // launcher script is not on disk (DESK-09); there the system ripgrep is run
+    // directly and search degrades to unavailable when none is installed.
+    const command = launcher ? 'node' : 'rg';
+    const commandArgs = launcher ? [launcher, JSON.stringify(args)] : args;
     return new Promise((resolve, reject) => {
         // Use cross-spawn so `node` resolves to `node.exe` on Windows (issue #1082).
-        const child = crossSpawn('node', [RUNNER_PATH, JSON.stringify(args)], {
+        const child = crossSpawn(command, commandArgs, {
             stdio: ['pipe', 'pipe', 'pipe'],
             cwd: options?.cwd,
             windowsHide: true,
@@ -55,4 +61,9 @@ export function run(args: string[], options?: RipgrepOptions): Promise<RipgrepRe
             reject(err);
         });
     });
+}
+
+export function ripgrepLauncherPath(): string | null {
+    const launcher = resolve(join(projectPath(), 'scripts', 'ripgrep_launcher.cjs'));
+    return existsSync(launcher) ? launcher : null;
 }

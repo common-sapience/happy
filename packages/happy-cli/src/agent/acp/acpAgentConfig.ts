@@ -3,9 +3,15 @@
  * invocation live here so every caller — CLI dispatch, daemon spawn, machine
  * capability report — reads the same constants.
  */
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+
+import { isPackagedExecutable, packagedExecutableDir } from '@/utils/packagedExecutable';
+
 export const ENGINE_AGENT_NAME = 'opencode' as const;
 export const ENGINE_ACP_COMMAND = 'opencode';
 export const ENGINE_ACP_ARGS: readonly string[] = ['acp'];
+export const ENGINE_PATH_ENV_VAR = 'HAPPY_ENGINE_PATH';
 
 export type EngineAgentName = typeof ENGINE_AGENT_NAME;
 
@@ -25,6 +31,44 @@ export function isEngineAgentName(agent: string | undefined): agent is EngineAge
 }
 
 /**
+ * Resolves the engine executable for this installation.
+ *
+ * Desktop installs ship the engine next to the daemon (DESK-09), so the binary
+ * beside this executable wins over whatever a shell happens to have on PATH.
+ * The environment variable stays ahead of both so a developer — or the desktop
+ * shell during a test run — can point the daemon at another engine build.
+ */
+export function resolveEngineCommand(
+  deps: {
+    env?: NodeJS.ProcessEnv;
+    packaged?: boolean;
+    executableDir?: string;
+    exists?: (path: string) => boolean;
+    platform?: NodeJS.Platform;
+  } = {},
+): string {
+  const env = deps.env ?? process.env;
+  const exists = deps.exists ?? existsSync;
+
+  const fromEnv = env[ENGINE_PATH_ENV_VAR]?.trim();
+  if (fromEnv) {
+    return fromEnv;
+  }
+
+  const packaged = deps.packaged ?? isPackagedExecutable();
+  if (packaged) {
+    const platform = deps.platform ?? process.platform;
+    const executableName = platform === 'win32' ? `${ENGINE_ACP_COMMAND}.exe` : ENGINE_ACP_COMMAND;
+    const sibling = join(deps.executableDir ?? packagedExecutableDir(), executableName);
+    if (exists(sibling)) {
+      return sibling;
+    }
+  }
+
+  return ENGINE_ACP_COMMAND;
+}
+
+/**
  * Resolves the ACP invocation for `happy acp <args>`.
  *
  * Only the engine is accepted by name. `--` stays as the explicit escape hatch
@@ -35,7 +79,7 @@ export function resolveAcpAgentConfig(cliArgs: string[]): ResolvedAcpAgentConfig
   if (cliArgs.length === 0) {
     return {
       agentName: ENGINE_AGENT_NAME,
-      command: ENGINE_ACP_COMMAND,
+      command: resolveEngineCommand(),
       args: [...ENGINE_ACP_ARGS],
     };
   }
@@ -61,7 +105,7 @@ export function resolveAcpAgentConfig(cliArgs: string[]): ResolvedAcpAgentConfig
 
   return {
     agentName: ENGINE_AGENT_NAME,
-    command: ENGINE_ACP_COMMAND,
+    command: resolveEngineCommand(),
     // Backward-compatible with old OpenCode docs/flags.
     args: [...ENGINE_ACP_ARGS, ...cliArgs.slice(1).filter((arg) => arg !== '--acp')],
   };
