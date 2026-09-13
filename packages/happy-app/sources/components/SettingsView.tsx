@@ -16,11 +16,13 @@ import { Avatar } from '@/components/Avatar';
 import { UsageSection } from '@/components/usage/UsageSection';
 import { buildArchivedAgentRows } from '@/components/account/archivedAgents';
 import { buildConnectedComputerRows } from '@/components/account/connectedComputers';
+import { PlatformGatewaySection } from '@/components/account/PlatformGatewaySection';
 import { t } from '@/text';
 
 /**
- * The account page (D-16, DESK-12): who you are signed in as, and four boards behind it — usage
- * (DESK-13), archived agents (DESK-14), connectors (DESK-15) and connected computers (DESK-16).
+ * The account page (D-16, DESK-12): who you are signed in as, the model gateway this computer
+ * reaches, and four boards behind it — usage (DESK-13), archived agents (DESK-14), connectors
+ * (DESK-15) and connected computers (DESK-16).
  *
  * Nothing else belongs here. Everything the product does not ship was removed rather than tucked
  * into an advanced section, and appearance and language stay only as plain preferences.
@@ -86,8 +88,8 @@ export const SettingsView = React.memo(function SettingsView({
                 </View>
             </View>
 
-            {/* Account information (DESK-12). The platform API key is not held here: it is entered on
-                each computer and kept in that computer's credential store (DESK-08, P-02). */}
+            {/* Account information (DESK-12). The platform API key is not held here: it is entered
+                below and kept in this computer's credential store (DESK-08, P-02). */}
             <ItemGroup title={t('accountPage.account')}>
                 <SettingsRow
                     title={t('accountPage.signedIn')}
@@ -101,16 +103,13 @@ export const SettingsView = React.memo(function SettingsView({
                     showChevron={false}
                 />
                 <SettingsRow
-                    title={t('accountPage.platformKey')}
-                    subtitle={t('accountPage.platformKeyHint')}
-                    showChevron={false}
-                />
-                <SettingsRow
                     title={t('accountPage.details')}
                     subtitle={t('accountPage.detailsHint')}
                     onPress={() => router.push('/settings/account')}
                 />
             </ItemGroup>
+
+            <PlatformGatewaySection />
 
             <UsageSection />
 

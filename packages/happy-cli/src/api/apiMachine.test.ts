@@ -5,11 +5,13 @@ import type { Machine } from './types';
 const {
     mockIo,
     mockShouldReconnect,
-    mockReadPermissionConfirmationEnabled
+    mockReadPermissionConfirmationEnabled,
+    mockReadEngineCredentials
 } = vi.hoisted(() => ({
     mockIo: vi.fn(),
     mockShouldReconnect: vi.fn(() => true),
-    mockReadPermissionConfirmationEnabled: vi.fn(async () => false)
+    mockReadPermissionConfirmationEnabled: vi.fn(async () => false),
+    mockReadEngineCredentials: vi.fn(async () => ({}) as Record<string, string>)
 }));
 
 vi.mock('socket.io-client', () => ({
@@ -63,6 +65,11 @@ vi.mock('@/utils/lidState', () => ({
 
 vi.mock('@/modules/permission/permissionSwitch', () => ({
     readPermissionConfirmationEnabled: mockReadPermissionConfirmationEnabled
+}));
+
+vi.mock('@/modules/credentials/engineCredentials', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@/modules/credentials/engineCredentials')>()),
+    readEngineCredentials: mockReadEngineCredentials
 }));
 
 const registeredHandlers = new Map<string, (params: unknown) => unknown>();
@@ -616,6 +623,7 @@ describe('PERM-08 / DESK-17 the machine metadata carries the switch', () => {
     it('PERM-08: writes no metadata of its own while the published copy already matches the host', async () => {
         const machine = makeMachine();
         machine.metadata!.permissionConfirmationEnabled = false;
+        machine.metadata!.platformCredentials = { apiKey: false, baseUrl: false, modelId: false };
         const { client, published } = connectedClient(machine);
 
         emitSocketEvent('connect');
@@ -631,6 +639,50 @@ describe('PERM-08 / DESK-17 the machine metadata carries the switch', () => {
         expect(published[0]).toEqual(expect.objectContaining({
             cliAvailability: { opencode: false, detectedAt: 0 },
             permissionConfirmationEnabled: false
+        }));
+
+        client.shutdown();
+    });
+
+    it('DESK-12: publishes which model gateway fields this computer holds, as booleans', async () => {
+        mockReadEngineCredentials.mockResolvedValue({
+            platformApiKey: 'sk-live-1',
+            platformBaseUrl: 'https://gateway.example/v1'
+        });
+        const machine = makeMachine();
+        const { client, published } = connectedClient(machine);
+
+        emitSocketEvent('connect');
+        await vi.waitFor(() => {
+            expect(machine.metadata!.platformCredentials).toEqual({
+                apiKey: true,
+                baseUrl: true,
+                modelId: false
+            });
+        });
+        expect(JSON.stringify(published)).not.toContain('sk-live-1');
+        expect(JSON.stringify(published)).not.toContain('gateway.example');
+
+        client.shutdown();
+    });
+
+    it('HOST-09: writes no metadata of its own while the published copy already matches the store', async () => {
+        mockReadEngineCredentials.mockResolvedValue({});
+        const machine = makeMachine();
+        machine.metadata!.platformCredentials = { apiKey: false, baseUrl: false, modelId: false };
+        machine.metadata!.permissionConfirmationEnabled = false;
+        const { client, published } = connectedClient(machine);
+
+        emitSocketEvent('connect');
+        await vi.waitFor(() => {
+            expect(mockReadEngineCredentials).toHaveBeenCalled();
+        });
+        await mockReadEngineCredentials.mock.results[0]!.value;
+        await Promise.resolve();
+
+        expect(published).toHaveLength(1);
+        expect(published[0]).toEqual(expect.objectContaining({
+            platformCredentials: { apiKey: false, baseUrl: false, modelId: false }
         }));
 
         client.shutdown();

@@ -1,4 +1,4 @@
-//! What the app hands the daemon (DESK-08, DESK-21).
+//! What the app hands the daemon (DESK-08, DESK-12, DESK-21).
 //!
 //! The app and the daemon keep their own state in their own places: the app has
 //! the relay address it was given and the account it logged into, the daemon reads
@@ -10,6 +10,12 @@
 //! files: the relay address goes through the daemon's locked settings writer, the
 //! account through the same login request a second computer uses. This shell never
 //! edits either file, and never handles the account key.
+//!
+//! The model gateway goes the same way, with one difference that matters: its
+//! request travels on the daemon's stdin, never in argv. The platform API key is
+//! one of its fields, and an argument is readable in any process list on the
+//! machine. The daemon writes its own credential store and replies with which
+//! fields are set, never with what they are set to.
 //!
 //! The login request carries a one-time token the app minted. The daemon echoes it
 //! back, this shell refuses a reply that does not carry it, and the app checks it
@@ -36,6 +42,16 @@ const REPLY_TIMEOUT: Duration = Duration::from_secs(30);
 #[derive(Serialize)]
 pub struct RelayHandoff {
     pub status: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlatformCredentialsHandoff {
+    pub status: String,
+    /// Which gateway fields the computer holds. Booleans: never the values.
+    pub set: Value,
+    /// The machine this daemon registers as, so the app can find it in the machine list.
+    pub machine_id: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -94,6 +110,52 @@ pub async fn request_daemon_login(app: AppHandle, token: String) -> Result<Login
         status,
         url,
         token: Some(token),
+    })
+}
+
+/// Sets or reads this computer's model gateway (DESK-12).
+///
+/// `request` is the JSON object the account page built — any subset of `apiKey`,
+/// `baseUrl` and `modelId`, or `{}` to read the state without changing it. It is
+/// written to the daemon's stdin and stdin is then closed, so the daemon sees the
+/// whole request and one end of it. No part of it is ever an argument.
+///
+/// The daemon does not have to be restarted afterwards: a session reads the
+/// credential store when it spawns its engine, so the next agent started on this
+/// computer gets the new gateway.
+#[tauri::command]
+pub async fn set_platform_credentials(
+    app: AppHandle,
+    request: String,
+) -> Result<PlatformCredentialsHandoff, String> {
+    let (mut events, mut child) =
+        spawn_handoff(&app, &["daemon", "set-platform-credentials"], None)?;
+    let written = child
+        .write(request.as_bytes())
+        .and_then(|_| child.write(b"\n"))
+        .map_err(|error| format!("could not hand the model gateway to the daemon: {error}"));
+    // Dropping the child closes its stdin, which is the end of the request the
+    // daemon is waiting for; the process itself runs on and answers.
+    drop(child);
+    written?;
+
+    let reply = first_reply(&mut events).await?;
+    let status = field(&reply, "status").ok_or("the daemon did not say what it did")?;
+    if status == "refused" {
+        let reason = field(&reply, "reason").unwrap_or_else(|| "unknown".to_string());
+        return Err(format!("the daemon refused the model gateway: {reason}"));
+    }
+
+    let set = reply
+        .get("set")
+        .filter(|value| value.is_object())
+        .cloned()
+        .ok_or("the daemon did not say which model gateway fields it holds")?;
+
+    Ok(PlatformCredentialsHandoff {
+        status,
+        set,
+        machine_id: field(&reply, "machineId"),
     })
 }
 

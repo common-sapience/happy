@@ -1,8 +1,9 @@
 /**
- * The two subcommands the desktop shell runs (DESK-08, DESK-21).
+ * The subcommands the desktop shell runs (DESK-08, DESK-12, DESK-21).
  *
- * They are the effectful half of `desktopHandoff.ts`: the decisions there are
- * pure and tested, the file and network work is here.
+ * They are the effectful half of `desktopHandoff.ts` and
+ * `@/modules/credentials/platformCredentials`: the decisions there are pure and
+ * tested, the file and network work is here.
  */
 
 import axios from 'axios';
@@ -11,7 +12,16 @@ import tweetnacl from 'tweetnacl';
 
 import { decodeBase64, encodeBase64 } from '@/api/encryption';
 import { configuration } from '@/configuration';
-import { readCredentials, updateSettings, writeCredentials } from '@/persistence';
+import {
+  describePlatformCredentials,
+  updateEngineCredentials,
+} from '@/modules/credentials/engineCredentials';
+import {
+  decidePlatformCredentials,
+  mergePlatformCredentials,
+  readPlatformCredentialRequest,
+} from '@/modules/credentials/platformCredentials';
+import { readCredentials, readSettings, updateSettings, writeCredentials } from '@/persistence';
 import { logger } from '@/ui/logger';
 import { credentialsFromSealedResponse } from '@/utils/authorizedLogin';
 import { delay } from '@/utils/time';
@@ -146,4 +156,73 @@ export async function runLoginRequest(): Promise<void> {
   await updateSettings((current) => ({ ...current, machineId: randomUUID() }));
 
   reply({ handoff: 'login', status: 'authenticated', token });
+}
+
+
+/**
+ * The model gateway this computer holds (HOST-09, DESK-12).
+ *
+ * The request arrives as one JSON object on stdin, never in argv: the platform
+ * API key is one of its fields and an argument is readable in any process list.
+ * A request naming no field is a legitimate read — it reports the configured
+ * state and writes nothing, which is how the account page learns what this
+ * computer holds before offering to change it.
+ *
+ * The reply names which fields are set and never what they are set to. The
+ * running daemon does not have to be restarted: a session reads this store when
+ * it spawns its engine, so the next agent started here gets the new gateway.
+ */
+export async function runSetPlatformCredentials(stdin: NodeJS.ReadableStream): Promise<void> {
+  const request = readPlatformCredentialRequest(await collectStdin(stdin));
+  if (request.action === 'refuse') {
+    reply({ handoff: 'platform-credentials', status: 'refused', reason: request.reason });
+    console.error('That request could not be read; nothing was written.');
+    process.exitCode = 1;
+    return;
+  }
+
+  const decision = decidePlatformCredentials(request.body);
+  if (decision.action === 'refuse') {
+    reply({
+      handoff: 'platform-credentials',
+      status: 'refused',
+      reason: decision.reason,
+      field: decision.field ?? undefined,
+    });
+    console.error('That model gateway value was refused; nothing was written.');
+    process.exitCode = 1;
+    return;
+  }
+
+  const changed = Object.keys(decision.values);
+  const stored = await updateEngineCredentials((current) => mergePlatformCredentials(current, decision.values));
+  const settings = await readSettings();
+
+  reply({
+    handoff: 'platform-credentials',
+    status: changed.length === 0 ? 'unchanged' : 'updated',
+    changed,
+    set: describePlatformCredentials(stored),
+    machineId: settings?.machineId,
+  });
+}
+
+/**
+ * A desktop shell writes one short line; anything larger is not this shell, so it
+ * is refused rather than buffered without bound.
+ */
+const MAX_REQUEST_BYTES = 64 * 1024;
+
+async function collectStdin(stdin: NodeJS.ReadableStream): Promise<string | null> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of stdin) {
+    const buffer = Buffer.from(chunk as Buffer | string);
+    size += buffer.byteLength;
+    if (size > MAX_REQUEST_BYTES) {
+      return null;
+    }
+    chunks.push(buffer);
+  }
+  return Buffer.concat(chunks).toString('utf8');
 }

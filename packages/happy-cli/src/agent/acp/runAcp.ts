@@ -548,7 +548,8 @@ export async function runAcp(opts: {
   const engineCredentials = await readEngineCredentials();
   const injected = describeInjectedCredentials(engineCredentials);
   logger.debug(
-    `[${opts.agentName}] Engine credentials: platformApiKey=${injected.platformApiKey} connectors=[${injected.connectors.join(', ')}]`,
+    `[${opts.agentName}] Engine credentials: apiKey=${injected.apiKey} baseUrl=${injected.baseUrl}`
+    + ` modelId=${injected.modelId} connectors=[${injected.connectors.join(', ')}]`,
   );
 
   const mcpServers = {

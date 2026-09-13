@@ -18,12 +18,10 @@ import { t } from '@/text';
 /**
  * DESK-12: account information.
  *
- * Who you are signed in as, the key that is the account, and signing out. The platform API key is
- * not here and cannot be: it is entered on each computer and kept in that computer's credential
- * store (DESK-08, P-02), so this app has nothing of it to show.
+ * Who you are signed in as, the key that is the account, and signing out.
  *
- * The four management boards of the account page are on the account page itself (D-16); this screen
- * is only the account's own details.
+ * The model gateway and the four management boards are on the account page itself (D-16); this
+ * screen is only the account's own details.
  */
 export default React.memo(() => {
     const { theme } = useUnistyles();
@@ -76,12 +74,6 @@ export default React.memo(() => {
                     title={t('accountPage.accountId')}
                     detail={sync.serverID || t('settingsAccount.notAvailable')}
                     copy={!!sync.serverID}
-                    showChevron={false}
-                />
-                <SettingsRow
-                    title={t('accountPage.platformKey')}
-                    subtitle={t('accountPage.platformKeyHint')}
-                    subtitleLines={0}
                     showChevron={false}
                 />
             </ItemGroup>
