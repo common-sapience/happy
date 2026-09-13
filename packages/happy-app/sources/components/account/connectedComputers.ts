@@ -12,8 +12,8 @@ export interface ConnectedComputerRow {
     machineId: string;
     name: string;
     online: boolean;
-    /** Plain language: the computer's platform when it published one, plus on or off. */
-    description: string;
+    /** The platform the computer published, when it published one. */
+    platform: string | null;
     lastSeenAt: number;
 }
 
@@ -35,7 +35,7 @@ export function buildConnectedComputerRows(machines: readonly Machine[]): Connec
                 machineId: machine.id,
                 name: computerNameOf(machine),
                 online,
-                description: [platform, online ? 'On' : 'Off'].filter(Boolean).join(' · '),
+                platform: platform || null,
                 lastSeenAt: machine.activeAt ?? 0,
             };
         });

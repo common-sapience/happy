@@ -23,18 +23,11 @@ export const SettingsSchema = z.object({
     diffStyle: z.enum(['unified', 'split']).describe('Diff view style (split is web-only)'),
     analyticsOptOut: z.boolean().describe('Whether to opt out of anonymous analytics'),
     experiments: z.boolean().describe('Enable current experiments: the Rig session file browser and the Usage settings page'),
-    alwaysShowContextSize: z.boolean().describe('Always show context size in agent input'),
-    agentInputEnterToSend: z.boolean().describe('Whether pressing Enter submits/sends in the agent input (web)'),
-    // Kept as a free string for cross-version sync; normalized on read by
-    // normalizeAvatarStyle so unknown values fall back to brutalist.
-    avatarStyle: z.string().describe('Generated avatar style: brutalist, pixelated, or gradient'),
-    avatarMonochrome: z.boolean().describe('Render generated avatars in black and white'),
-    // Keep the legacy key for synced settings compatibility. It controls the
-    // harness badges in the session list.
-    showFlavorIcons: z.boolean().describe('Whether to show harness icons in the session list'),
-    showHarnessIconInSessionHeader: z.boolean().describe('Whether to show the harness icon in the session header'),
     userMessageBubbleColor: z.string().describe('User message bubble color preset'),
-    usageLimitShowRemaining: z.boolean().describe('Show plan rate limits as quota remaining instead of quota used'),
+    // DESK-17: the product shows no usage badge under the input, so this has no
+    // settings row and stays at its default. The field remains because settings
+    // sync field by field with app versions that still write it.
+    alwaysShowContextSize: z.boolean().describe('Always show context and plan usage under the agent input'),
 
     // Drives the archive-visibility toggle: it hides archived sessions, not
     // merely disconnected ones. The key keeps its original name because these
@@ -45,7 +38,9 @@ export const SettingsSchema = z.object({
     // Resume is capability-driven; this legacy rollout key still protects the
     // newer fork/duplicate RPC on older daemons.
     expResumeSession: z.boolean().describe('Enable session fork and duplicate actions'),
-    fileDiffsSidebar: z.boolean().describe('Show the file diffs sidebar next to the chat on desktop'),
+    // DESK-17: the sidebar and the compact activity row are product defaults, not
+    // choices — neither has a settings row, and both keep their default value.
+    fileDiffsSidebar: z.boolean().describe('Show the file changes sidebar next to the chat on desktop'),
     groupToolCalls: z.boolean().describe('Collapse consecutive tool calls into grouped containers in chat'),
     compactToolCalls: z.boolean().describe('Render non-interactive tool calls as compact one-line rows'),
     reviewPromptAnswered: z.boolean().describe('Whether the review prompt has been answered'),
@@ -109,19 +104,13 @@ export const settingsDefaults: Settings = {
     diffStyle: 'unified',
     analyticsOptOut: false,
     experiments: false,
-    alwaysShowContextSize: false,
-    agentInputEnterToSend: true,
-    avatarStyle: 'brutalist',
-    avatarMonochrome: false,
-    showFlavorIcons: false,
-    showHarnessIconInSessionHeader: true,
     userMessageBubbleColor: DEFAULT_USER_MESSAGE_BUBBLE_COLOR,
-    usageLimitShowRemaining: false,
+    alwaysShowContextSize: false,
 
     hideInactiveSessions: true,
     sortSessionsByActivity: true,
     expResumeSession: true,
-    fileDiffsSidebar: false,
+    fileDiffsSidebar: true,
     groupToolCalls: false,
     // DESK-01: an activity record is one plain line by default; the raw tool
     // call and its arguments are a tap away on the detail screen.

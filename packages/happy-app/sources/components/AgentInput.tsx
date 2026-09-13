@@ -816,7 +816,6 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
     }, [isSandboxEnabled]);
 
     // Usage row under the card: week quota + context gauge
-    const usageLimitShowRemaining = useSetting('usageLimitShowRemaining');
     const contextStatus = props.usageData?.contextSize
         ? getContextStatus(props.usageData.contextSize, props.alwaysShowContextSize ?? false, theme, props.usageData.contextWindow)
         : null;
@@ -829,13 +828,13 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
         return { session, week };
     }, [props.sessionStatusUsageLimits]);
     const weekPercent = usageRows.week?.utilization != null && (props.alwaysShowContextSize || contextStatus != null)
-        ? getUsageLimitDisplayPercentage(usageRows.week.utilization, usageLimitShowRemaining)
+        ? getUsageLimitDisplayPercentage(usageRows.week.utilization)
         : null;
     const usageMenuOptions = React.useMemo<NativeSettingsMenuOption[]>(() => {
         const options: NativeSettingsMenuOption[] = [];
         const push = (key: string, label: string, row: { utilization: number | null; resetsAt: number | null } | null) => {
             if (!row || row.utilization == null) return;
-            const percent = getUsageLimitDisplayPercentage(row.utilization, usageLimitShowRemaining);
+            const percent = getUsageLimitDisplayPercentage(row.utilization);
             // The newline renders as a second line inside the native menu row.
             const reset = row.resetsAt != null
                 ? `\n${t('agentInput.usagePopup.resets', { time: formatUsageLimitResetTime(row.resetsAt) })}`
@@ -845,10 +844,7 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
         push('session', t('agentInput.usagePopup.session'), usageRows.session);
         push('week', t('agentInput.usagePopup.week'), usageRows.week);
         return options;
-    }, [usageRows, usageLimitShowRemaining]);
-
-    const agentInputEnterToSend = useSetting('agentInputEnterToSend');
-
+    }, [usageRows]);
 
     // Abort button state
     const [isAborting, setIsAborting] = React.useState(false);
@@ -1277,7 +1273,7 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
             // Use pointer:coarse media query instead of ontouchstart/maxTouchPoints
             // to avoid false positives on Windows touch-screen laptops with keyboards.
             const isTouchDevice = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
-            if (agentInputEnterToSend && event.key === 'Enter' && !event.shiftKey && !isTouchDevice) {
+            if (event.key === 'Enter' && !event.shiftKey && !isTouchDevice) {
                 // Read live text from the textarea — `hasText` is debounced via
                 // startTransition and would lag behind a quick type-then-Enter.
                 const liveText = inputRef.current?.getText() ?? '';
@@ -1301,7 +1297,7 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
 
         }
         return false; // Key was not handled
-    }, [suggestions, moveUp, moveDown, selected, handleSuggestionSelect, props.showAbortButton, props.onAbort, isAborting, handleAbortPress, agentInputEnterToSend, props.onSend, props.onPermissionModeChange, availableModes, permissionModeKey, isSendBlocked, handleBlockedSendAttempt, props.isSendDisabled]);
+    }, [suggestions, moveUp, moveDown, selected, handleSuggestionSelect, props.showAbortButton, props.onAbort, isAborting, handleAbortPress, props.onSend, props.onPermissionModeChange, availableModes, permissionModeKey, isSendBlocked, handleBlockedSendAttempt, props.isSendDisabled]);
 
     const desktopActionControls = (
         <View style={styles.actionButtonsContainer}>

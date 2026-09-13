@@ -26,7 +26,6 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
     const router = useRouter();
     const { logout, isAuthenticated } = useAuth();
     const sessions = storage(useShallow((state) => state.sessions));
-    const commandPaletteEnabled = storage(useShallow((state) => state.localSettings.commandPaletteEnabled));
     const sessionListViewData = useVisibleSessionListViewData();
     const machines = useAllMachines();
     const navigateToSession = useNavigateToSession();
@@ -148,7 +147,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
     }, [browserSafeShortcuts, router, logout, sessions, navigateToSession, preferredModifier]);
 
     const showCommandPalette = useCallback(() => {
-        if (Platform.OS !== 'web' || !isAuthenticated || !commandPaletteEnabled) return;
+        if (Platform.OS !== 'web' || !isAuthenticated) return;
         
         Modal.show({
             component: CommandPalette,
@@ -156,7 +155,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
                 commands,
             }
         } as any);
-    }, [commands, commandPaletteEnabled, isAuthenticated]);
+    }, [commands, isAuthenticated]);
 
     const openNewSession = useCallback(() => {
         router.navigate('/new');
@@ -177,7 +176,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
 
     const visibleModifier = useGlobalKeyboard(
         {
-            commandPalette: isAuthenticated && commandPaletteEnabled ? showCommandPalette : undefined,
+            commandPalette: isAuthenticated ? showCommandPalette : undefined,
             newSession: isAuthenticated ? openNewSession : undefined,
             settings: isAuthenticated ? openSettings : undefined,
             recentSession: isAuthenticated ? openRecentSession : undefined,
@@ -188,7 +187,6 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
     return (
         <ShortcutHintsProvider
             modifier={isAuthenticated ? visibleModifier : null}
-            commandPaletteEnabled={isAuthenticated && commandPaletteEnabled}
             recentSessionIds={isAuthenticated ? visibleSessionShortcutIds : EMPTY_SESSION_IDS}
             browserSafeShortcuts={browserSafeShortcuts}
         >

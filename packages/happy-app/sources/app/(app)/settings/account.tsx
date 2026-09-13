@@ -13,6 +13,7 @@ import { useProfile } from '@/sync/storage';
 import { sync } from '@/sync/sync';
 import { useUnistyles } from 'react-native-unistyles';
 import { getDisplayName } from '@/sync/profile';
+import { t } from '@/text';
 
 /**
  * DESK-12: account information.
@@ -41,15 +42,15 @@ export default React.memo(() => {
             setCopiedRecently(true);
             setTimeout(() => setCopiedRecently(false), 2000);
         } catch {
-            Modal.alert('Could not copy', 'Copying the recovery key to the clipboard failed.');
+            Modal.alert(t('accountPage.copyFailedTitle'), t('accountPage.copyFailedMessage'));
         }
     };
 
     const handleLogout = async () => {
         const confirmed = await Modal.confirm(
-            'Sign out',
-            'You will need your recovery key, or another computer already signed in, to get back into this account.',
-            { confirmText: 'Sign out', destructive: true }
+            t('accountPage.signOut'),
+            t('accountPage.signOutConfirm'),
+            { confirmText: t('accountPage.signOut'), destructive: true }
         );
         if (confirmed) {
             auth.logout();
@@ -58,39 +59,39 @@ export default React.memo(() => {
 
     return (
         <ItemList>
-            <ItemGroup title="Account">
+            <ItemGroup title={t('accountPage.account')}>
                 <SettingsRow
-                    title="Signed in"
-                    detail={auth.isAuthenticated ? 'Yes' : 'No'}
+                    title={t('accountPage.signedIn')}
+                    detail={auth.isAuthenticated ? t('common.yes') : t('common.no')}
                     showChevron={false}
                 />
                 {displayName && (
                     <SettingsRow
-                        title="Name"
+                        title={t('settingsAccount.name')}
                         detail={displayName}
                         showChevron={false}
                     />
                 )}
                 <SettingsRow
-                    title="Account id"
-                    detail={sync.serverID || 'Not available'}
+                    title={t('accountPage.accountId')}
+                    detail={sync.serverID || t('settingsAccount.notAvailable')}
                     copy={!!sync.serverID}
                     showChevron={false}
                 />
                 <SettingsRow
-                    title="Platform API key"
-                    subtitle="Entered on each computer and kept in that computer's credential store. This app never holds it."
+                    title={t('accountPage.platformKey')}
+                    subtitle={t('accountPage.platformKeyHint')}
                     subtitleLines={0}
                     showChevron={false}
                 />
             </ItemGroup>
 
             <ItemGroup
-                title="Recovery key"
-                footer="This key is the account. Keep a copy somewhere safe: anyone who has it can read your agents, and without it a lost account cannot be recovered."
+                title={t('accountPage.recoveryKey')}
+                footer={t('accountPage.recoveryKeyFooter')}
             >
                 <SettingsRow
-                    title={showSecret ? 'Hide the key' : 'Show the key'}
+                    title={showSecret ? t('accountPage.hideKey') : t('accountPage.showKey')}
                     onPress={() => setShowSecret(!showSecret)}
                     showChevron={false}
                 />
@@ -115,7 +116,7 @@ export default React.memo(() => {
                                 marginBottom: 10,
                                 ...Typography.default('semiBold')
                             }}>
-                                {copiedRecently ? 'Copied' : 'Tap to copy'}
+                                {copiedRecently ? t('common.copied') : t('accountPage.tapToCopy')}
                             </Text>
                             <Text style={{
                                 fontSize: 13,
@@ -131,10 +132,10 @@ export default React.memo(() => {
                 </ItemGroup>
             )}
 
-            <ItemGroup title="Signing out">
+            <ItemGroup title={t('accountPage.signingOut')}>
                 <SettingsRow
-                    title="Sign out"
-                    subtitle="Removes this account from this app on this device"
+                    title={t('accountPage.signOut')}
+                    subtitle={t('accountPage.signOutHint')}
                     tone="destructive"
                     onPress={handleLogout}
                     showChevron={false}

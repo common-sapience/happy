@@ -81,86 +81,89 @@ export const SettingsView = React.memo(function SettingsView({
                         />
                     </View>
                     <Text style={{ fontSize: 20, fontWeight: '600', color: theme.colors.text }}>
-                        {displayName || 'Your account'}
+                        {displayName || t('accountPage.yourAccount')}
                     </Text>
                 </View>
             </View>
 
             {/* Account information (DESK-12). The platform API key is not held here: it is entered on
                 each computer and kept in that computer's credential store (DESK-08, P-02). */}
-            <ItemGroup title="Account">
+            <ItemGroup title={t('accountPage.account')}>
                 <SettingsRow
-                    title="Signed in"
-                    detail={auth.isAuthenticated ? 'Yes' : 'No'}
+                    title={t('accountPage.signedIn')}
+                    detail={auth.isAuthenticated ? t('common.yes') : t('common.no')}
                     showChevron={false}
                 />
                 <SettingsRow
-                    title="Account id"
-                    detail={sync.serverID || 'Not available'}
+                    title={t('accountPage.accountId')}
+                    detail={sync.serverID || t('settingsAccount.notAvailable')}
                     copy={!!sync.serverID}
                     showChevron={false}
                 />
                 <SettingsRow
-                    title="Platform API key"
-                    subtitle="Entered on each computer and kept in that computer's credential store. This app never holds it."
+                    title={t('accountPage.platformKey')}
+                    subtitle={t('accountPage.platformKeyHint')}
                     showChevron={false}
                 />
                 <SettingsRow
-                    title="Account details"
-                    subtitle="Backup key and sign out"
+                    title={t('accountPage.details')}
+                    subtitle={t('accountPage.detailsHint')}
                     onPress={() => router.push('/settings/account')}
                 />
             </ItemGroup>
 
             <UsageSection />
 
-            <ItemGroup title="Agents">
+            <ItemGroup title={t('sidebar.agentsTitle')}>
                 <SettingsRow
-                    title="Archived agents"
-                    subtitle="Read their history, or bring one back"
+                    title={t('accountPage.archived')}
+                    subtitle={t('accountPage.archivedHint')}
                     detail={archivedAgents.length > 0 ? String(archivedAgents.length) : undefined}
                     onPress={() => router.push('/settings/archived')}
                 />
             </ItemGroup>
 
             <ItemGroup
-                title="Connectors"
-                footer="A connector is set up on the computer that will use it, so its sign-in never passes through this app."
+                title={t('accountPage.connectors')}
+                footer={t('accountPage.connectorsFooter')}
             >
                 <SettingsRow
-                    title="Connected services"
-                    subtitle="Mail and other services your agents may use"
+                    title={t('accountPage.connectedServices')}
+                    subtitle={t('accountPage.connectedServicesHint')}
                     onPress={() => router.push('/settings/connectors')}
                 />
             </ItemGroup>
 
             <ItemGroup
-                title="Computers"
-                footer="Open a computer to rename it, ask for confirmation before risky steps, or remove it."
+                title={t('accountPage.computers')}
+                footer={t('accountPage.computersFooter')}
             >
                 {computers.length === 0 ? (
                     <SettingsRow
-                        title="No computers yet"
-                        subtitle="Add the computer you want your agents to work on"
+                        title={t('accountPage.noComputers')}
+                        subtitle={t('accountPage.noComputersHint')}
                         showChevron={false}
                     />
                 ) : computers.map((computer) => (
                     <SettingsRow
                         key={computer.machineId}
                         title={computer.name}
-                        subtitle={computer.description}
+                        subtitle={[
+                            computer.platform,
+                            computer.online ? t('accountPage.computerOn') : t('accountPage.computerOff'),
+                        ].filter(Boolean).join(' · ')}
                         onPress={() => router.push(`/machine/${computer.machineId}`)}
                     />
                 ))}
                 <SettingsRow
-                    title="Add a computer"
-                    subtitle="Approve a computer that asked to join this account"
+                    title={t('accountPage.addComputer')}
+                    subtitle={t('accountPage.addComputerHint')}
                     onPress={() => router.push('/settings/add-computer')}
                 />
             </ItemGroup>
 
             {/* Appearance carries the language choice, so the account page has one entry for both. */}
-            <ItemGroup title="Preferences">
+            <ItemGroup title={t('accountPage.preferences')}>
                 <SettingsRow
                     title={t('settings.appearance')}
                     subtitle={t('settings.appearanceSubtitle')}

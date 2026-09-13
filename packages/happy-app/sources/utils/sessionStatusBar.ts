@@ -164,13 +164,9 @@ export function getUsageLimitRows(limits: UsageLimitsLike): UsageLimitRow[] {
     }));
 }
 
-/**
- * `utilization` is always "percent used" — the wire format and the color
- * thresholds both depend on that, so the remaining view is a display-time
- * flip only.
- */
-export function getUsageLimitDisplayPercentage(utilization: number, showRemaining: boolean): number {
-    return showRemaining ? 100 - utilization : utilization;
+/** `utilization` is "percent used" on the wire, which is also how it is shown. */
+export function getUsageLimitDisplayPercentage(utilization: number): number {
+    return utilization;
 }
 
 /** Short reset moment: a clock time within a day, a date beyond that. */

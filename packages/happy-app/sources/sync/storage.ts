@@ -129,6 +129,18 @@ export interface SessionRowData {
     projectAvatarThumbhash?: string | null;
 }
 
+/** Messages arrive newest first, so the opening user message is the last one of its kind. */
+function findOpeningUserText(messages: Message[]): string | null {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+        const message = messages[index];
+        if (message.kind === 'user-text') {
+            const text = (message.displayText ?? message.text)?.trim();
+            if (text) return text;
+        }
+    }
+    return null;
+}
+
 function buildSessionRowData(
     session: Session,
     unreadSessionIds?: Set<string>,
@@ -585,14 +597,21 @@ export const storage = create<StorageState>()((set, get) => {
                 // Update session with todos and latestUsage
                 // IMPORTANT: We extract latestUsage from the mutable reducerState and copy it to the Session object
                 // This ensures latestUsage is available immediately on load, even before messages are fully loaded
+                // The opening user message travels the same way: it names the agent (utils/sessionTitle.ts)
+                // and has to be on the Session for every list row to read it.
+                const openingUserText = findOpeningUserText(messagesArray) ?? session?.openingUserText ?? null;
                 let updatedSessions = state.sessions;
-                const needsUpdate = (reducerResult.todos !== undefined || existingSession.reducerState.latestUsage || shouldEnterPlanMode) && session;
+                const needsUpdate = (reducerResult.todos !== undefined
+                    || existingSession.reducerState.latestUsage
+                    || shouldEnterPlanMode
+                    || openingUserText !== (session?.openingUserText ?? null)) && session;
 
                 if (needsUpdate) {
                     updatedSessions = {
                         ...state.sessions,
                         [sessionId]: {
                             ...session,
+                            openingUserText,
                             ...(reducerResult.todos !== undefined && { todos: reducerResult.todos }),
                             // Copy latestUsage from reducerState to make it immediately available
                             latestUsage: existingSession.reducerState.latestUsage ? {

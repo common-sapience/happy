@@ -97,7 +97,7 @@ describe('settings', () => {
         });
 
         it('should apply delta to existing settings', () => {
-            const currentSettings = makeSettings({ schemaVersion: 1, avatarStyle: 'gradient' });
+            const currentSettings = makeSettings({ schemaVersion: 1, diffStyle: 'split' });
             const delta: Partial<Settings> = { viewInline: true };
             expect(applySettings(currentSettings, delta)).toEqual({
                 ...currentSettings,
@@ -106,13 +106,13 @@ describe('settings', () => {
         });
 
         it('should merge with defaults', () => {
-            const currentSettings = makeSettings({ schemaVersion: 1, avatarStyle: 'gradient' });
+            const currentSettings = makeSettings({ schemaVersion: 1, diffStyle: 'split' });
             const delta: Partial<Settings> = {};
             expect(applySettings(currentSettings, delta)).toEqual(currentSettings);
         });
 
         it('should override existing values with delta', () => {
-            const currentSettings = makeSettings({ viewInline: true, avatarStyle: 'gradient' });
+            const currentSettings = makeSettings({ viewInline: true, diffStyle: 'split' });
             const delta: Partial<Settings> = { viewInline: false };
             expect(applySettings(currentSettings, delta)).toEqual({
                 ...currentSettings,
@@ -121,7 +121,7 @@ describe('settings', () => {
         });
 
         it('should handle empty delta', () => {
-            const currentSettings = makeSettings({ viewInline: true, avatarStyle: 'gradient' });
+            const currentSettings = makeSettings({ viewInline: true, diffStyle: 'split' });
             expect(applySettings(currentSettings, {})).toEqual(currentSettings);
         });
 
@@ -141,7 +141,7 @@ describe('settings', () => {
         });
 
         it('should handle extra fields in delta', () => {
-            const currentSettings = makeSettings({ viewInline: true, avatarStyle: 'gradient' });
+            const currentSettings = makeSettings({ viewInline: true, diffStyle: 'split' });
             const delta: any = {
                 viewInline: false,
                 newField: 'new value'
@@ -190,17 +190,11 @@ describe('settings', () => {
                 inferenceOpenAIKey: null,
                 experiments: false,
                 alwaysShowContextSize: false,
-                agentInputEnterToSend: true,
-                avatarStyle: 'brutalist',
-                avatarMonochrome: false,
-                showFlavorIcons: false,
-                showHarnessIconInSessionHeader: true,
                 userMessageBubbleColor: 'gray',
-                usageLimitShowRemaining: false,
                 hideInactiveSessions: true,
                 sortSessionsByActivity: true,
                 expResumeSession: true,
-                fileDiffsSidebar: false,
+                fileDiffsSidebar: true,
                 groupToolCalls: false,
                 compactToolCalls: true,
                 reviewPromptAnswered: false,
@@ -218,10 +212,9 @@ describe('settings', () => {
             });
         });
 
-        it('keeps the legacy list setting while defaulting the header setting on', () => {
+        it('keeps unknown fields written by other app versions', () => {
             expect(settingsParse({ showFlavorIcons: true })).toMatchObject({
                 showFlavorIcons: true,
-                showHarnessIconInSessionHeader: true,
             });
         });
 

@@ -105,13 +105,11 @@ export function useShortcutHints() {
 
 export function ShortcutHintsProvider({
     modifier,
-    commandPaletteEnabled,
     recentSessionIds,
     browserSafeShortcuts,
     children,
 }: {
     modifier: ShortcutModifier | null;
-    commandPaletteEnabled: boolean;
     recentSessionIds: readonly string[];
     browserSafeShortcuts: boolean;
     children: React.ReactNode;
@@ -134,7 +132,6 @@ export function ShortcutHintsProvider({
             {visible && modifier && (
                 <View pointerEvents="none" style={stylesheet.overlay} testID="shortcut-hints-overlay">
                     {GLOBAL_SHORTCUTS
-                        .filter((shortcut) => shortcut.id !== 'commandPalette' || commandPaletteEnabled)
                         .map((shortcut) => (
                             <View key={shortcut.id} style={stylesheet.overlayItem}>
                                 <View style={stylesheet.keycap}>

@@ -23,6 +23,12 @@ const PROFILE_WORDS: Record<string, { name: () => string; description: () => str
     },
 };
 
+/** The profile's plain name, or null for a session that never recorded one. */
+export function getAgentProfileName(key: string | null | undefined): string | null {
+    if (!key) return null;
+    return PROFILE_WORDS[key]?.name() ?? null;
+}
+
 /**
  * The profiles the new-agent composer offers, in plain words (DESK-10). A profile
  * the host config adds is reachable by a session's own profile switch, not from

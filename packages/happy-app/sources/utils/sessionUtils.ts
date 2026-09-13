@@ -89,17 +89,7 @@ export function useSessionStatus(session: Session): SessionStatus {
     };
 }
 
-/**
- * Extracts a display name from a session's metadata path.
- * Returns the last segment of the path, or 'unknown' if no path is available.
- */
-export function getSessionName(session: Session): string {
-    if (session.metadata?.bot) return session.metadata.bot.name;
-    if (session.metadata?.summary) {
-        return session.metadata.summary.text;
-    }
-    return t('session.newChat');
-}
+export { resolveAgentTitle as getSessionName } from '@/utils/sessionTitle';
 
 /**
  * Generates a deterministic avatar ID from machine ID and path.

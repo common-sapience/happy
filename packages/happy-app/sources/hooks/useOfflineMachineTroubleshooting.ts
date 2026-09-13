@@ -14,13 +14,21 @@ export function useOfflineMachineTroubleshooting(choices: readonly MachineChoice
     );
 
     return React.useCallback(() => {
-        Modal.alert('Troubleshoot connection', guide.message, [
+        const message = [
+            t('harness.troubleshootStep1'),
+            t('harness.troubleshootStep2'),
+            t('harness.troubleshootStep3'),
+            '',
+            t('harness.troubleshootPromptLabel'),
+            guide.aiPrompt,
+        ].join('\n');
+        Modal.alert(t('harness.troubleshootTitle'), message, [
             { text: t('common.cancel'), style: 'cancel' },
             {
-                text: 'Copy AI prompt',
+                text: t('harness.troubleshootCopy'),
                 onPress: () => {
                     void Clipboard.setStringAsync(guide.aiPrompt).catch(() => {
-                        Modal.alert(t('common.error'), 'Could not copy the AI prompt.');
+                        Modal.alert(t('common.error'), t('harness.troubleshootCopyFailed'));
                     });
                 },
             },

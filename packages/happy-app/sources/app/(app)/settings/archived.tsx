@@ -11,10 +11,10 @@ import { Modal } from '@/modal';
 import { getSessionName } from '@/utils/sessionUtils';
 import { useNavigateToSession } from '@/hooks/useNavigateToSession';
 import { useUnistyles } from 'react-native-unistyles';
+import { t } from '@/text';
 import {
     buildArchivedAgentRows,
     canRestoreArchivedAgent,
-    describeRestoreBlockedReason,
     type ArchivedAgentRow,
 } from '@/components/account/archivedAgents';
 
@@ -26,9 +26,15 @@ import {
  * it is offered only while that computer is reachable, and the row says why when it is not.
  */
 function rowSubtitle(row: ArchivedAgentRow): string {
-    const blocked = describeRestoreBlockedReason(row);
-    if (blocked) return blocked;
-    return `On ${row.computerName}`;
+    const computer = row.computerName ?? t('archivedAgents.thatComputer');
+    switch (row.restoreBlockedReason) {
+        case null:
+            return t('archivedAgents.onComputer', { computer });
+        case 'computer-offline':
+            return t('archivedAgents.computerOffline', { computer });
+        case 'computer-unknown':
+            return t('archivedAgents.computerUnknown');
+    }
 }
 
 export default function ArchivedAgentsScreen() {
@@ -48,7 +54,7 @@ export default function ArchivedAgentsScreen() {
         try {
             const result = await sessionArchive(row.session.id, false);
             if (!result.success) {
-                Modal.alert('Could not bring it back', result.message ?? 'That computer did not answer.');
+                Modal.alert(t('archivedAgents.restoreFailedTitle'), result.message ?? t('archivedAgents.restoreFailedMessage'));
             }
         } finally {
             setRestoringSessionId(null);
@@ -60,15 +66,15 @@ export default function ArchivedAgentsScreen() {
             containerStyle={{ paddingTop: Platform.OS === 'ios' ? MOBILE_GLASS_HEADER_HEIGHT : 0 }}
         >
             {rows.length === 0 ? (
-                <ItemGroup footer="An agent you archive from its conversation shows up here.">
+                <ItemGroup footer={t('archivedAgents.emptyFooter')}>
                     <Item
-                        title="Nothing archived"
-                        subtitle="Agents you put away will be listed here"
+                        title={t('archivedAgents.emptyTitle')}
+                        subtitle={t('archivedAgents.emptyHint')}
                         showChevron={false}
                     />
                 </ItemGroup>
             ) : (
-                <ItemGroup footer="Opening an archived agent shows its history. Bringing it back needs its computer to be on.">
+                <ItemGroup footer={t('archivedAgents.footer')}>
                     {rows.map((row) => {
                         const restorable = canRestoreArchivedAgent(row);
                         const isRestoring = restoringSessionId === row.session.id;
@@ -85,13 +91,13 @@ export default function ArchivedAgentsScreen() {
                                     ) : (
                                         <Pressable
                                             accessibilityRole="button"
-                                            accessibilityLabel={`Bring back ${getSessionName(row.session)}`}
+                                            accessibilityLabel={t('archivedAgents.bringBackAgent', { name: getSessionName(row.session) })}
                                             hitSlop={10}
                                             onPress={() => void restore(row)}
                                             disabled={restoringSessionId !== null}
                                         >
                                             <Text style={{ fontSize: 15, color: theme.colors.header.tint }}>
-                                                Bring back
+                                                {t('archivedAgents.bringBack')}
                                             </Text>
                                         </Pressable>
                                     )
