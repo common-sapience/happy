@@ -68,7 +68,7 @@ export const MarkdownView = React.memo((props: {
                     if (block.type === 'text') {
                         return <RenderTextBlock spans={block.content} key={index} first={index === 0} last={index === blocks.length - 1} selectable={selectable} onLinkPress={handleLinkPress} />;
                     } else if (block.type === 'header') {
-                        return <RenderHeaderBlock level={block.level} spans={block.content} key={index} first={index === 0} last={index === blocks.length - 1} selectable={selectable} onLinkPress={handleLinkPress} />;
+                        return <RenderHeaderBlock spans={block.content} key={index} first={index === 0} last={index === blocks.length - 1} selectable={selectable} onLinkPress={handleLinkPress} />;
                     } else if (block.type === 'horizontal-rule') {
                         return <View style={style.horizontalRule} key={index} />;
                     } else if (block.type === 'list') {
@@ -130,9 +130,8 @@ function RenderTextBlock(props: { spans: MarkdownSpan[], first: boolean, last: b
     return <Text selectable={props.selectable} style={[style.text, props.first && style.first, props.last && style.last]}><RenderSpans spans={props.spans} baseStyle={style.text} selectable={props.selectable} onLinkPress={props.onLinkPress} /></Text>;
 }
 
-function RenderHeaderBlock(props: { level: 1 | 2 | 3 | 4 | 5 | 6, spans: MarkdownSpan[], first: boolean, last: boolean, selectable: boolean, onLinkPress: (url: string) => void }) {
-    const s = (style as any)[`header${props.level}`];
-    const headerStyle = [style.header, s, props.first && style.first, props.last && style.last];
+function RenderHeaderBlock(props: { spans: MarkdownSpan[], first: boolean, last: boolean, selectable: boolean, onLinkPress: (url: string) => void }) {
+    const headerStyle = [style.header, style.headerLevel, props.first && style.first, props.last && style.last];
     return <Text selectable={props.selectable} style={headerStyle}><RenderSpans spans={props.spans} baseStyle={headerStyle} selectable={props.selectable} onLinkPress={props.onLinkPress} /></Text>;
 }
 
@@ -390,12 +389,12 @@ const style = StyleSheet.create((theme) => ({
 
     text: {
         ...Typography.default(),
-        fontSize: 16,
-        lineHeight: 25,
-        marginTop: 8,
-        marginBottom: 10,
+        fontSize: theme.typography.body.fontSize,
+        lineHeight: theme.typography.body.lineHeight,
+        fontWeight: theme.typography.body.fontWeight,
+        marginTop: theme.margins.xs,
+        marginBottom: theme.margins.sm,
         color: theme.colors.text,
-        fontWeight: '400',
     },
 
     italic: {
@@ -411,14 +410,14 @@ const style = StyleSheet.create((theme) => ({
     },
     code: {
         ...Typography.mono(),
-        fontSize: 16,
-        lineHeight: 24,
+        fontSize: theme.typography.mono.fontSize,
+        lineHeight: theme.typography.mono.lineHeight,
         color: theme.colors.text,
     },
     link: {
         ...Typography.default(),
         color: theme.colors.text,
-        fontWeight: '400',
+        fontWeight: theme.typography.body.fontWeight,
         textDecorationLine: 'underline',
         cursor: 'pointer',
     },
@@ -429,43 +428,14 @@ const style = StyleSheet.create((theme) => ({
         ...Typography.default('semiBold'),
         color: theme.colors.text,
     },
-    header1: {
-        fontSize: 16,
-        lineHeight: 24,  // Reduced from 36 to 24
-        fontWeight: '900',
-        marginTop: 16,
-        marginBottom: 8
-    },
-    header2: {
-        fontSize: 20,
-        lineHeight: 24,  // Reduced from 36 to 32
-        fontWeight: '600',
-        marginTop: 16,
-        marginBottom: 8
-    },
-    header3: {
-        fontSize: 16,
-        lineHeight: 28,  // Reduced from 32 to 28
-        fontWeight: '600',
-        marginTop: 16,
-        marginBottom: 8,
-    },
-    header4: {
-        fontSize: 16,
-        lineHeight: 24,
-        fontWeight: '600',
-        marginTop: 8,
-        marginBottom: 8,
-    },
-    header5: {
-        fontSize: 16,
-        lineHeight: 24,  // Reduced from 28 to 24
-        fontWeight: '600'
-    },
-    header6: {
-        fontSize: 16,
-        lineHeight: 24, // Reduced from 28 to 24
-        fontWeight: '600'
+    // Every heading level is the same one step above body text: a reply is a
+    // message, not a document, and six sizes of heading in it read as a mess.
+    headerLevel: {
+        fontSize: theme.typography.subtitle.fontSize,
+        lineHeight: theme.typography.subtitle.lineHeight,
+        fontWeight: theme.typography.subtitle.fontWeight,
+        marginTop: theme.margins.lg,
+        marginBottom: theme.margins.sm,
     },
 
     //
@@ -518,16 +488,16 @@ const style = StyleSheet.create((theme) => ({
     codeLanguage: {
         ...Typography.mono(),
         color: theme.colors.textSecondary,
-        fontSize: 12,
-        marginTop: 8,
-        paddingHorizontal: 16,
+        fontSize: theme.typography.mono.fontSize,
+        marginTop: theme.margins.sm,
+        paddingHorizontal: theme.margins.lg,
         marginBottom: 0,
     },
     codeText: {
         ...Typography.mono(),
         color: theme.colors.text,
-        fontSize: 14,
-        lineHeight: 20,
+        fontSize: theme.typography.mono.fontSize,
+        lineHeight: theme.typography.mono.lineHeight,
     },
     horizontalRule: {
         height: 1,
@@ -551,8 +521,8 @@ const style = StyleSheet.create((theme) => ({
     },
     imageCaption: {
         ...Typography.default(),
-        fontSize: 14,
-        lineHeight: 20,
+        fontSize: theme.typography.caption.fontSize,
+        lineHeight: theme.typography.caption.lineHeight,
         color: theme.colors.textSecondary,
     },
     copyButtonContainer: {
@@ -586,8 +556,8 @@ const style = StyleSheet.create((theme) => ({
     copyButtonText: {
         ...Typography.default(),
         color: theme.colors.text,
-        fontSize: 12,
-        lineHeight: 16,
+        fontSize: theme.typography.caption.fontSize,
+        lineHeight: theme.typography.caption.lineHeight,
     },
 
     //
@@ -617,8 +587,8 @@ const style = StyleSheet.create((theme) => ({
     },
     optionText: {
         ...Typography.default(),
-        fontSize: 16,
-        lineHeight: 24,
+        fontSize: theme.typography.body.fontSize,
+        lineHeight: theme.typography.body.lineHeight,
         color: theme.colors.text,
     },
     // Tapping an option sends it as your message. Full-width rows in the
@@ -635,8 +605,8 @@ const style = StyleSheet.create((theme) => ({
     },
     optionButtonText: {
         ...Typography.default(),
-        fontSize: 16,
-        lineHeight: 24,
+        fontSize: theme.typography.body.fontSize,
+        lineHeight: theme.typography.body.lineHeight,
         color: theme.colors.text,
     },
 
@@ -680,14 +650,14 @@ const style = StyleSheet.create((theme) => ({
     tableHeaderText: {
         ...Typography.default('semiBold'),
         color: theme.colors.text,
-        fontSize: 16,
-        lineHeight: 24,
+        fontSize: theme.typography.body.fontSize,
+        lineHeight: theme.typography.body.lineHeight,
     },
     tableCellText: {
         ...Typography.default(),
         color: theme.colors.text,
-        fontSize: 16,
-        lineHeight: 24,
+        fontSize: theme.typography.body.fontSize,
+        lineHeight: theme.typography.body.lineHeight,
     },
 
     // Add global style for Web platform (Unistyles supports this via compiler plugin)

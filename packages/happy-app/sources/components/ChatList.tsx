@@ -8,8 +8,11 @@ import { useHeaderHeight } from '@/utils/responsive';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MessageView } from './MessageView';
 import { AgentWorkGroupHeader } from './AgentWorkGroupHeader';
-import { Metadata, Session } from '@/sync/storageTypes';
-import { ChatFooter } from './ChatFooter';
+import { Session } from '@/sync/storageTypes';
+import { buildThinkingDurations } from './kit/kitTranscriptRow';
+import { TranscriptStatus } from './kit/TranscriptStatus';
+import { isSessionArchived } from '@/sync/sessionArchived';
+import { resolveSessionState } from '@/sync/sessionState';
 import { Message } from '@/sync/typesMessage';
 import { AgentWorkGroupItem, DisplayItem, TextItem, useGroupedMessages } from '@/hooks/useGroupedMessages';
 import { Octicons } from '@expo/vector-icons';
@@ -164,10 +167,17 @@ export const ChatList = React.memo((props: {
     onBottomDockVisibilityChange?: (visible: boolean) => void;
 }) => {
     const { messages, hasMoreOlder, isLoadingOlder } = useSessionMessages(props.session.id);
+    // Read here rather than behind the memo barrier below: the turn's completion is
+    // what decides whether its work collapses, so the list has to re-render when it
+    // changes, and nothing else about the session does.
+    const hasPendingPermission = Boolean(
+        props.session.agentState?.requests && Object.keys(props.session.agentState.requests).length > 0,
+    );
+    const currentTurnComplete = props.session.thinking !== true && !hasPendingPermission;
     return (
         <ChatListInternal
-            metadata={props.session.metadata}
             sessionId={props.session.id}
+            currentTurnComplete={currentTurnComplete}
             active={props.active ?? true}
             messages={messages}
             hasMoreOlder={hasMoreOlder}
@@ -208,17 +218,25 @@ const OlderEnd = React.memo((props: { showOlderSpinner: boolean; topContentInset
     );
 });
 
-/** Renders just past the newest message, so the list's header when inverted. */
+/**
+ * Renders just past the newest message, so the list's header when inverted. This
+ * is where the running indicator belongs: directly under the last thing the agent
+ * said (DESK-20).
+ */
 const NewerEnd = React.memo((props: { sessionId: string }) => {
     const session = useSession(props.sessionId)!;
-    return (
-        <ChatFooter controlledByUser={session.agentState?.controlledByUser || false} />
-    )
+    const state = resolveSessionState({
+        agentState: session.agentState,
+        thinking: session.thinking,
+        isOnline: session.presence === 'online',
+    });
+    return <TranscriptStatus state={state} archived={isSessionArchived(session)} />;
 });
 
 const ChatListInternal = React.memo((props: {
-    metadata: Metadata | null,
     sessionId: string,
+    /** The newest turn has finished, so its intermediate work can fold away. */
+    currentTurnComplete: boolean,
     active: boolean,
     messages: Message[],
     hasMoreOlder: boolean,
@@ -279,13 +297,9 @@ const ChatListInternal = React.memo((props: {
     // its work visible when it finishes, while a completed turn first seen on
     // open keeps the historic collapsed-by-default behavior.
     const groupToolCalls = useSetting('groupToolCalls');
-    const hasPendingPermission = Boolean(
-        session?.agentState?.requests && Object.keys(session.agentState.requests).length > 0,
-    );
     const [appState, setAppState] = React.useState(AppState.currentState);
     const sessionInForeground = props.active && appState !== 'background';
-    const currentTurnComplete = session?.thinking !== true
-        && !hasPendingPermission;
+    const currentTurnComplete = props.currentTurnComplete;
     const groupingOptions = React.useMemo(
         () => ({ collapseCurrentTurn: currentTurnComplete }),
         [currentTurnComplete],
@@ -341,6 +355,10 @@ const ChatListInternal = React.memo((props: {
     const agentCopyTextByMessageId = React.useMemo(
         () => buildAgentTurnCopyTextByMessageId(windowedMessages, { currentTurnComplete }),
         [currentTurnComplete, windowedMessages],
+    );
+    const thinkingDurationByMessageId = React.useMemo(
+        () => buildThinkingDurations(windowedMessages),
+        [windowedMessages],
     );
 
     const currentTurnUserMessageId = React.useMemo(() => {
@@ -591,13 +609,13 @@ const ChatListInternal = React.memo((props: {
             <DiffSyntaxCell key={item.message.id} viewport={syntaxViewport} itemKey={item.id} enabled={target !== 'Measurement'}>
                 <MessageView
                     message={item.message}
-                    metadata={props.metadata}
                     sessionId={props.sessionId}
                     copyText={agentCopyTextByMessageId.get(item.message.id)}
+                    thinkingDurationMs={thinkingDurationByMessageId.get(item.message.id)}
                 />
             </DiffSyntaxCell>
         );
-    }, [agentCopyTextByMessageId, props.metadata, props.sessionId, syntaxViewport, isGroupExpanded, handleToggleGroup]);
+    }, [agentCopyTextByMessageId, thinkingDurationByMessageId, props.sessionId, syntaxViewport, isGroupExpanded, handleToggleGroup]);
 
     // The list is inverted, so offset 0 is the newest message and growing
     // offsets walk back through history.
@@ -808,7 +826,7 @@ const ChatListInternal = React.memo((props: {
                         ]}
                         onPress={scrollToBottom}
                     >
-                        <Octicons name="arrow-down" size={14} color={theme.colors.text} />
+                        <Octicons name="arrow-down" size={theme.iconSize.medium} color={theme.colors.textSecondary} />
                     </Pressable>
                 </View>
             )}
@@ -826,19 +844,16 @@ const styles = StyleSheet.create((theme) => ({
         justifyContent: 'center',
         pointerEvents: 'box-none',
     },
+    // A control, so it takes the pill and the hairline edge every other floating
+    // control in the kit has, and nothing else: no shadow stack, no tint.
     scrollButton: {
-        borderRadius: 16,
-        width: 32,
-        height: 32,
+        borderRadius: theme.borderRadius.pill,
+        width: theme.minTouchTarget - theme.margins.md,
+        height: theme.minTouchTarget - theme.margins.md,
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 1,
+        borderWidth: StyleSheet.hairlineWidth,
         borderColor: theme.colors.divider,
-        shadowColor: theme.colors.shadow.color,
-        shadowOffset: { width: 0, height: 1 },
-        shadowRadius: 2,
-        shadowOpacity: theme.colors.shadow.opacity * 0.5,
-        elevation: 2,
     },
     scrollButtonDefault: {
         backgroundColor: theme.colors.surface,

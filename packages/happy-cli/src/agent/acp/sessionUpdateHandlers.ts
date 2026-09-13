@@ -40,6 +40,8 @@ export interface SessionUpdate {
   messageChunk?: {
     textDelta?: string;
   };
+  title?: string;
+  rawInput?: unknown;
   plan?: unknown;
   thinking?: unknown;
   [key: string]: unknown;
@@ -293,8 +295,10 @@ export function startToolCall(
   // Emit running status
   ctx.emit({ type: 'status', status: 'running' });
 
-  // Parse args and emit tool-call event
-  const args = parseArgsFromContent(update.content);
+  // The call's own arguments when the engine sends them, and only otherwise the
+  // content it has produced so far: the controller names what a step acted on from
+  // these, and a content block describes the output rather than the target.
+  const args = parseArgsFromContent(update.rawInput ?? update.content);
 
   // Extract locations if present
   if (update.locations && Array.isArray(update.locations)) {
@@ -309,6 +313,35 @@ export function startToolCall(
   ctx.emit({
     type: 'tool-call',
     toolName: toolKindStr || 'unknown',
+    ...(typeof update.title === 'string' && update.title.length > 0 ? { title: update.title } : {}),
+    args,
+    callId: toolCallId,
+  });
+}
+
+/**
+ * A call is announced before its arguments are parsed, so the first event often
+ * names only the kind. A later update carrying the arguments is re-emitted for
+ * the same call id: the control end merges them into the step it already has,
+ * which is what lets the step say what it acted on.
+ */
+export function emitToolCallArguments(
+  toolCallId: string,
+  toolKind: string | unknown,
+  update: SessionUpdate,
+  ctx: HandlerContext
+): void {
+  const args = parseArgsFromContent(update.rawInput);
+  if (Object.keys(args).length === 0) {
+    return;
+  }
+  if (update.locations && Array.isArray(update.locations)) {
+    args.locations = update.locations;
+  }
+  ctx.emit({
+    type: 'tool-call',
+    toolName: ctx.toolCallIdToNameMap.get(toolCallId) ?? (typeof toolKind === 'string' ? toolKind : 'unknown'),
+    ...(typeof update.title === 'string' && update.title.length > 0 ? { title: update.title } : {}),
     args,
     callId: toolCallId,
   });
@@ -455,6 +488,7 @@ export function handleToolCallUpdate(
       startToolCall(toolCallId, toolKind, update, ctx, 'tool_call_update');
     } else {
       logger.debug(`[AcpBackend] Tool call ${toolCallId} already tracked, status: ${status}`);
+      emitToolCallArguments(toolCallId, toolKind, update, ctx);
     }
   } else if (status === 'completed') {
     completeToolCall(toolCallId, toolKind, update.content, ctx);

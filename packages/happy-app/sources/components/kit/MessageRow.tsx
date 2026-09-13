@@ -9,14 +9,21 @@ import {
 } from './kitMessageRow';
 
 const stylesheet = StyleSheet.create((theme) => ({
+    centering: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+    },
     row: {
         flexDirection: 'column',
-        width: '100%',
+        flexGrow: 1,
+        flexBasis: 0,
+        minWidth: 0,
         maxWidth: layout.maxWidth,
-        alignSelf: 'center',
+        overflow: 'hidden',
         paddingHorizontal: theme.margins.lg,
     },
     content: {
+        minWidth: 0,
         maxWidth: '100%',
     },
     flat: {
@@ -62,19 +69,21 @@ export const MessageRow = React.memo(function MessageRow({ author, children, sty
         : undefined;
 
     return (
-        <View
-            onLayout={presentation.maxWidthRatio < 1 ? handleLayout : undefined}
-            style={[styles.row, { alignItems: presentation.align }, style]}
-        >
+        <View style={styles.centering}>
             <View
-                style={[
-                    styles.content,
-                    !presentation.bubble && styles.flat,
-                    presentation.emphasis === 'muted' && styles.muted,
-                    constrainedWidth ? { maxWidth: constrainedWidth } : undefined,
-                ]}
+                onLayout={presentation.maxWidthRatio < 1 ? handleLayout : undefined}
+                style={[styles.row, { alignItems: presentation.align }, style]}
             >
-                {children}
+                <View
+                    style={[
+                        styles.content,
+                        !presentation.bubble && styles.flat,
+                        presentation.emphasis === 'muted' && styles.muted,
+                        constrainedWidth ? { maxWidth: constrainedWidth } : undefined,
+                    ]}
+                >
+                    {children}
+                </View>
             </View>
         </View>
     );

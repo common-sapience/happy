@@ -629,3 +629,10 @@ export const darkTheme = {
 } satisfies typeof lightTheme;
 
 export type Theme = typeof lightTheme;
+
+/**
+ * The motion group on its own, for the shared animation definitions that are
+ * built once at module scope and so cannot reach a theme. Durations and curves are
+ * identical in both themes, so this is the same single source as `theme.motion`.
+ */
+export const motion = sharedSpacing.motion;

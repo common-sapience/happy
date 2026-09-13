@@ -5,7 +5,6 @@ import {
     canSubmit,
     describeAnswer,
     isQuestionAnswered,
-    canRenderAgentFormInline,
     shouldUseAgentQuestionFallback,
     selectAgentFormCommunication,
     selectPendingCommunications,
@@ -162,30 +161,14 @@ describe('selectAgentFormCommunication', () => {
     });
 });
 
-describe('canRenderAgentFormInline', () => {
-    it('accepts choice forms and keeps text-only forms on the modal fallback', () => {
-        expect(canRenderAgentFormInline({
-            id: 'choice',
-            createdAt: 0,
-            kind: 'form',
-            questions: [question()],
-        })).toBe(true);
-
-        expect(canRenderAgentFormInline({
-            id: 'text',
-            createdAt: 0,
-            kind: 'form',
-            questions: [question({ options: [], allowCustom: true })],
-        })).toBe(false);
-    });
-
-    it('assigns choice forms to the transcript before their tool message arrives', () => {
+describe('shouldUseAgentQuestionFallback', () => {
+    it('answers every question above the composer, whatever it offers', () => {
         expect(shouldUseAgentQuestionFallback({
             id: 'choice',
             createdAt: 0,
             kind: 'form',
             questions: [question()],
-        })).toBe(false);
+        })).toBe(true);
 
         expect(shouldUseAgentQuestionFallback({
             id: 'text',

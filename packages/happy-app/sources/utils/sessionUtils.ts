@@ -1,7 +1,9 @@
-import * as React from 'react';
+import { useUnistyles } from 'react-native-unistyles';
 import { Session } from '@/sync/storageTypes';
 import { resolveSessionState } from '@/sync/sessionState';
 import type { SessionState } from '@/sync/sessionState';
+import { agentListStateColor, agentListStateLabel, resolveAgentListState } from '@/components/agentListState';
+import { isSessionArchived } from '@/sync/sessionArchived';
 import { t } from '@/text';
 
 export type { SessionState } from '@/sync/sessionState';
@@ -10,82 +12,39 @@ export interface SessionStatus {
     state: SessionState;
     isConnected: boolean;
     statusText: string;
-    shouldShowStatus: boolean;
     statusColor: string;
     statusDotColor: string;
     isPulsing?: boolean;
 }
 
 /**
- * Get the current state of a session based on presence and thinking status.
- * Uses centralized session state from storage.ts
+ * The state of one session, in the four words the product uses for it.
+ *
+ * Word and colour come from `agentListState`: the list, the transcript's running
+ * indicator and this hook all read the same authority, so an agent is never
+ * "working" in one place and "waiting" in another (design.md §5).
  */
 export function useSessionStatus(session: Session): SessionStatus {
+    const { theme } = useUnistyles();
     const isOnline = session.presence === "online";
     const state = resolveSessionState({
         agentState: session.agentState,
         thinking: session.thinking,
         isOnline,
     });
-
-    const vibingMessage = React.useMemo(() => {
-        return vibingMessages[Math.floor(Math.random() * vibingMessages.length)].toLowerCase() + '…';
-    }, [state]);
-
-    if (state === 'disconnected') {
-        return {
-            state,
-            isConnected: false,
-            statusText: t('status.lastSeen', { time: formatLastSeen(session.activeAt, false) }),
-            shouldShowStatus: true,
-            statusColor: '#999',
-            statusDotColor: '#999'
-        };
-    }
-
-    if (state === 'permission_required') {
-        return {
-            state,
-            isConnected: true,
-            statusText: t('status.permissionRequired'),
-            shouldShowStatus: true,
-            statusColor: '#FF9500',
-            statusDotColor: '#FF9500',
-            isPulsing: true
-        };
-    }
-
-    if (state === 'input_required') {
-        return {
-            state,
-            isConnected: true,
-            statusText: t('status.inputRequired'),
-            shouldShowStatus: true,
-            statusColor: '#FF9500',
-            statusDotColor: '#FF9500',
-            isPulsing: true,
-        };
-    }
-
-    if (state === 'thinking') {
-        return {
-            state,
-            isConnected: true,
-            statusText: vibingMessage,
-            shouldShowStatus: true,
-            statusColor: '#007AFF',
-            statusDotColor: '#007AFF',
-            isPulsing: true
-        };
-    }
+    const listState = resolveAgentListState({ state, archived: isSessionArchived(session) });
+    const color = agentListStateColor(listState, theme);
+    const isPulsing = listState === 'running' || listState === 'waiting';
 
     return {
         state,
-        isConnected: true,
-        statusText: t('status.online'),
-        shouldShowStatus: false,
-        statusColor: '#34C759',
-        statusDotColor: '#34C759'
+        isConnected: isOnline,
+        statusText: state === 'disconnected'
+            ? t('status.lastSeen', { time: formatLastSeen(session.activeAt, false) })
+            : agentListStateLabel(listState),
+        statusColor: color,
+        statusDotColor: color,
+        isPulsing,
     };
 }
 
@@ -224,5 +183,3 @@ export function formatLastSeen(activeAt: number, isActive: boolean = false): str
         return date.toLocaleDateString(undefined, options);
     }
 }
-
-export const vibingMessages = ["Accomplishing", "Actioning", "Actualizing", "Baking", "Booping", "Brewing", "Calculating", "Cerebrating", "Channelling", "Churning", "Clauding", "Coalescing", "Cogitating", "Computing", "Combobulating", "Concocting", "Conjuring", "Considering", "Contemplating", "Cooking", "Crafting", "Creating", "Crunching", "Deciphering", "Deliberating", "Determining", "Discombobulating", "Divining", "Doing", "Effecting", "Elucidating", "Enchanting", "Envisioning", "Finagling", "Flibbertigibbeting", "Forging", "Forming", "Frolicking", "Generating", "Germinating", "Hatching", "Herding", "Honking", "Ideating", "Imagining", "Incubating", "Inferring", "Manifesting", "Marinating", "Meandering", "Moseying", "Mulling", "Mustering", "Musing", "Noodling", "Percolating", "Perusing", "Philosophising", "Pontificating", "Pondering", "Processing", "Puttering", "Puzzling", "Reticulating", "Ruminating", "Scheming", "Schlepping", "Shimmying", "Simmering", "Smooshing", "Spelunking", "Spinning", "Stewing", "Sussing", "Synthesizing", "Thinking", "Tinkering", "Transmuting", "Unfurling", "Unravelling", "Vibing", "Wandering", "Whirring", "Wibbling", "Wizarding", "Working", "Wrangling"];

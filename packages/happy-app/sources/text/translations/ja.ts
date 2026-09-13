@@ -1153,6 +1153,15 @@ export const ja: TranslationStructure = {
         troubleshootPromptLabel: 'AI プロンプト:',
     },
 
+    transcript: {
+        thinking: '考えています',
+        thoughtFor: ({ duration }: { duration: string }) => `${duration} 考えました`,
+        showThinking: '考えた内容を表示',
+        hideThinking: '考えた内容を隠す',
+        showRawCall: '詳細を表示',
+        hideRawCall: '詳細を隠す',
+    },
+
     permissionRequest: {
         allowOnce: "1回だけ許可",
         allowAlways: "常に許可",

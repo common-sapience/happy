@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { Message } from '@/sync/typesMessage';
-import { knownTools } from '@/components/tools/knownTools';
-import { isInteractiveQuestionToolName } from '@/utils/toolDisplay';
+import { resolveTranscriptRowKind } from '@/components/kit/kitTranscriptRow';
 
 // Display item types for the grouped message list
 export type TextItem = {
@@ -135,12 +134,15 @@ function collectAgentWorkGroups(messages: Message[], turnOf: number[], collapseC
         const visibleAgentIndexes = indexes.filter((index) => {
             const msg = messages[index];
             if (msg.kind === 'user-text') return false;
-            if (isInvisibleMessage(msg) || isUserAttachment(msg)) return false;
-            if (msg.kind === 'tool-call' && isInteractiveQuestionToolName(msg.tool.name)) return false;
+            if (isInvisibleMessage(msg)) return false;
             return true;
         });
 
-        const finalTextIndex = visibleAgentIndexes.find((index) => messages[index].kind === 'agent-text');
+        // The turn's answer, which stays on screen. A thinking block is also agent
+        // text but is part of the work, so it collapses with the rest.
+        const finalTextIndex = visibleAgentIndexes.find(
+            (index) => resolveTranscriptRowKind(messages[index]) === 'reply',
+        );
         if (finalTextIndex === undefined) continue;
 
         const hiddenIndexes = visibleAgentIndexes.filter((index) => index > finalTextIndex);
@@ -176,24 +178,13 @@ function collectAgentWorkGroups(messages: Message[], turnOf: number[], collapseC
     return groups;
 }
 
-/** Returns true for messages that render as null and should be excluded entirely */
+/**
+ * Messages the transcript draws nothing for. The renderer decides this, not the
+ * grouping: one authority, so a row can never be grouped as work and then render
+ * as nothing (DESK-20).
+ */
 function isInvisibleMessage(msg: Message): boolean {
-    // Hidden tools (ToolSearch, CodexReasoning, etc.)
-    if (msg.kind === 'tool-call') {
-        const known = knownTools[msg.tool.name as keyof typeof knownTools] as any;
-        return known?.hidden === true;
-    }
-    // Thinking messages render as null in MessageView
-    if (msg.kind === 'agent-text') {
-        if (msg.isThinking) return true;
-        if (msg.text.trim().length === 0) return true;
-    }
-    return false;
-}
-
-/** User-sent file/image attachments should never be collapsed into a group */
-function isUserAttachment(msg: Message): boolean {
-    return msg.kind === 'tool-call' && msg.tool.name === 'file';
+    return resolveTranscriptRowKind(msg) === 'hidden';
 }
 
 function hasPendingPermission(messages: Message[]): boolean {
@@ -203,17 +194,3 @@ function hasPendingPermission(messages: Message[]): boolean {
     ));
 }
 
-export function formatWorkDuration(durationMs: number): string {
-    const totalSeconds = Math.max(0, Math.floor(durationMs / 1000));
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    if (hours > 0) {
-        return `${hours}h${minutes}m`;
-    }
-    if (minutes > 0) {
-        return `${minutes}m${seconds}s`;
-    }
-    return `${seconds}s`;
-}

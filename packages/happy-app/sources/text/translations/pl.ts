@@ -1182,6 +1182,15 @@ export const pl: TranslationStructure = {
         troubleshootPromptLabel: 'Polecenie dla AI:',
     },
 
+    transcript: {
+        thinking: 'Myśli',
+        thoughtFor: ({ duration }: { duration: string }) => `Myślał ${duration}`,
+        showThinking: 'Pokaż, o czym myślał',
+        hideThinking: 'Ukryj, o czym myślał',
+        showRawCall: 'Pokaż szczegóły',
+        hideRawCall: 'Ukryj szczegóły',
+    },
+
     permissionRequest: {
         allowOnce: "Pozwól raz",
         allowAlways: "Pozwalaj zawsze",

@@ -542,6 +542,32 @@ describe('reducer', () => {
             }
         });
 
+        // DESK-20: the card has to collapse to its answer the moment the request is
+        // answered, and a view can only notice that if each pass hands it a new value.
+        it('hands out a fresh permission object once the request is answered', () => {
+            const state = createReducer();
+            const pending = reducer(state, [], {
+                requests: { 'tool-2': { tool: 'Bash', arguments: { command: 'ls' }, createdAt: 1000 } },
+            });
+            const answered = reducer(state, [], {
+                completedRequests: {
+                    'tool-2': {
+                        tool: 'Bash',
+                        arguments: { command: 'ls' },
+                        createdAt: 1000,
+                        completedAt: 2000,
+                        status: 'approved',
+                    },
+                },
+            });
+
+            if (pending.messages[0].kind === 'tool-call' && answered.messages[0].kind === 'tool-call') {
+                expect(pending.messages[0].tool.permission).not.toBe(answered.messages[0].tool.permission);
+                expect(pending.messages[0].tool.permission?.status).toBe('pending');
+                expect(answered.messages[0].tool.permission?.status).toBe('approved');
+            }
+        });
+
         it('should match incoming tool calls to approved permission messages', () => {
             const state = createReducer();
             

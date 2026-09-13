@@ -2,7 +2,8 @@ import * as React from 'react';
 import { Text, Pressable, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Ionicons } from '@expo/vector-icons';
-import { AgentWorkGroupItem, formatWorkDuration } from '@/hooks/useGroupedMessages';
+import { AgentWorkGroupItem } from '@/hooks/useGroupedMessages';
+import { formatTranscriptDuration } from './kit';
 import { layout } from './layout';
 import { t } from '@/text';
 
@@ -37,7 +38,7 @@ export const AgentWorkGroupHeader = React.memo((props: {
     const trailing = props.placement === 'trailing';
     const label = trailing
         ? t('toolGroup.hide')
-        : t('toolGroup.workedFor', { duration: formatWorkDuration(durationMs) });
+        : t('toolGroup.workedFor', { duration: formatTranscriptDuration(durationMs) });
 
     return (
         <View style={styles.outerContainer}>
@@ -54,7 +55,7 @@ export const AgentWorkGroupHeader = React.memo((props: {
                     </Text>
                     <Ionicons
                         name={trailing || props.expanded ? 'chevron-up' : 'chevron-forward'}
-                        size={13}
+                        size={theme.iconSize.small}
                         color={theme.colors.textSecondary}
                     />
                 </Pressable>
@@ -73,17 +74,15 @@ const styles = StyleSheet.create((theme) => ({
         flexBasis: 0,
         minWidth: 0,
         maxWidth: layout.maxWidth,
-        marginVertical: 8,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        gap: theme.margins.xs,
         alignSelf: 'stretch',
-        marginHorizontal: 16,
-        minHeight: 28,
-        paddingVertical: 4,
-        borderRadius: 4,
+        marginHorizontal: theme.margins.lg,
+        minHeight: theme.minTouchTarget - theme.margins.md,
+        paddingVertical: theme.margins.xs,
     },
     headerPressed: {
         opacity: 0.6,
@@ -91,8 +90,8 @@ const styles = StyleSheet.create((theme) => ({
     summaryText: {
         flexShrink: 1,
         minWidth: 0,
-        fontSize: 13,
-        lineHeight: 20,
+        fontSize: theme.typography.caption.fontSize,
+        lineHeight: theme.typography.caption.lineHeight,
         color: theme.colors.textSecondary,
     },
 }));

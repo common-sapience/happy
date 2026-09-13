@@ -6,14 +6,6 @@ function turnOptions(turnId: string | null, time: number): CreateEnvelopeOptions
   return turnId ? { turn: turnId, time } : { time };
 }
 
-function buildToolTitle(toolName: string): string {
-  return toolName;
-}
-
-function buildToolDescription(toolName: string): string {
-  return `Running ${toolName}`;
-}
-
 function parseThinkingPayload(payload: unknown): { text: string; streaming: boolean } {
   if (typeof payload === 'string') {
     return { text: payload, streaming: false };
@@ -158,12 +150,15 @@ export class AcpSessionManager {
       const call = this.ensureSessionCallId(msg.callId);
       return [
         ...flushed,
+        // The name is the engine's tool category and the title its own one-line
+        // description of this call. Neither is restated as a description: the
+        // controller writes the words a reader sees (DESK-01).
         createEnvelope('agent', {
           t: 'tool-call-start',
           call,
           name: msg.toolName,
-          title: buildToolTitle(msg.toolName),
-          description: buildToolDescription(msg.toolName),
+          title: msg.title ?? '',
+          description: '',
           args: msg.args,
         }, turnOptions(this.currentTurnId, this.nextTime())),
       ];

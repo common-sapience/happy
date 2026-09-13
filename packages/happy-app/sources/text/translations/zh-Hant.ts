@@ -1151,6 +1151,15 @@ export const zhHant: TranslationStructure = {
         troubleshootPromptLabel: 'AI 提示詞：',
     },
 
+    transcript: {
+        thinking: '思考中',
+        thoughtFor: ({ duration }: { duration: string }) => `思考了 ${duration}`,
+        showThinking: '查看思考過程',
+        hideThinking: '隱藏思考過程',
+        showRawCall: '查看詳情',
+        hideRawCall: '隱藏詳情',
+    },
+
     permissionRequest: {
         allowOnce: "允許一次",
         allowAlways: "一律允許",

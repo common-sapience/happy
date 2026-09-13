@@ -50,6 +50,8 @@ export interface StatusMessage {
 export interface ToolCallMessage {
   type: 'tool-call';
   toolName: string;
+  /** The engine's own one-line description of the call, when it sends one. */
+  title?: string;
   args: Record<string, unknown>;
   callId: ToolCallId;
 }

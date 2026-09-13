@@ -1151,6 +1151,15 @@ export const ca: TranslationStructure = {
         troubleshootPromptLabel: 'Instrucció per a la IA:',
     },
 
+    transcript: {
+        thinking: 'Pensant',
+        thoughtFor: ({ duration }: { duration: string }) => `Ha pensat durant ${duration}`,
+        showThinking: 'Mostra què estava pensant',
+        hideThinking: 'Amaga què estava pensant',
+        showRawCall: 'Mostra els detalls',
+        hideRawCall: 'Amaga els detalls',
+    },
+
     permissionRequest: {
         allowOnce: "Permet una vegada",
         allowAlways: "Permet sempre",

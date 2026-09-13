@@ -1150,6 +1150,15 @@ export const it: TranslationStructure = {
         troubleshootPromptLabel: 'Prompt per l\u2019IA:',
     },
 
+    transcript: {
+        thinking: 'Sta pensando',
+        thoughtFor: ({ duration }: { duration: string }) => `Ha pensato per ${duration}`,
+        showThinking: 'Mostra a cosa stava pensando',
+        hideThinking: 'Nascondi a cosa stava pensando',
+        showRawCall: 'Mostra i dettagli',
+        hideRawCall: 'Nascondi i dettagli',
+    },
+
     permissionRequest: {
         allowOnce: "Consenti una volta",
         allowAlways: "Consenti sempre",

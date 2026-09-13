@@ -716,13 +716,6 @@ export function SessionViewLoaded({
         getSuggestions(sessionId, query)
     ), [sessionId]);
 
-    const connectionStatus = React.useMemo(() => ({
-        text: sessionStatus.statusText,
-        color: sessionStatus.statusColor,
-        dotColor: sessionStatus.statusDotColor,
-        isPulsing: sessionStatus.isPulsing,
-    }), [sessionStatus.statusText, sessionStatus.statusColor, sessionStatus.statusDotColor, sessionStatus.isPulsing]);
-
     const usageData = React.useMemo(() => {
         const source = sessionUsage ?? session.latestUsage;
         if (!source) return undefined;
@@ -809,8 +802,6 @@ export function SessionViewLoaded({
                 availableModels={availableModels}
                 onModelModeChange={availableModels.length > 0 ? updateModelMode : undefined}
                 metadata={session.metadata}
-                connectionStatus={connectionStatus}
-
                 onSend={handleSend}
                 onAbort={isDisconnected ? undefined : handleAbort}
                 showAbortButton={(

@@ -1153,6 +1153,15 @@ export const es: TranslationStructure = {
         troubleshootPromptLabel: 'Instrucción para la IA:',
     },
 
+    transcript: {
+        thinking: 'Pensando',
+        thoughtFor: ({ duration }: { duration: string }) => `Pensó durante ${duration}`,
+        showThinking: 'Ver en qué pensaba',
+        hideThinking: 'Ocultar en qué pensaba',
+        showRawCall: 'Ver los detalles',
+        hideRawCall: 'Ocultar los detalles',
+    },
+
     permissionRequest: {
         allowOnce: "Permitir una vez",
         allowAlways: "Permitir siempre",
