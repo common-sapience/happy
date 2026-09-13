@@ -246,7 +246,7 @@ function nodeToWebStreams(
   });
 
   // Convert Node readable to Web ReadableStream
-  // Filter out non-JSON debug output from gemini CLI (experiments, flags, etc.)
+  // Filter out non-JSON debug output from the agent process
   const readable = new ReadableStream<Uint8Array>({
     start(controller) {
       stdout.on('data', (chunk: Buffer) => {
@@ -406,7 +406,7 @@ export class AcpBackend implements AgentBackend {
       }
       
       // Ensure stderr doesn't leak to console - redirect to logger only
-      // This prevents gemini CLI debug output from appearing in user's console
+      // This prevents agent debug output from appearing in user's console
       if (this.process.stderr) {
         // stderr is already handled by the event listener below
         // but we ensure it doesn't go to parent's stderr
@@ -609,27 +609,29 @@ export class AcpBackend implements AgentBackend {
             paramsKeys: Object.keys(params),
           }, null, 2));
           
-          // Emit permission request event for UI/mobile handling
-          this.emit({
-            type: 'permission-request',
-            id: permissionId,
-            reason: toolName,
-            payload: {
-              ...params,
-              permissionId,
-              toolCallId,
-              toolName,
-              input,
-              options: options.map((opt) => ({
-                id: opt.optionId,
-                name: opt.name,
-                kind: opt.kind,
-              })),
-            },
-          });
-          
-          // Use permission handler if provided, otherwise auto-approve
+          // Only a session that is going to ask the user surfaces the request.
+          // With permission confirmation off (PERM-08) there is no handler, the
+          // engine already runs on an allow baseline, and a card the control end
+          // cannot answer must not appear.
           if (this.options.permissionHandler) {
+            this.emit({
+              type: 'permission-request',
+              id: permissionId,
+              reason: toolName,
+              payload: {
+                ...params,
+                permissionId,
+                toolCallId,
+                toolName,
+                input,
+                options: options.map((opt) => ({
+                  id: opt.optionId,
+                  name: opt.name,
+                  kind: opt.kind,
+                })),
+              },
+            });
+
             try {
               const result = await this.options.permissionHandler.handleToolCall(
                 toolCallId,
@@ -1013,7 +1015,7 @@ export class AcpBackend implements AgentBackend {
     handleThinkingUpdate(update as SessionUpdate, ctx);
 
     // Log unhandled session update types for debugging
-    // Cast to string to avoid TypeScript errors (SDK types don't include all Gemini-specific update types)
+    // Cast to string to avoid TypeScript errors (SDK types don't include every update type agents send)
     const handledTypes = [
       'agent_message_chunk',
       'tool_call_update',
@@ -1202,7 +1204,7 @@ export class AcpBackend implements AgentBackend {
 
   /**
    * Wait for the response to complete (idle status after all chunks received)
-   * Call this after sendPrompt to wait for Gemini to finish responding
+   * Call this after sendPrompt to wait for the agent to finish responding
    */
   async waitForResponseComplete(timeoutMs: number = 120000): Promise<void> {
     if (!this.waitingForResponse) {

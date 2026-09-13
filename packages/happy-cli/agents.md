@@ -1,40 +1,34 @@
 # Happy CLI Agent Tests
 
+The engine (`opencode` over ACP) is the only agent (HOST-10).
+
 ## Layer 1 Rules
 
-- one primary integration test file per agent
+- one primary integration test file for the engine
 - keep that file next to the agent code
-- use 2-3 long integration tests per agent
+- use 2-3 long integration tests
 - mocked tests do not count as acceptance
 - do not build a generic layer-1 framework directory
 - test the real agent surface directly
 
 ## Primary Files
 
-- `packages/happy-cli/src/codex/codex.integration.test.ts`
-- `packages/happy-cli/src/claude/claude.integration.test.ts`
-- `packages/happy-cli/src/gemini/gemini.integration.test.ts`
-- `packages/happy-cli/src/openclaw/openclaw.integration.test.ts`
+- `packages/happy-cli/src/daemon/daemon.integration.test.ts` — daemon lifecycle
+- the harness `e2e/run.sh` — control end through relay, daemon, engine and gateway
 
-If an agent has extra integration-style files, only one file is the primary
-acceptance test. The rest are support checks.
-
-## What Each Primary Test Must Cover
-
-Every primary agent integration file must cover:
+## What The Primary Test Must Cover
 
 1. basic turn + multi-turn context
-2. permissions + model switching + sandboxing
+2. agent profile + permission confirmation switch + model switching
 3. interrupt + stop + failure handling
 
-If an agent does not support part of that surface, the test should assert the
+If the engine does not support part of that surface, the test should assert the
 real limitation directly.
 
 ## Test Shape
 
 Keep it simple:
 
-- one file per agent
 - a few long tests
 - real CLI
 - real auth

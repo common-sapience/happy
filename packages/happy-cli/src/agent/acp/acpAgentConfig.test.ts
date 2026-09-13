@@ -1,25 +1,38 @@
 import { describe, expect, it } from 'vitest';
-import { KNOWN_ACP_AGENTS, resolveAcpAgentConfig } from './acpAgentConfig';
+import { ENGINE_AGENT_NAME, isEngineAgentName, resolveAcpAgentConfig } from './acpAgentConfig';
 
-describe('KNOWN_ACP_AGENTS', () => {
-  it('defines built-in Gemini and OpenCode command mappings', () => {
-    expect(KNOWN_ACP_AGENTS).toEqual({
-      gemini: { command: 'gemini', args: ['--experimental-acp'] },
-      opencode: { command: 'opencode', args: ['acp'] },
-    });
+describe('HOST-10 engine agent identity', () => {
+  it('names the engine as the only agent', () => {
+    expect(ENGINE_AGENT_NAME).toBe('opencode');
+  });
+
+  it('accepts the engine and an unset agent, rejects every other agent', () => {
+    expect(isEngineAgentName('opencode')).toBe(true);
+    expect(isEngineAgentName(undefined)).toBe(true);
+    for (const agent of ['claude', 'codex', 'gemini', 'openclaw', 'agy']) {
+      expect(isEngineAgentName(agent)).toBe(false);
+    }
   });
 });
 
 describe('resolveAcpAgentConfig', () => {
-  it('resolves known agent names to predefined command + args', () => {
-    expect(resolveAcpAgentConfig(['gemini'])).toEqual({
-      agentName: 'gemini',
-      command: 'gemini',
-      args: ['--experimental-acp'],
+  it('HOST-10: defaults to the engine when no agent is named', () => {
+    expect(resolveAcpAgentConfig([])).toEqual({
+      agentName: 'opencode',
+      command: 'opencode',
+      args: ['acp'],
     });
   });
 
-  it('appends extra CLI args for known agent aliases', () => {
+  it('resolves the engine name to its ACP invocation', () => {
+    expect(resolveAcpAgentConfig(['opencode'])).toEqual({
+      agentName: 'opencode',
+      command: 'opencode',
+      args: ['acp'],
+    });
+  });
+
+  it('appends extra CLI args after the ACP subcommand', () => {
     expect(resolveAcpAgentConfig(['opencode', '--foo'])).toEqual({
       agentName: 'opencode',
       command: 'opencode',
@@ -35,24 +48,18 @@ describe('resolveAcpAgentConfig', () => {
     });
   });
 
-  it('resolves custom command form with -- separator', () => {
-    expect(resolveAcpAgentConfig(['--', 'custom-agent', '--flag'])).toEqual({
-      agentName: 'custom-agent',
-      command: 'custom-agent',
-      args: ['--flag'],
+  it('resolves a specific engine build with the -- separator', () => {
+    expect(resolveAcpAgentConfig(['--', '/opt/engine/opencode', 'acp'])).toEqual({
+      agentName: 'opencode',
+      command: '/opt/engine/opencode',
+      args: ['acp'],
     });
   });
 
-  it('treats unknown agent names as direct commands', () => {
-    expect(resolveAcpAgentConfig(['my-agent', '--x'])).toEqual({
-      agentName: 'my-agent',
-      command: 'my-agent',
-      args: ['--x'],
-    });
-  });
-
-  it('throws with helpful usage when no args are provided', () => {
-    expect(() => resolveAcpAgentConfig([])).toThrow('Usage: happy acp <agent-name> or happy acp -- <command> [args]');
+  it('HOST-10: rejects every other agent name instead of running it as a command', () => {
+    for (const agent of ['claude', 'codex', 'gemini', 'openclaw', 'agy']) {
+      expect(() => resolveAcpAgentConfig([agent])).toThrow(`Unsupported agent: '${agent}'`);
+    }
   });
 
   it('throws when separator form omits command', () => {

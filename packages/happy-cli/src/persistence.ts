@@ -14,22 +14,6 @@ import { encodeBase64, decodeBase64 } from '@/api/encryption';
 import type { Metadata } from '@/api/types';
 import { logger } from '@/ui/logger';
 
-export const SandboxConfigSchema = z.object({
-  enabled: z.boolean().default(false),
-  workspaceRoot: z.string().optional(),
-  sessionIsolation: z.enum(['strict', 'workspace', 'custom']).default('workspace'),
-  customWritePaths: z.array(z.string()).default([]),
-  denyReadPaths: z.array(z.string()).default(['~/.ssh', '~/.aws', '~/.gnupg']),
-  extraWritePaths: z.array(z.string()).default(['/tmp']),
-  denyWritePaths: z.array(z.string()).default(['.env']),
-  networkMode: z.enum(['blocked', 'allowed', 'custom']).default('allowed'),
-  allowedDomains: z.array(z.string()).default([]),
-  deniedDomains: z.array(z.string()).default([]),
-  allowLocalBinding: z.boolean().default(true),
-});
-
-export type SandboxConfig = z.infer<typeof SandboxConfigSchema>;
-
 // Settings schema version: Integer for overall Settings structure compatibility
 // Incremented when Settings structure changes (e.g., adding profiles array was v1→v2)
 // Used for migration logic in readSettings()
@@ -41,8 +25,12 @@ interface Settings {
   machineId?: string
   machineIdConfirmedByServer?: boolean
   daemonAutoStartWhenRunningHappy?: boolean
-  chromeMode?: boolean
-  sandboxConfig?: SandboxConfig
+  /**
+   * Permission confirmation switch for this host (PERM-08). Off by default: the
+   * engine runs on an allow baseline and no permission request is surfaced.
+   * Any paired control end may flip it.
+   */
+  permissionConfirmationEnabled?: boolean
   serverUrl?: string
   webappUrl?: string
 }
@@ -50,7 +38,6 @@ interface Settings {
 const defaultSettings: Settings = {
   schemaVersion: SUPPORTED_SCHEMA_VERSION,
   onboardingCompleted: false,
-  sandboxConfig: undefined,
 }
 
 /**
@@ -102,15 +89,6 @@ export async function readSettings(): Promise<Settings> {
 
     // Migrate if needed
     const migrated = migrateSettings(raw, schemaVersion);
-
-    if (migrated.sandboxConfig !== undefined) {
-      try {
-        migrated.sandboxConfig = SandboxConfigSchema.parse(migrated.sandboxConfig);
-      } catch (error: any) {
-        logger.warn(`⚠️ Invalid sandbox config - skipping. Error: ${error.message}`);
-        migrated.sandboxConfig = undefined;
-      }
-    }
 
     // Merge with defaults to ensure all required fields exist
     return { ...defaultSettings, ...migrated };

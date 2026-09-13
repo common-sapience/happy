@@ -2,7 +2,7 @@
  * AgentBackend - Universal interface for AI agent backends
  * 
  * This module defines the core abstraction for different agent backends
- * (Claude, Codex, Gemini, OpenCode, etc.) that can be controlled through
+ * that can be controlled through
  * the Happy CLI and mobile app.
  * 
  * The AgentBackend interface provides a unified way to:
@@ -33,9 +33,9 @@ export type AgentMessage =
   | { type: 'terminal-output'; data: string }
   | { type: 'event'; name: string; payload: unknown }
   | { type: 'token-count'; [key: string]: unknown } // Token count information (format may vary)
-  | { type: 'exec-approval-request'; call_id: string; [key: string]: unknown } // Exec approval request (like Codex exec_approval_request)
-  | { type: 'patch-apply-begin'; call_id: string; auto_approved?: boolean; changes: Record<string, unknown> } // Patch operation begin (like Codex patch_apply_begin)
-  | { type: 'patch-apply-end'; call_id: string; stdout?: string; stderr?: string; success: boolean } // Patch operation end (like Codex patch_apply_end)
+  | { type: 'exec-approval-request'; call_id: string; [key: string]: unknown }
+  | { type: 'patch-apply-begin'; call_id: string; auto_approved?: boolean; changes: Record<string, unknown> }
+  | { type: 'patch-apply-end'; call_id: string; stdout?: string; stderr?: string; success: boolean }
 
 /** MCP server configuration for tools */
 export interface McpServerConfig {
@@ -45,10 +45,10 @@ export interface McpServerConfig {
 }
 
 /** Transport type for agent communication */
-export type AgentTransport = 'native-claude' | 'mcp-codex' | 'acp';
+export type AgentTransport = 'acp';
 
-/** Agent identifier */
-export type AgentId = 'claude' | 'codex' | 'gemini' | 'opencode' | 'openclaw' | 'agy' | 'claude-acp' | 'codex-acp';
+/** Agent identifier — the engine is the only agent (HOST-10) */
+export type AgentId = 'opencode';
 
 /**
  * Configuration for creating an agent backend
@@ -98,7 +98,7 @@ export type AgentMessageHandler = (msg: AgentMessage) => void;
 /**
  * Universal interface for agent backends.
  * 
- * All agent implementations (Claude, Codex, Gemini, etc.) should implement
+ * The agent backend implementation should implement
  * this interface to be usable through the Happy CLI and mobile app.
  */
 export interface AgentBackend {
@@ -143,7 +143,7 @@ export interface AgentBackend {
    * Respond to a permission request.
    *
    * **Implementation Note for ACP backends:**
-   * For ACP-based agents (Gemini, Codex via ACP), permission handling is done
+   * For the ACP backend, permission handling is done
    * synchronously within the `requestPermission` RPC handler via `AcpPermissionHandler`.
    * This method only emits an internal `permission-response` event for UI/logging purposes.
    * The actual ACP response is already sent by the time this method is called.

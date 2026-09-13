@@ -1,8 +1,7 @@
 /**
  * Session Metadata Factory
  *
- * Creates session state and metadata objects for all backends (Claude, Codex, Gemini).
- * This follows DRY principles by providing a single implementation for all backends.
+ * Single place the daemon builds a session's state and metadata.
  *
  * @module createSessionMetadata
  */
@@ -14,32 +13,29 @@ import { resolve } from 'node:path';
 import type { AgentState, Metadata } from '@/api/types';
 import { configuration } from '@/configuration';
 import { projectPath } from '@/projectPath';
-import type { SandboxConfig } from '@/persistence';
+import type { EngineAgentName } from '@/agent/acp/acpAgentConfig';
 import packageJson from '../../package.json';
 
 /**
- * Backend flavor identifier for session metadata.
+ * Backend flavor identifier for session metadata. The engine is the only
+ * backend (HOST-10).
  */
-export type BackendFlavor = 'claude' | 'codex' | 'gemini' | 'opencode' | 'openclaw' | 'agy' | 'acp';
+export type BackendFlavor = EngineAgentName;
 
 /**
  * Options for creating session metadata.
  */
 export interface CreateSessionMetadataOptions {
-    /** Backend flavor (claude, codex, gemini) */
+    /** Backend flavor */
     flavor: BackendFlavor;
     /** Machine ID for server identification */
     machineId: string;
     /** How the session was started */
     startedBy?: 'daemon' | 'terminal';
-    /** Active sandbox config for the session, or undefined when not used */
-    sandbox?: SandboxConfig;
-    /** Whether the backend runs with "dangerously skip permissions" behavior */
-    dangerouslySkipPermissions?: boolean;
+    /** Engine agent profile this session runs under (HOST-12). */
+    agentProfile?: string;
     /** Happy session id this session was forked from. */
     parentSessionId?: string;
-    /** Happy message id used as the fork rewind point. */
-    forkedFromMessageId?: string;
     /** Marks this session as a hidden side chat of `parentSessionId`. */
     isSideChat?: boolean;
 }
@@ -69,24 +65,10 @@ function getGitBranch(cwd: string): string | undefined {
 }
 
 /**
- * Creates session state and metadata for backend agents.
- *
- * This utility consolidates the common session metadata creation logic used by
- * Codex and Gemini backends, ensuring consistency across all backend implementations.
+ * Creates session state and metadata for an engine session.
  *
  * @param opts - Options specifying flavor, machineId, and startedBy
  * @returns Object containing state and metadata for session creation
- *
- * @example
- * ```typescript
- * const { state, metadata } = createSessionMetadata({
- *     flavor: 'gemini',
- *     machineId: settings.machineId,
- *     startedBy: opts.startedBy
- * });
- *
- * const response = await api.getOrCreateSession({ tag: sessionTag, metadata, state });
- * ```
  */
 export function createSessionMetadata(opts: CreateSessionMetadataOptions): SessionMetadataResult {
     const state: AgentState = {
@@ -111,11 +93,9 @@ export function createSessionMetadata(opts: CreateSessionMetadataOptions): Sessi
         lifecycleState: 'running',
         lifecycleStateSince: Date.now(),
         flavor: opts.flavor,
-        sandbox: opts.sandbox?.enabled ? opts.sandbox : null,
-        dangerouslySkipPermissions: opts.dangerouslySkipPermissions ?? null,
+        ...(opts.agentProfile ? { agentProfile: opts.agentProfile } : {}),
         ...(gitBranch ? { gitBranch } : {}),
         ...(opts.parentSessionId ? { parentSessionId: opts.parentSessionId } : {}),
-        ...(opts.forkedFromMessageId ? { forkedFromMessageId: opts.forkedFromMessageId } : {}),
         ...(opts.isSideChat ? { isSideChat: true } : {}),
     };
 

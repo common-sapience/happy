@@ -200,7 +200,7 @@ export function handleAgentMessageChunk(
 }
 
 /**
- * Handle agent_thought_chunk update (Gemini's thinking/reasoning)
+ * Handle agent_thought_chunk update (the agent's thinking/reasoning)
  */
 export function handleAgentThoughtChunk(
   update: SessionUpdate,
@@ -375,12 +375,12 @@ export function failToolCall(
     const durationMinutes = formatDurationMinutes(startTime);
     logger.debug(`[AcpBackend] 🔍 Investigation tool ${status.toUpperCase()} after ${durationMinutes} minutes (${durationStr})`);
 
-    // Check for 3-minute timeout pattern (Gemini CLI internal timeout)
+    // Check for 3-minute timeout pattern (an agent's own internal timeout)
     if (duration) {
       const threeMinutes = 3 * 60 * 1000;
       const tolerance = 5000;
       if (Math.abs(duration - threeMinutes) < tolerance) {
-        logger.debug(`[AcpBackend] 🔍 ⚠️ Investigation tool failed at ~3 minutes - likely Gemini CLI timeout, not our timeout`);
+        logger.debug(`[AcpBackend] 🔍 ⚠️ Investigation tool failed at ~3 minutes - likely the agent's own timeout, not ours`);
       }
     }
 

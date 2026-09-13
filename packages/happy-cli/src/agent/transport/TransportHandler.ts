@@ -2,7 +2,7 @@
  * TransportHandler Interface
  *
  * Abstraction layer for agent-specific transport logic.
- * Allows different ACP agents (Gemini, Codex, Claude, etc.) to customize:
+ * Allows an ACP agent to customize:
  * - Initialization timeouts
  * - Stdout filtering (for debug output removal)
  * - Stderr handling (for error detection)
@@ -69,9 +69,6 @@ export interface TransportHandler {
    * Get initialization timeout in milliseconds.
    *
    * Different agents have different startup times:
-   * - Gemini CLI: 120s (slow on first start, downloads models)
-   * - Codex: ~30s
-   * - Claude: ~10s
    *
    * @returns Timeout in milliseconds
    */

@@ -2,7 +2,7 @@
  * AgentMessage - Universal message types for agent communication
  *
  * This module defines the message types that flow between:
- * - Agent backends (Gemini, Codex, Claude, etc.)
+ * - The engine's ACP backend
  * - Happy CLI
  * - Mobile app (via Happy server)
  *
@@ -119,7 +119,7 @@ export interface TokenCountMessage {
 }
 
 /**
- * Exec approval request message (Codex-style)
+ * Exec approval request message
  */
 export interface ExecApprovalRequestMessage {
   type: 'exec-approval-request';
@@ -128,7 +128,7 @@ export interface ExecApprovalRequestMessage {
 }
 
 /**
- * Patch apply begin message (Codex-style)
+ * Patch apply begin message
  */
 export interface PatchApplyBeginMessage {
   type: 'patch-apply-begin';
@@ -138,7 +138,7 @@ export interface PatchApplyBeginMessage {
 }
 
 /**
- * Patch apply end message (Codex-style)
+ * Patch apply end message
  */
 export interface PatchApplyEndMessage {
   type: 'patch-apply-end';
