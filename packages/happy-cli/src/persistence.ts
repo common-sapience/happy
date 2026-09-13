@@ -5,7 +5,7 @@
  */
 
 import { FileHandle } from 'node:fs/promises'
-import { readFile, writeFile, mkdir, open, unlink, rename, stat } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, open, unlink, rename, stat, chmod } from 'node:fs/promises'
 import { existsSync, writeFileSync, readFileSync, unlinkSync, renameSync, linkSync } from 'node:fs'
 import { constants } from 'node:fs'
 import { configuration } from '@/configuration'
@@ -251,24 +251,42 @@ export async function readCredentials(): Promise<Credentials | null> {
   return null
 }
 
-export async function writeCredentialsLegacy(credentials: { secret: Uint8Array, token: string }): Promise<void> {
+/** The account key is readable by its owner only, whichever login flow wrote it. */
+const CREDENTIALS_FILE_MODE = 0o600;
+
+async function writeCredentialsFile(body: Record<string, unknown>): Promise<void> {
   if (!existsSync(configuration.happyHomeDir)) {
     await mkdir(configuration.happyHomeDir, { recursive: true })
   }
-  await writeFile(configuration.privateKeyFile, JSON.stringify({
+  await writeFile(configuration.privateKeyFile, JSON.stringify(body, null, 2), { mode: CREDENTIALS_FILE_MODE });
+  await chmod(configuration.privateKeyFile, CREDENTIALS_FILE_MODE);
+}
+
+export async function writeCredentialsLegacy(credentials: { secret: Uint8Array, token: string }): Promise<void> {
+  await writeCredentialsFile({
     secret: encodeBase64(credentials.secret),
     token: credentials.token
-  }, null, 2));
+  });
 }
 
 export async function writeCredentialsDataKey(credentials: { publicKey: Uint8Array, machineKey: Uint8Array, token: string }): Promise<void> {
-  if (!existsSync(configuration.happyHomeDir)) {
-    await mkdir(configuration.happyHomeDir, { recursive: true })
-  }
-  await writeFile(configuration.privateKeyFile, JSON.stringify({
+  await writeCredentialsFile({
     encryption: { publicKey: encodeBase64(credentials.publicKey), machineKey: encodeBase64(credentials.machineKey) },
     token: credentials.token
-  }, null, 2));
+  });
+}
+
+/** Writes whichever form the approved login yielded, so callers do not branch on it. */
+export async function writeCredentials(credentials: Credentials): Promise<void> {
+  if (credentials.encryption.type === 'legacy') {
+    await writeCredentialsLegacy({ secret: credentials.encryption.secret, token: credentials.token });
+    return;
+  }
+  await writeCredentialsDataKey({
+    publicKey: credentials.encryption.publicKey,
+    machineKey: credentials.encryption.machineKey,
+    token: credentials.token
+  });
 }
 
 export async function clearCredentials(): Promise<void> {

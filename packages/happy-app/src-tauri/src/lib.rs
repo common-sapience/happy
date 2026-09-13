@@ -1,4 +1,5 @@
 mod daemon;
+mod handoff;
 
 use tauri::{Manager, RunEvent};
 
@@ -9,6 +10,10 @@ pub fn run() {
     .plugin(tauri_plugin_opener::init())
     .plugin(tauri_plugin_shell::init())
     .manage(daemon::DaemonProcess::default())
+    .invoke_handler(tauri::generate_handler![
+      handoff::set_daemon_relay,
+      handoff::request_daemon_login
+    ])
     .setup(|app| {
       // Also in release: without it nothing explains a daemon that will not start.
       app.handle().plugin(
