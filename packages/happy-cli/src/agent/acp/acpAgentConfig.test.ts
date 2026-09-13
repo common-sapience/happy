@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ENGINE_AGENT_NAME,
   ENGINE_PATH_ENV_VAR,
+  ENGINE_SIDECAR_NAME,
   isEngineAgentName,
   resolveAcpAgentConfig,
   resolveEngineCommand,
@@ -11,6 +12,11 @@ import {
 describe('HOST-10 engine agent identity', () => {
   it('names the engine as the only agent', () => {
     expect(ENGINE_AGENT_NAME).toBe('opencode');
+  });
+
+  it('T-29: ships the engine under a product-prefixed file name', () => {
+    expect(ENGINE_SIDECAR_NAME).toBe('happy-engine');
+    expect(ENGINE_SIDECAR_NAME).not.toBe(ENGINE_AGENT_NAME);
   });
 
   it('accepts the engine and an unset agent, rejects every other agent', () => {
@@ -75,8 +81,8 @@ describe('resolveAcpAgentConfig', () => {
 });
 
 describe('DESK-09 engine resolution in a desktop install', () => {
-  const packagedDir = '/opt/happy';
-  const engineBeside = '/opt/happy/opencode';
+  const packagedDir = '/usr/bin';
+  const engineBeside = '/usr/bin/happy-engine';
 
   it('prefers the explicit engine path over everything else', () => {
     expect(
@@ -101,6 +107,23 @@ describe('DESK-09 engine resolution in a desktop install', () => {
     ).toBe(engineBeside);
   });
 
+  it('T-29: never takes a sibling named after the generic engine, which is the user\'s own install', () => {
+    const probed: string[] = [];
+    expect(
+      resolveEngineCommand({
+        env: {},
+        packaged: true,
+        executableDir: packagedDir,
+        exists: (path) => {
+          probed.push(path);
+          return path === join(packagedDir, 'opencode');
+        },
+        platform: 'linux',
+      }),
+    ).toBe('opencode');
+    expect(probed).toEqual([engineBeside]);
+  });
+
   it('looks for the Windows executable name on Windows', () => {
     const probed: string[] = [];
     const installDir = 'C:\\Program Files\\Happy';
@@ -115,7 +138,7 @@ describe('DESK-09 engine resolution in a desktop install', () => {
       platform: 'win32',
     });
 
-    expect(probed).toEqual([join(installDir, 'opencode.exe')]);
+    expect(probed).toEqual([join(installDir, 'happy-engine.exe')]);
   });
 
   it('falls back to the engine on PATH when nothing ships beside the daemon', () => {

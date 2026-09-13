@@ -21,7 +21,10 @@ const repoRoot = resolve(appDir, '..', '..');
 const binariesDir = join(appDir, 'src-tauri', 'binaries');
 
 const DAEMON_NAME = 'happy-daemon';
-const ENGINE_NAME = 'opencode';
+// Product-prefixed, and kept in step with ENGINE_SIDECAR_NAME in happy-cli: the
+// Linux package installs both sidecars into a shared directory, so a file named
+// `opencode` there would collide with the user's own engine (T-29).
+const ENGINE_NAME = 'happy-engine';
 
 function parseArgs(argv) {
   const args = { engineRepo: process.env.ENGINE_REPO, target: process.env.SIDECAR_TARGET };

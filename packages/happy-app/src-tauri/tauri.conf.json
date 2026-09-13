@@ -44,7 +44,7 @@
     "category": "Utility",
     "externalBin": [
       "binaries/happy-daemon",
-      "binaries/opencode"
+      "binaries/happy-engine"
     ],
     "icon": [
       "icons/32x32.png",

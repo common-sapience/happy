@@ -10,6 +10,15 @@ import { isPackagedExecutable, packagedExecutableDir } from '@/utils/packagedExe
 
 export const ENGINE_AGENT_NAME = 'opencode' as const;
 export const ENGINE_ACP_COMMAND = 'opencode';
+/**
+ * File name of the engine sidecar inside the desktop package (T-29).
+ *
+ * Product-prefixed on purpose: the Linux package installs the daemon into a
+ * directory it shares with everything else on the system, so a sibling called
+ * `opencode` there is the user's own install rather than the engine this
+ * package shipped. Only this name is ever taken from beside the daemon.
+ */
+export const ENGINE_SIDECAR_NAME = 'happy-engine';
 export const ENGINE_ACP_ARGS: readonly string[] = ['acp'];
 export const ENGINE_PATH_ENV_VAR = 'HAPPY_ENGINE_PATH';
 
@@ -33,8 +42,9 @@ export function isEngineAgentName(agent: string | undefined): agent is EngineAge
 /**
  * Resolves the engine executable for this installation.
  *
- * Desktop installs ship the engine next to the daemon (DESK-09), so the binary
- * beside this executable wins over whatever a shell happens to have on PATH.
+ * Desktop installs ship the engine next to the daemon (DESK-09) under its own
+ * product-prefixed name (T-29), so that binary wins over whatever a shell
+ * happens to have on PATH.
  * The environment variable stays ahead of both so a developer — or the desktop
  * shell during a test run — can point the daemon at another engine build.
  */
@@ -58,7 +68,7 @@ export function resolveEngineCommand(
   const packaged = deps.packaged ?? isPackagedExecutable();
   if (packaged) {
     const platform = deps.platform ?? process.platform;
-    const executableName = platform === 'win32' ? `${ENGINE_ACP_COMMAND}.exe` : ENGINE_ACP_COMMAND;
+    const executableName = platform === 'win32' ? `${ENGINE_SIDECAR_NAME}.exe` : ENGINE_SIDECAR_NAME;
     const sibling = join(deps.executableDir ?? packagedExecutableDir(), executableName);
     if (exists(sibling)) {
       return sibling;

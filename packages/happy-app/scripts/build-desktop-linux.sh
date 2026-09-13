@@ -5,10 +5,13 @@
 # (DESK-09, TD-07).
 #
 # Inputs:
-#   ENGINE_REPO        checkout of the engine fork at the pinned commit (required)
-#   HAPPY_SERVER_URL   relay baked into the package; unset ships one that asks on first launch
-#   CARGO_WORK_DIR     where the Rust build writes (default /var/tmp/harness-tauri)
-#   BUNDLES            Tauri bundle list (default deb,appimage)
+#   ENGINE_REPO                    checkout of the engine fork at the pinned commit (required)
+#   EXPO_PUBLIC_HAPPY_SERVER_URL   relay baked into the web app; unset ships a package that asks on first launch
+#   CARGO_WORK_DIR                 where the Rust build writes (default /var/tmp/harness-tauri)
+#   BUNDLES                        Tauri bundle list (default deb,appimage)
+#
+# The baked address reaches the web app only. The Rust shell compiles no relay
+# address: the app resolves one and hands it to the daemon (HOST-14, T-30).
 
 set -euo pipefail
 
@@ -48,8 +51,7 @@ docker run --rm \
   -e CARGO_TARGET_DIR=/target \
   -e ENGINE_REPO=/engine \
   -e OPENCODE_CHANNEL="${engine_channel}" \
-  -e HAPPY_SERVER_URL="${HAPPY_SERVER_URL:-}" \
-  -e EXPO_PUBLIC_HAPPY_SERVER_URL="${HAPPY_SERVER_URL:-}" \
+  -e EXPO_PUBLIC_HAPPY_SERVER_URL="${EXPO_PUBLIC_HAPPY_SERVER_URL:-}" \
   -e CI=true \
   -e HOME=/tmp/build-home \
   -u "$(id -u):$(id -g)" \
