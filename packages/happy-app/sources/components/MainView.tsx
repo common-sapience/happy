@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useSocketStatus, useSettingMutable } from '@/sync/storage';
+import { useSocketStatus } from '@/sync/storage';
 import { NativeSettingsMenu, type NativeSettingsMenuGroup } from './NativeSettingsMenu';
 import { useVisibleSessionListViewData } from '@/hooks/useVisibleSessionListViewData';
 import { useIsTablet } from '@/utils/responsive';
@@ -232,25 +232,12 @@ const HeaderRight = React.memo(({ activeTab }: { activeTab: ActiveTabType }) => 
     const router = useRouter();
     const { theme } = useUnistyles();
     const isCustomServer = isUsingCustomServer();
-    const [sessionListGrouping, setSessionListGrouping] = useSettingMutable('sessionListGrouping');
 
     if (activeTab === 'sessions') {
         if (Platform.OS !== 'web') {
+            // The list has one shape (DESK-11), so this menu offers no layout
+            // choice — only the way out to appearance settings.
             const viewMenuGroups: NativeSettingsMenuGroup[] = [
-                {
-                    key: 'grouping',
-                    label: t('sessionsFilter.groupingTitle'),
-                    title: t('sessionsFilter.groupingTitle'),
-                    systemImage: 'rectangle.grid.1x2',
-                    options: [
-                        { key: 'flat', label: t('sessionsFilter.flatList') },
-                        { key: 'project', label: t('sessionsFilter.groupByProject') },
-                    ],
-                    selectedKey: sessionListGrouping === 'project' ? 'project' : 'flat',
-                    onSelect: (key) => setSessionListGrouping(key === 'project' ? 'project' : 'flat'),
-                },
-                // A plain row, not a choice: it leaves this screen for the
-                // appearance settings, where the avatar options now live.
                 {
                     key: 'appearance',
                     label: '',

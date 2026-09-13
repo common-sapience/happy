@@ -1076,7 +1076,25 @@ export const ca: TranslationStructure = {
         friendRequestGeneric: 'Nova sol·licitud d\'amistat',
         friendAccepted: ({ name }: { name: string }) => `Ara ets amic de ${name}`,
         friendAcceptedGeneric: 'Sol·licitud d\'amistat acceptada',
-    }
+    },
+    harness: {
+        stateRunning: 'treballant',
+        stateIdle: 'lliure',
+        stateWaiting: 'espera la teva resposta',
+        stateArchived: 'arxivat',
+        usedTool: 'ha usat una eina',
+        profileLabel: 'Perfil',
+        profileDefault: 'Predeterminat',
+        profileDefaultHint: 'tot activat',
+        profilePlan: 'Pla',
+        profilePlanHint: 'pensa abans de canviar res',
+        profileBuild: 'Construir',
+        profileBuildHint: 'escriu codi i executa ordres',
+        extraInstructions: 'Instruccions addicionals',
+        extraInstructionsPlaceholder: 'Allò que aquest agent ha de recordar sempre',
+        noAgentsTitle: 'Encara no hi ha agents',
+    },
+
 } as const;
 
 export type TranslationsCa = typeof ca;

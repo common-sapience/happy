@@ -15,7 +15,6 @@ import { AllFilesDiffView } from '@/components/AllFilesDiffView';
 import { sync } from '@/sync/sync';
 import { useGitStatusFiles } from '@/hooks/useGitStatusFiles';
 import { useSession } from '@/sync/storage';
-import { isRigMetadata } from '@/sync/rig';
 import { useUnistyles } from 'react-native-unistyles';
 
 export default React.memo(function SessionChangesScreen() {
@@ -33,7 +32,7 @@ export default React.memo(function SessionChangesScreen() {
 
     // Only the legacy viewer needs the shell-backed status cache. Happy Agent
     // loads its native workspace comparison inside AllFilesDiffView.
-    useGitStatusFiles(sessionId!, Boolean(session?.metadata) && !isRigMetadata(session?.metadata));
+    useGitStatusFiles(sessionId!, Boolean(session?.metadata));
 
     return (
         <View style={{ flex: 1, backgroundColor: theme.colors.surface }}>

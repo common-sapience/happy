@@ -1,6 +1,5 @@
 import type { NewSessionAgentType } from './persistence';
 import type { Machine } from './storageTypes';
-import { isRigMachine } from './rigSessionCreation';
 import { pairedMachineIds } from './agentSessionPlaces';
 import { isMachineOnline } from '@/utils/machineUtils';
 import { isHarnessAvailable } from '@/utils/harnessCatalog';
@@ -9,25 +8,18 @@ import { resolveMachineAgent } from '@/utils/newSessionAgentSelection';
 /**
  * One computer, as a person picks it.
  *
- * Happy gives every daemon a machine of its own, so a computer running both Happy CLI and Happy
- * Agent arrives as two. Nobody thinks of their laptop that way. A choice is the laptop; which
- * daemon actually runs the session follows from the agent, underneath, without being asked.
+ * A computer can have registered itself more than once — a daemon started from a different data
+ * directory mints a new machine identity and points at its sibling. Nobody thinks of their laptop
+ * that way, so the pairing is followed and the computer is offered once.
  */
 export interface MachineChoice {
-    /**
-     * What a draft stores, which is Happy CLI's machine whenever this computer has one.
-     *
-     * Happy Agent's display name carries a suffix that only means anything when both halves are on
-     * screen at once, and drafts made before this pairing existed already hold the CLI machine.
-     */
+    /** What a draft stores: the daemon this computer is talked to through. */
     id: string;
     name: string;
     /** Every machine on this computer, for reading the places on it. */
     machineIds: string[];
-    /** The daemon Happy CLI runs here, if it runs one. */
+    /** The daemon to talk to, which is the reachable one when several registered. */
     happyMachine: Machine | null;
-    /** The daemon Happy Agent runs here, if it runs one. */
-    rigMachine: Machine | null;
     /** True when any daemon on this computer is reachable. */
     online: boolean;
     activeAt: number;
@@ -43,16 +35,6 @@ function preferLiveliest(machines: readonly Machine[]): Machine | null {
         Number(isMachineOnline(right)) - Number(isMachineOnline(left))
         || (right.activeAt ?? 0) - (left.activeAt ?? 0)
     ))[0] ?? null;
-}
-
-/** The host name without the daemon suffix Happy Agent adds to tell the pair apart. */
-function getComputerName(choice: { happyMachine: Machine | null; rigMachine: Machine | null }): string {
-    const named = choice.happyMachine ?? choice.rigMachine;
-    if (!named) return 'Unknown machine';
-    // Happy Agent has no sibling to be distinguished from once the pair is offered as one row,
-    // so it is named by its host rather than by the display name it publishes.
-    if (choice.happyMachine === null && named.metadata?.host) return named.metadata.host;
-    return getMachineName(named);
 }
 
 /**
@@ -100,18 +82,14 @@ export function collectMachineChoices(machines: readonly Machine[]): MachineChoi
         const ids = connectedMachineIds(machine, machines, byId);
         for (const id of ids) grouped.add(id);
         const group = ids.map((id) => byId.get(id)!);
-        // One computer can accumulate several Happy Agent registrations — a daemon started from a
-        // different data directory mints a new machine identity and claims the same Happy CLI
-        // machine as its sibling. The live one is the one to talk to, so reachability decides
-        // first and recency breaks the tie; the stale ones are history and simply go unused.
-        const rigMachine = preferLiveliest(group.filter((member) => isRigMachine(member.metadata)));
-        const happyMachine = preferLiveliest(group.filter((member) => !isRigMachine(member.metadata)));
+        // The live registration is the one to talk to, so reachability decides first and recency
+        // breaks the tie; the stale ones are history and simply go unused.
+        const happyMachine = preferLiveliest(group);
         choices.push({
-            id: (happyMachine ?? rigMachine ?? machine).id,
-            name: getComputerName({ happyMachine, rigMachine }),
+            id: (happyMachine ?? machine).id,
+            name: happyMachine ? getMachineName(happyMachine) : 'Unknown machine',
             machineIds: ids,
             happyMachine,
-            rigMachine,
             online: group.some(isMachineOnline),
             activeAt: Math.max(...group.map((member) => member.activeAt ?? 0)),
         });

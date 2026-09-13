@@ -14,12 +14,10 @@ import {
 
 const baseInput = {
     machineId: 'machine-1',
-    agent: 'rig',
+    agent: 'opencode',
     directory: '~/project',
     worktree: '__none__',
-    modelKey: 'codex/gpt-5.6-sol',
-    permissionMode: 'auto',
-    effort: 'high',
+    agentProfile: 'default',
 };
 
 describe('spawn request id', () => {
@@ -48,7 +46,7 @@ describe('spawn request id', () => {
         expect(resolveSpawnRequestId(buildSpawnRequestSignature(baseInput))).toBe('request-1');
         expect(resolveSpawnRequestId(buildSpawnRequestSignature({
             ...baseInput,
-            permissionMode: 'read_only',
+            agentProfile: 'plan',
         }))).toBe('request-2');
         expect(resolveSpawnRequestId(buildSpawnRequestSignature({
             ...baseInput,

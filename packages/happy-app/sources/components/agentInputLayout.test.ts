@@ -33,7 +33,6 @@ describe('agent input compact mobile layout', () => {
             actionSize: 42,
             addIconSize: 26,
             secondaryActionHeight: 40,
-            effortWidth: 64,
             primaryActionSize: 42,
             primaryActionMarginLeft: 8,
             attachmentExtraHeight: 72,
@@ -71,22 +70,13 @@ describe('agent input compact mobile layout', () => {
         ['icon',
             { width: 42, height: 42, flexShrink: 0 },
             { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }],
-        // The pair is right-aligned, so each chip keeps its slack on the outside
-        // of the separator. Only the model shrinks; the effort reserves the
-        // widest label's width so changing level cannot reflow or clip the row.
+        // Right-aligned against the send button, and the only chip that shrinks.
         ['model',
             { flexShrink: 1, minWidth: 0, height: 40 },
             {
                 minWidth: 0, height: 40, borderRadius: 20,
                 flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end',
                 paddingLeft: 12, paddingRight: 4, gap: 7,
-            }],
-        ['effort',
-            { flexShrink: 0, minWidth: 64, height: 40 },
-            {
-                minWidth: 0, height: 40, borderRadius: 20,
-                flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start',
-                paddingLeft: 4, paddingRight: 12, gap: 4,
             }],
     ])('keeps %s native-menu frame geometry separate from label padding', (variant, expectedFrame, expectedContent) => {
         const resolveGeometry = (agentInputLayout as Record<string, unknown>)

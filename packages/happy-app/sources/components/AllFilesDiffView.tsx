@@ -4,13 +4,11 @@ import { Text } from '@/components/StyledText';
 import { Typography } from '@/constants/Typography';
 import { DiffFilesList, type DiffFileItem } from '@/components/diff/DiffFilesList';
 import { DiffHeaderRight } from '@/components/diff/DiffHeaderRight';
-import { HappyAgentDiffView } from '@/components/HappyAgentDiffView';
 import { countPatchStats } from '@/components/diff/engine/stats';
 import { buildGitDiffCommand, buildGitShowBase64Command, FULL_FILE_CONTEXT } from '@/utils/gitDiffCommand';
 import { imageDataUri, isImagePath } from '@/utils/imageFiles';
 import { sessionBash, sessionReadFile } from '@/sync/ops';
 import { storage, useSession, useSessionGitStatusFiles, useSettingMutable } from '@/sync/storage';
-import { isRigMetadata } from '@/sync/rig';
 import { resolveSessionFilePath } from '@/utils/sessionFileLinks';
 import { GitFileStatus } from '@/sync/gitStatusFiles';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -41,15 +39,12 @@ type FileDiffResult = {
     error: string | null;
 };
 
-/** Native sessions use their workspace comparison; legacy CLI sessions keep their patch path. */
 export const AllFilesDiffView = React.memo(function AllFilesDiffView(props: AllFilesDiffViewProps) {
     const session = useSession(props.sessionId);
     if (!session?.metadata) {
         return <View style={styles.centered}><ActivityIndicator size="small" /></View>;
     }
-    return isRigMetadata(session.metadata)
-        ? <HappyAgentDiffView key={props.sessionId} {...props} metadata={session.metadata} />
-        : <LegacyAllFilesDiffView key={props.sessionId} {...props} />;
+    return <LegacyAllFilesDiffView key={props.sessionId} {...props} />;
 });
 
 const LegacyAllFilesDiffView = React.memo(function LegacyAllFilesDiffView({

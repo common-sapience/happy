@@ -1077,5 +1077,23 @@ export const zhHans: TranslationStructure = {
         friendRequestGeneric: '新的好友请求',
         friendAccepted: ({ name }: { name: string }) => `您现在与 ${name} 成为了好友`,
         friendAcceptedGeneric: '好友请求已接受',
-    }
+    },
+    harness: {
+        stateRunning: '运行中',
+        stateIdle: '空闲',
+        stateWaiting: '待回答',
+        stateArchived: '已归档',
+        usedTool: '使用了工具',
+        profileLabel: '档案',
+        profileDefault: '默认',
+        profileDefaultHint: '全部工具与技能可用',
+        profilePlan: '规划',
+        profilePlanHint: '先想清楚，不改动任何东西',
+        profileBuild: '构建',
+        profileBuildHint: '写代码、执行命令',
+        extraInstructions: '追加说明',
+        extraInstructionsPlaceholder: '这个 agent 需要一直记住的事',
+        noAgentsTitle: '还没有 agent',
+    },
+
 } as const;

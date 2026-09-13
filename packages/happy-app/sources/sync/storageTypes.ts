@@ -182,11 +182,16 @@ export const MetadataSchema = z.object({
     parentSessionId: z.string().optional(),
     forkedFromMessageId: z.string().optional(),
     /**
-     * Marks this session as a hidden "side chat" forked from `parentSessionId`.
-     * Side chats never appear in the top-level session list — they render only
-     * inside the parent session's sidebar panel (see `useSideChatSession`).
+     * The agent profile this session was created under (ENG-17), written by the
+     * daemon at session start.
      */
-    isSideChat: z.boolean().optional(),
+    agentProfile: z.string().optional(),
+    /**
+     * The host's own session rather than one the user started — today the
+     * background memory consolidation run. Never listed and never counted as an
+     * agent (DESK-11).
+     */
+    internal: z.boolean().optional(),
     /**
      * Per-session permission / model / effort picks made in any client.
      * Synced through session metadata so every device shows the same

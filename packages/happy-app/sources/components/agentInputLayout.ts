@@ -32,7 +32,6 @@ export const MOBILE_COMPOSER_METRICS = {
     actionSize: 42,
     addIconSize: 26,
     secondaryActionHeight: 40,
-    effortWidth: 64,
     primaryActionSize: 42,
     primaryActionMarginLeft: 8,
     attachmentExtraHeight: 72,
@@ -59,7 +58,7 @@ export function resolveMobileComposerHeight(inputHeight: number, hasAttachments 
         + (hasAttachments ? MOBILE_COMPOSER_METRICS.attachmentExtraHeight : 0);
 }
 
-export type MobileComposerMenuVariant = 'icon' | 'model' | 'effort' | 'permission';
+export type MobileComposerMenuVariant = 'icon' | 'model' | 'permission';
 
 export interface MobileComposerGeometryStyle {
     width?: number | '100%';
@@ -159,36 +158,12 @@ export function resolveMobileComposerMenuGeometry(
         };
     }
 
-    // The pair is right-aligned against the send button, so each chip keeps its
-    // slack on the outside of the separator: the model's padding sits to its
-    // left, the effort's to its right. Only the model shrinks, and the effort
-    // reserves the widest label's width so switching levels never reflows the
-    // row or clips the text.
-    if (variant === 'model') {
-        return {
-            frame: {
-                flexShrink: 1,
-                minWidth: 0,
-                height: MOBILE_COMPOSER_METRICS.secondaryActionHeight,
-            },
-            content: {
-                minWidth: 0,
-                height: MOBILE_COMPOSER_METRICS.secondaryActionHeight,
-                borderRadius: MOBILE_COMPOSER_METRICS.secondaryActionHeight / 2,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-                paddingLeft: 12,
-                paddingRight: 4,
-                gap: 7,
-            },
-        };
-    }
-
+    // The model chip is right-aligned against the send button and is the only
+    // one that shrinks, so its slack sits on its left.
     return {
         frame: {
-            flexShrink: 0,
-            minWidth: MOBILE_COMPOSER_METRICS.effortWidth,
+            flexShrink: 1,
+            minWidth: 0,
             height: MOBILE_COMPOSER_METRICS.secondaryActionHeight,
         },
         content: {
@@ -197,10 +172,10 @@ export function resolveMobileComposerMenuGeometry(
             borderRadius: MOBILE_COMPOSER_METRICS.secondaryActionHeight / 2,
             flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'flex-start',
-            paddingLeft: 4,
-            paddingRight: 12,
-            gap: 4,
+            justifyContent: 'flex-end',
+            paddingLeft: 12,
+            paddingRight: 4,
+            gap: 7,
         },
     };
 }

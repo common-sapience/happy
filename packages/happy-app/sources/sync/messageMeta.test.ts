@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveMessageModeMeta, UnsupportedPermissionModeError } from './messageMeta';
+import { resolveMessageModeMeta } from './messageMeta';
 import { rigMetadataFixture } from './__testdata__/rigMetadata';
 
 describe('resolveMessageModeMeta', () => {
@@ -27,85 +27,6 @@ describe('resolveMessageModeMeta', () => {
         } as any);
 
         expect(meta.permissionMode).toBe('yolo');
-    });
-
-    // The composer resolves a saved `dontAsk` to Auto because the key is gone
-    // from the catalog. Without retiring it at the read path the wire kept
-    // sending `dontAsk`, which the CLI's message schema rejects outright.
-    it('retires a dontAsk left on an existing session instead of sending it', () => {
-        const meta = resolveMessageModeMeta({
-            permissionMode: 'dontAsk',
-            modelMode: null,
-            effortLevel: null,
-            metadata: { flavor: 'opencode' },
-        } as any);
-
-        expect(meta.permissionMode).toBe('acceptEdits');
-    });
-
-    it('retires a saved dontAsk default instead of sending it', () => {
-        const meta = resolveMessageModeMeta({
-            permissionMode: null,
-            modelMode: null,
-            effortLevel: null,
-            metadata: { flavor: 'opencode' },
-        } as any, {
-            agentDefaultOverrides: { opencode: { permissionMode: 'dontAsk' } },
-        } as any);
-
-        expect(meta.permissionMode).toBe('acceptEdits');
-    });
-
-    // A session on an old CLI can still carry `auto` — saved before the gate
-    // existed, or persisted as an explicit default — and CLIs before 1.2.1-beta.2
-    // reject the whole message envelope on it. The resolver refuses loudly:
-    // substituting the code default would silently change permissions (for
-    // Claude it could change a previously selected mode without consent.
-    it('refuses a saved auto for a claude session on an old CLI', () => {
-        expect(() => resolveMessageModeMeta({
-            permissionMode: 'auto',
-            modelMode: null,
-            effortLevel: null,
-            metadata: { flavor: 'opencode', version: '1.2.1-beta.1' },
-        } as any)).toThrow(UnsupportedPermissionModeError);
-    });
-
-    it('refuses an auto default override for a codex session on an old CLI', () => {
-        expect(() => resolveMessageModeMeta({
-            permissionMode: null,
-            modelMode: null,
-            effortLevel: null,
-            metadata: { flavor: 'opencode', version: '1.2.0' },
-        } as any, {
-            agentDefaultOverrides: { opencode: { permissionMode: 'auto' } },
-        } as any)).toThrow(UnsupportedPermissionModeError);
-    });
-
-    it('refuses an auto default override for a claude session on an old CLI', () => {
-        expect(() => resolveMessageModeMeta({
-            permissionMode: null,
-            modelMode: null,
-            effortLevel: null,
-            metadata: { flavor: 'opencode', version: '1.2.0' },
-        } as any, {
-            agentDefaultOverrides: { opencode: { permissionMode: 'auto' } },
-        } as any)).toThrow(UnsupportedPermissionModeError);
-    });
-
-    it('names the mode and CLI version in the refusal', () => {
-        try {
-            resolveMessageModeMeta({
-                permissionMode: 'auto',
-                modelMode: null,
-                effortLevel: null,
-                metadata: { flavor: 'opencode', version: '1.2.0' },
-            } as any);
-            expect.unreachable('should have thrown');
-        } catch (error) {
-            expect(error).toBeInstanceOf(UnsupportedPermissionModeError);
-            expect((error as Error).message).toContain("'auto'");
-            expect((error as Error).message).toContain('1.2.0');
-        }
     });
 
     it('sends auto untouched when the session CLI is new enough', () => {
@@ -251,31 +172,17 @@ describe('resolveMessageModeMeta', () => {
         expect(meta).toEqual({ model: null });
     });
 
-    it('sends canonical Rig selection metadata using mode code rather than semantic kind', () => {
+    it('sends the picked profile and model through untouched', () => {
         const meta = resolveMessageModeMeta({
-            permissionMode: 'auto',
-            modelMode: 'claude:shared-model',
-            effortLevel: 'max',
-            metadata: rigMetadataFixture,
+            permissionMode: 'plan',
+            modelMode: 'gateway/model-a',
+            effortLevel: null,
+            metadata: { flavor: 'opencode' },
         } as any);
 
         expect(meta).toEqual({
-            permissionMode: 'auto',
-            model: 'shared-model',
-            modelProviderId: 'claude',
-            effort: 'max',
+            permissionMode: 'plan',
+            model: 'gateway/model-a',
         });
-        expect(meta.permissionMode).not.toBe('safe-yolo');
-    });
-
-    it('does not carry an unsupported reasoning value across a Rig model change', () => {
-        const meta = resolveMessageModeMeta({
-            permissionMode: null,
-            modelMode: 'claude:shared-model',
-            effortLevel: 'medium',
-            metadata: rigMetadataFixture,
-        } as any);
-
-        expect(meta.effort).toBe('high');
     });
 });

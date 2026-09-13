@@ -4,10 +4,9 @@ type Draft = {
     input: string;
     selectedMachineId: string | null;
     selectedPath: string | null;
-    agentType: 'claude' | 'codex' | 'gemini' | 'openclaw' | 'agy' | 'rig';
+    agentType: 'opencode';
     permissionMode: string | null;
-    modelMode: string | null;
-    effortLevel: string | null;
+    systemPromptAddition: string | null;
     sessionType: 'simple' | 'worktree';
     worktreeKey: string | null;
     updatedAt: number;
@@ -31,10 +30,9 @@ function persistedDraft(overrides: Partial<Draft> = {}): Draft {
         input: '',
         selectedMachineId: null,
         selectedPath: null,
-        agentType: 'claude',
+        agentType: 'opencode',
         permissionMode: null,
-        modelMode: null,
-        effortLevel: null,
+        systemPromptAddition: null,
         sessionType: 'simple',
         worktreeKey: null,
         updatedAt: 1,
@@ -49,35 +47,32 @@ describe('useNewSessionDraft', () => {
         mockPersistence.saved = [];
     });
 
-    it('keeps mode defaults unset when there is no persisted draft', async () => {
+    it('DESK-10: leaves the profile unset so the composer lands on the everything-on one', async () => {
         const { useNewSessionDraft } = await import('./useNewSessionDraft');
 
         expect(useNewSessionDraft.getState().permissionMode).toBeNull();
-        expect(useNewSessionDraft.getState().modelMode).toBeNull();
-        expect(useNewSessionDraft.getState().effortLevel).toBeNull();
+        expect(useNewSessionDraft.getState().systemPromptAddition).toBeNull();
     });
 
-    it('loads persisted permission, model, and effort defaults', async () => {
+    it('DESK-10: loads the persisted profile and extra instructions', async () => {
         mockPersistence.draft = persistedDraft({
-            permissionMode: 'yolo',
-            modelMode: 'opus',
-            effortLevel: 'xhigh',
+            permissionMode: 'plan',
+            systemPromptAddition: 'Always ask before deleting files',
         });
 
         const { useNewSessionDraft } = await import('./useNewSessionDraft');
 
-        expect(useNewSessionDraft.getState().permissionMode).toBe('yolo');
-        expect(useNewSessionDraft.getState().modelMode).toBe('opus');
-        expect(useNewSessionDraft.getState().effortLevel).toBe('xhigh');
+        expect(useNewSessionDraft.getState().permissionMode).toBe('plan');
+        expect(useNewSessionDraft.getState().systemPromptAddition).toBe('Always ask before deleting files');
     });
 
-    it('persists effort changes with the rest of the new-session draft', async () => {
+    it('DESK-10: persists a profile change with the rest of the draft', async () => {
         const { useNewSessionDraft } = await import('./useNewSessionDraft');
 
-        useNewSessionDraft.getState().setEffortLevel('high');
+        useNewSessionDraft.getState().setPermissionMode('build');
 
-        expect(useNewSessionDraft.getState().effortLevel).toBe('high');
-        expect(mockPersistence.saved.at(-1)).toMatchObject({ effortLevel: 'high' });
+        expect(useNewSessionDraft.getState().permissionMode).toBe('build');
+        expect(mockPersistence.saved.at(-1)).toMatchObject({ permissionMode: 'build' });
     });
 
     it('keeps temporary image attachments in memory without persisting their file URIs', async () => {

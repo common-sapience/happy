@@ -93,13 +93,6 @@ const INTERACTIVE_QUESTION_TOOL_NAMES = new Set([
 
 export type ToolSummaryCategory = 'terminal' | 'edit' | 'read' | 'search' | 'web' | 'task' | 'other';
 
-/** Formats `mcp__linear__create_issue` as `MCP: Linear Create Issue`. */
-export function formatMCPTitle(toolName: string): string {
-    const parts = toolName.replace(/^mcp__/, '').split('__');
-    const formattedParts = parts.map(formatSnakeCaseTitle);
-    return `MCP: ${formattedParts.join(' ')}`;
-}
-
 export function isTerminalToolName(name: string): boolean {
     return TERMINAL_TOOL_NAMES.has(name) || happyToolDisplay[name]?.category === 'terminal';
 }
@@ -314,6 +307,12 @@ function getProviderActivityDescription(
     return description;
 }
 
+/**
+ * DESK-01: an activity record is written in plain language. A tool we have no
+ * word for — an MCP server's, the browser's — is reported as what it was, a tool
+ * the agent used; its real name and arguments live in the expanded detail, which
+ * is where protocol words belong (design.md §3).
+ */
 function getToolActivityAction(category: ToolSummaryCategory, toolName: string): string {
     switch (category) {
         case 'terminal':
@@ -331,9 +330,7 @@ function getToolActivityAction(category: ToolSummaryCategory, toolName: string):
                 ? t('toolGroup.ranTask')
                 : formatToolName(toolName);
         default:
-            return toolName.startsWith('mcp__')
-                ? formatMCPTitle(toolName)
-                : formatToolName(toolName);
+            return t('harness.usedTool');
     }
 }
 
@@ -350,14 +347,6 @@ function isGenericToolDescription(toolName: string, value: string | null): boole
         || normalized === normalizeActivityText(formatToolName(toolName))
         || normalized === normalizeActivityText(`Running ${toolName}`)
         || normalized === normalizeActivityText(`Running ${formatToolName(toolName)}`);
-}
-
-function formatSnakeCaseTitle(value: string): string {
-    return value
-        .split('_')
-        .filter(Boolean)
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join(' ');
 }
 
 function formatToolName(value: string): string {

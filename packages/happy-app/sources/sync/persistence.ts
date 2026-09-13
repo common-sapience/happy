@@ -16,9 +16,13 @@ export interface NewSessionDraft {
     selectedMachineId: string | null;
     selectedPath: string | null;
     agentType: NewSessionAgentType;
+    /**
+     * The agent profile the session starts under (ENG-17). Named for the wire
+     * field the daemon maps to the engine's ACP mode.
+     */
     permissionMode: PermissionModeKey | null;
-    modelMode: string | null;
-    effortLevel: string | null;
+    /** Extra instructions the user wants this agent to keep in mind (DESK-10). */
+    systemPromptAddition: string | null;
     sessionType: NewSessionSessionType;
     worktreeKey: string | null;
     updatedAt: number;
@@ -144,8 +148,9 @@ export function loadNewSessionDraft(): NewSessionDraft | null {
         const permissionMode: PermissionModeKey | null = typeof parsed.permissionMode === 'string'
             ? parsed.permissionMode
             : null;
-        const modelMode: string | null = typeof parsed.modelMode === 'string' ? parsed.modelMode : null;
-        const effortLevel: string | null = typeof parsed.effortLevel === 'string' ? parsed.effortLevel : null;
+        const systemPromptAddition: string | null = typeof parsed.systemPromptAddition === 'string'
+            ? parsed.systemPromptAddition
+            : null;
         const sessionType: NewSessionSessionType = parsed.sessionType === 'worktree' ? 'worktree' : 'simple';
         const worktreeKey = typeof parsed.worktreeKey === 'string' ? parsed.worktreeKey : null;
         const updatedAt = typeof parsed.updatedAt === 'number' ? parsed.updatedAt : Date.now();
@@ -156,8 +161,7 @@ export function loadNewSessionDraft(): NewSessionDraft | null {
             selectedPath,
             agentType,
             permissionMode,
-            modelMode,
-            effortLevel,
+            systemPromptAddition,
             sessionType,
             worktreeKey,
             updatedAt,
