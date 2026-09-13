@@ -9,18 +9,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { t } from '@/text';
 import { isTauri } from '@/utils/isTauri';
 import { useOverlayNav } from '@/-session/sessionOverlayNav';
 import { DEFAULT_APP_ZOOM } from '@/hooks/useTauriZoom';
 import { canRouteForward, canUseRouteBack, getNavigatorCanGoBack } from '@/navigation/browserNavigation';
 import { useBrowserNavigationStore } from '@/navigation/browserNavigationStore';
+import { MobileGlassSurface } from './MobileGlass';
 
 const TAURI_HEADER_CONTROL_LEFT = Math.ceil(92 / DEFAULT_APP_ZOOM);
 
 export const SidebarNavigator = React.memo(() => {
     const auth = useAuth();
+    const { theme } = useUnistyles();
     const isTablet = useIsTablet();
     const zenMode = useLocalSetting('zenMode');
     const isDesktopLayout = auth.isAuthenticated && isTablet;
@@ -61,7 +63,7 @@ export const SidebarNavigator = React.memo(() => {
             headerShown: false,
             drawerType: 'permanent' as const,
             drawerStyle: {
-                backgroundColor: 'white',
+                backgroundColor: theme.colors.surface,
                 borderRightWidth: 0,
                 width: drawerWidth,
                 overflow: 'hidden' as const,
@@ -72,10 +74,16 @@ export const SidebarNavigator = React.memo(() => {
             drawerItemStyle: { display: 'none' as const },
             drawerLabelStyle: { display: 'none' as const },
         };
-    }, [isDesktopLayout, drawerWidth]);
+    }, [isDesktopLayout, drawerWidth, theme]);
 
+    // The sidebar is navigation chrome, so its shell is a glass layer whose only
+    // visible edge separates it from the content pane.
     const drawerContent = React.useCallback(
-        () => <SidebarView />,
+        () => (
+            <MobileGlassSurface nativeEffect material="static" intensity={76} style={sidebarStyles.shell}>
+                <SidebarView />
+            </MobileGlassSurface>
+        ),
         []
     );
 
@@ -156,9 +164,12 @@ const PersistentHeader = React.memo(() => {
             pointerEvents="box-none"
             {...(inTauri ? { dataSet: { tauriDragRegion: 'true' } } : {})}
         >
-            {/* Zen / Back / Forward buttons */}
-            <View
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+            {/* Zen / Back / Forward buttons, on one glass control pill */}
+            <MobileGlassSurface
+                nativeEffect
+                material="static"
+                intensity={76}
+                style={sidebarStyles.controlCluster}
                 pointerEvents="auto"
                 {...(inTauri ? { dataSet: { tauriDragRegion: 'false' } } : {})}
             >
@@ -183,7 +194,26 @@ const PersistentHeader = React.memo(() => {
                         <Ionicons name="chevron-forward" size={20} color={theme.colors.header.tint} />
                     </Pressable>
                 )}
-            </View>
+            </MobileGlassSurface>
         </View>
     );
 });
+
+const sidebarStyles = StyleSheet.create((theme) => ({
+    shell: {
+        flex: 1,
+        borderTopWidth: 0,
+        borderBottomWidth: 0,
+        borderLeftWidth: 0,
+        borderRightColor: theme.colors.glass.divider,
+    },
+    controlCluster: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.margins.xs,
+        paddingHorizontal: theme.margins.sm,
+        height: theme.minTouchTarget - 8,
+        borderRadius: theme.borderRadius.pill,
+        overflow: 'hidden',
+    },
+}));

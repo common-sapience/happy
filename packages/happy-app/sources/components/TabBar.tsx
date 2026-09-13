@@ -55,10 +55,13 @@ function tabTransition(from: number, to: number) {
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const styles = StyleSheet.create((theme) => ({
+    // Desktop tab bar: flush chrome, so the glass material draws only its top
+    // edge and carries no drop shadow.
     webOuterContainer: {
-        backgroundColor: theme.colors.surface,
-        borderTopWidth: 1,
-        borderTopColor: theme.colors.divider,
+        borderBottomWidth: 0,
+        borderLeftWidth: 0,
+        borderRightWidth: 0,
+        borderTopColor: theme.colors.glass.divider,
     },
     webInnerContainer: {
         flexDirection: 'row',
@@ -79,7 +82,7 @@ const styles = StyleSheet.create((theme) => ({
         position: 'relative',
     },
     webLabel: {
-        fontSize: 10,
+        fontSize: theme.typography.caption.fontSize,
         marginTop: 3,
         ...Typography.default(),
     },
@@ -510,7 +513,12 @@ export const TabBar = React.memo(({ activeTab, onTabPress }: TabBarProps) => {
 
     if (Platform.OS === 'web') {
         return (
-            <View style={[styles.webOuterContainer, { paddingBottom: insets.bottom }]}>
+            <MobileGlassSurface
+                nativeEffect
+                material="static"
+                intensity={76}
+                style={[styles.webOuterContainer, { paddingBottom: insets.bottom }]}
+            >
                 <View style={styles.webInnerContainer}>
                     {tabs.map((tab) => {
                         const isActive = activeTab === tab.key;
@@ -536,7 +544,7 @@ export const TabBar = React.memo(({ activeTab, onTabPress }: TabBarProps) => {
                         );
                     })}
                 </View>
-            </View>
+            </MobileGlassSurface>
         );
     }
 

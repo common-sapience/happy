@@ -29,7 +29,7 @@ export default function RootLayout() {
                     : theme.colors.groupped.background,
             }}
         >
-            <MobileGlassBackdrop enabled={!isDesktop} />
+            <MobileGlassBackdrop />
         <Stack
             initialRouteName='index'
             screenOptions={{
