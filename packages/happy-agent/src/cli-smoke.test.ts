@@ -545,19 +545,20 @@ describe('Smoke: Full test suite runs', () => {
 
     });
 
-    it('config loads with correct defaults', () => {
+    it('config loads from the configured relay address', () => {
         const origUrl = process.env.HAPPY_SERVER_URL;
         const origHome = process.env.HAPPY_HOME_DIR;
-        delete process.env.HAPPY_SERVER_URL;
+        process.env.HAPPY_SERVER_URL = 'https://relay.example.test';
         delete process.env.HAPPY_HOME_DIR;
 
         try {
             const config = loadConfig();
-            expect(config.serverUrl).toBe('https://api.cluster-fluster.com');
+            expect(config.serverUrl).toBe('https://relay.example.test');
             expect(config.homeDir).toContain('.happy');
             expect(config.credentialPath).toContain('agent.key');
         } finally {
             if (origUrl !== undefined) process.env.HAPPY_SERVER_URL = origUrl;
+            else delete process.env.HAPPY_SERVER_URL;
             if (origHome !== undefined) process.env.HAPPY_HOME_DIR = origHome;
         }
     });

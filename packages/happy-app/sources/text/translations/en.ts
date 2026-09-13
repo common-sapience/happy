@@ -115,12 +115,6 @@ export const en: TranslationStructure = {
         whatRow: 'The other computer joins this account',
         whatHint: 'It can then run agents for you, and it appears in the list of computers on the account page. Remove it there whenever you want.',
     },
-    voiceStatusBar: {
-        tapToEnd: 'tap to end',
-        connecting: 'Connecting…',
-        error: 'Connection error',
-        active: 'Voice assistant active',
-    },
 
     tabs: {
         // Tab navigation labels
@@ -129,12 +123,6 @@ export const en: TranslationStructure = {
         settings: 'Account',
     },
 
-    inbox: {
-        // Inbox screen
-        emptyTitle: 'Empty Inbox',
-        emptyDescription: 'Connect with friends to start sharing sessions',
-        updates: 'Updates',
-    },
 
     common: {
         // Simple string constants
@@ -229,7 +217,6 @@ export const en: TranslationStructure = {
         developer: 'Developer',
         developerTools: 'Developer Tools',
         about: 'About',
-        aboutFooter: 'Happy Coder is a Codex and Claude Code mobile client. It\'s fully end-to-end encrypted and your account is stored only on your device. Not affiliated with Anthropic.',
         whatsNew: 'What\'s New',
         whatsNewSubtitle: 'See the latest updates and improvements',
         reportIssue: 'Report an Issue',
@@ -406,44 +393,45 @@ export const en: TranslationStructure = {
         placeholder: 'Type a command or search...',
     },
 
-    server: {
-        // Used by Server Configuration screen (app/(app)/server.tsx)
-        serverConfiguration: 'Server Configuration',
-        enterServerUrl: 'Please enter a server URL',
-        notValidHappyServer: 'Not a valid Happy Server',
-        changeServer: 'Change Server',
-        continueWithServer: 'Continue with this server?',
-        resetToDefault: 'Reset to Default',
-        resetServerDefault: 'Reset server to default?',
-        validating: 'Validating...',
-        validatingServer: 'Validating server...',
-        serverReturnedError: 'Server returned an error',
-        failedToConnectToServer: 'Failed to connect to server',
-        currentlyUsingCustomServer: 'Currently using custom server',
-        customServerUrlLabel: 'Custom Server URL',
-        advancedFeatureFooter: "This is an advanced feature. Only change the server if you know what you're doing. You will need to log out and log in again after changing servers.",
-        services: 'Services',
-        useCustomServerForVoice: 'Use Custom Server for Voice',
-        customServerVoiceEnabled: 'Voice credentials and usage use your custom server',
-        customServerVoiceDisabled: 'Voice uses Happy Cloud and your Happy subscription',
-        customServerVoiceFooter: 'When off, starting voice contacts Happy Cloud and ElevenLabs. Turn this on only if your custom server is configured for voice.',
+    relay: {
+        // Used by the relay address entry (components/RelayAddressEntry.tsx)
+        title: 'Relay',
+        firstRunTitle: 'Name your relay',
+        firstRunBody: 'This app reaches your computers through a relay you run. There is no default one, so enter its address to continue.',
+        addressLabel: 'Relay address',
+        addressPlaceholder: 'https://relay.example.com',
+        addressEmpty: 'Enter a relay address',
+        addressProtocol: 'The address has to start with http:// or https://',
+        addressFormat: 'That is not a valid address',
+        checking: 'Checking the relay...',
+        checkingShort: 'Checking...',
+        notARelay: 'Nothing answered as a relay at that address',
+        unreachable: 'Could not reach that address',
+        returnedError: 'The relay returned an error',
+        current: 'This computer reaches the relay above',
+        changeTitle: 'Change relay',
+        changeBody: 'Your account lives on the relay you leave, so you have to log in again on the new one. Continue?',
+        forget: 'Forget relay',
+        forgetTitle: 'Forget this relay',
+        forgetBody: 'The app asks for an address again and stays logged out until you give it one.',
+        footer: 'Agents run on your computers; the relay only passes encrypted messages between them and this app. Changing it signs you out.',
     },
 
     sessionInfo: {
+        title: 'Agent details',
         // Used by Session Info screen (app/(app)/session/[id]/info.tsx)
         killSession: 'Kill Session',
         killSessionConfirm: 'Are you sure you want to terminate this session?',
         archiveSession: 'Archive agent',
         archiveSessionConfirm: 'Are you sure you want to archive this session?',
-        happySessionIdCopied: 'Happy Session ID copied to clipboard',
-        failedToCopySessionId: 'Failed to copy Happy Session ID',
-        happySessionId: 'Happy Session ID',
-        claudeCodeSessionId: 'Claude Code Session ID',
-        claudeCodeSessionIdCopied: 'Claude Code Session ID copied to clipboard',
+        agentIdCopied: 'Agent ID copied to clipboard',
+        failedToCopyAgentId: 'Failed to copy the agent ID',
+        agentId: 'Agent ID',
+        engineSessionId: 'Engine session ID',
+        engineSessionIdCopied: 'Engine session ID copied to clipboard',
         codexThreadId: 'Codex Thread ID',
         codexThreadIdCopied: 'Codex Thread ID copied to clipboard',
-        aiProvider: 'AI Provider',
-        failedToCopyClaudeCodeSessionId: 'Failed to copy Claude Code Session ID',
+        failedToCopyEngineSessionId: 'Failed to copy the engine session ID',
         failedToCopyCodexThreadId: 'Failed to copy Codex Thread ID',
         metadataCopied: 'Agent details copied to clipboard',
         failedToCopyMetadata: 'Failed to copy the agent details',
@@ -621,10 +609,6 @@ export const en: TranslationStructure = {
         toggle: 'Zen mode',
     },
 
-    toolView: {
-        input: 'Input',
-        output: 'Output',
-    },
 
     toolGroup: {
         ran: 'Ran',
@@ -637,71 +621,6 @@ export const en: TranslationStructure = {
         hide: 'Hide',
     },
 
-    tools: {
-        fullView: {
-            description: 'Description',
-            inputParams: 'Input Parameters',
-            output: 'Output',
-            error: 'Error',
-            completed: 'Tool completed successfully',
-            noOutput: 'No output was produced',
-            running: 'Tool is running...',
-            rawJsonDevMode: 'Raw JSON (Dev Mode)',
-        },
-        taskView: {
-            initializing: 'Initializing agent...',
-            moreTools: ({ count }: { count: number }) => `+${count} more ${plural({ count, singular: 'tool', plural: 'tools' })}`,
-        },
-        multiEdit: {
-            editNumber: ({ index, total }: { index: number; total: number }) => `Edit ${index} of ${total}`,
-            replaceAll: 'Replace All',
-        },
-        names: {
-            task: 'Task',
-            terminal: 'Terminal',
-            searchFiles: 'Search Files',
-            search: 'Search',
-            searchContent: 'Search Content',
-            listFiles: 'List Files',
-            planProposal: 'Plan proposal',
-            readFile: 'Read File',
-            editFile: 'Edit File',
-            writeFile: 'Write File',
-            fetchUrl: 'Fetch URL',
-            readNotebook: 'Read Notebook',
-            editNotebook: 'Edit Notebook',
-            todoList: 'Todo List',
-            webSearch: 'Web Search',
-            reasoning: 'Reasoning',
-            applyChanges: 'Update file',
-            viewDiff: 'Current file changes',
-            question: 'Question',
-        },
-        askUserQuestion: {
-            submit: 'Submit Answer',
-            multipleQuestions: ({ count }: { count: number }) => `${count} questions`,
-            other: 'Other',
-            otherDescription: 'Type your own answer',
-            otherPlaceholder: 'Type your answer...',
-        },
-        desc: {
-            terminalCmd: ({ cmd }: { cmd: string }) => `Terminal(cmd: ${cmd})`,
-            searchPattern: ({ pattern }: { pattern: string }) => `Search(pattern: ${pattern})`,
-            searchPath: ({ basename }: { basename: string }) => `Search(path: ${basename})`,
-            fetchUrlHost: ({ host }: { host: string }) => `Fetch URL(url: ${host})`,
-            editNotebookMode: ({ path, mode }: { path: string; mode: string }) => `Edit Notebook(file: ${path}, mode: ${mode})`,
-            todoListCount: ({ count }: { count: number }) => `Todo List(count: ${count})`,
-            webSearchQuery: ({ query }: { query: string }) => `Web Search(query: ${query})`,
-            grepPattern: ({ pattern }: { pattern: string }) => `grep(pattern: ${pattern})`,
-            multiEditEdits: ({ path, count }: { path: string; count: number }) => `${path} (${count} edits)`,
-            readingFile: ({ file }: { file: string }) => `Reading ${file}`,
-            writingFile: ({ file }: { file: string }) => `Writing ${file}`,
-            modifyingFile: ({ file }: { file: string }) => `Modifying ${file}`,
-            modifyingFiles: ({ count }: { count: number }) => `Modifying ${count} files`,
-            modifyingMultipleFiles: ({ file, count }: { file: string; count: number }) => `${file} and ${count} more`,
-            showingDiff: 'Showing changes',
-        }
-    },
 
     files: {
         changes: 'Changes',
@@ -752,51 +671,7 @@ export const en: TranslationStructure = {
         noChanges: 'No changes',
         binaryFile: 'Binary file not shown',
     },
-    sideChat: {
-        panelTitle: 'Side chat',
-        emptyTitle: 'Start a side chat',
-        emptySubtitle: 'Ask the agent something on the side. It inherits this chat’s context but stays isolated — nothing here touches the main conversation.',
-        startButton: 'Start side chat',
-        creating: 'Starting side chat…',
-        unavailable: 'This session can’t start a side chat yet — wait for the agent to come online.',
-        composerPlaceholder: 'Message side chat…',
-        expand: 'Open full screen',
-        tabLabel: ({ index }: { index: number }) => `Side chat ${index}`,
-        newChat: 'New side chat',
-        close: 'Close side chat',
-    },
 
-    settingsVoice: {
-        // Voice settings screen
-        languageTitle: 'Language',
-        languageDescription: 'Choose your preferred language for voice assistant interactions. This setting syncs across all your devices.',
-        preferredLanguage: 'Preferred Language',
-        preferredLanguageSubtitle: 'Language used for voice assistant responses',
-        language: {
-            searchPlaceholder: 'Search languages...',
-            title: 'Languages',
-            footer: ({ count }: { count: number }) => `${count} ${plural({ count, singular: 'language', plural: 'languages' })} available`,
-            autoDetect: 'Auto-detect',
-        },
-        // Bring your own agent
-        byoTitle: 'Bring Your Own Agent',
-        byoDescription: 'Use your own ElevenLabs agent instead of the Happy default. No subscription required — connect directly with your own ElevenLabs account. Your agent must define two client tools: messageClaudeCode (sends text to the coding agent) and processPermissionRequest (allows or denies tool use). It receives session context via the {{initialConversationContext}} dynamic variable.',
-        customAgentId: 'ElevenLabs Agent ID',
-        customAgentIdNotSet: 'Not configured',
-        customAgentIdDescription: 'Enter your ElevenLabs agent ID. Leave empty to use the Happy default.',
-        customAgentIdPlaceholder: 'e.g. abc123def456',
-        bypassToken: 'Direct Connection',
-        bypassTokenSubtitle: 'Skip Happy server, connect straight to ElevenLabs',
-        promptGuideTitle: 'Agent Prompt Guide',
-        promptGuideDescription: 'Your ElevenLabs agent needs:\n\n• Tool: messageClaudeCode — parameter: message (string). Sends a message to the active coding session.\n• Tool: processPermissionRequest — parameter: decision ("allow" or "deny"). Approves or denies a pending tool permission.\n• Dynamic variable: {{initialConversationContext}} — receives session history and context on start.\n\nThe agent acts as a voice bridge between the user and coding agents. It should be concise, only respond when addressed, and report when a coding agent finishes work.',
-        usageTitle: 'Usage (Last 30 Days)',
-        usageFooter: 'Voice time used in the last 30 days. Free tier: 20 min. Subscribed: 5 hours. Max 100 conversations per month.',
-        usageLabel: 'Voice Time',
-        conversationsLabel: 'Conversations',
-        usageUsed: ({ used, limit }: { used: string; limit: string }) => `${used} used of ${limit}`,
-        supportTitle: 'Upgrade Voice',
-        supportSubtitle: 'Get more voice time and support development',
-    },
 
     settingsAccount: {
         // Account settings screen
@@ -813,7 +688,6 @@ export const en: TranslationStructure = {
         name: 'Name',
         github: 'GitHub',
         tapToDisconnect: 'Tap to disconnect',
-        server: 'Server',
         backup: 'Backup',
         backupDescription: 'Your secret key is the only way to recover your account. Save it in a secure place like a password manager.',
         secretKey: 'Secret Key',
@@ -925,11 +799,11 @@ export const en: TranslationStructure = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: 'Codex and Claude Code mobile client',
+        title: 'An agent that works your computer',
         subtitle: 'End-to-end encrypted and your account is stored only on your device.',
         createAccount: 'Create account',
         linkOrRestoreAccount: 'Link or restore account',
-        loginWithMobileApp: 'Login with mobile app',
+        loginWithMobileApp: 'Use another computer',
     },
 
     review: {
@@ -1016,98 +890,8 @@ export const en: TranslationStructure = {
         mermaidRenderFailed: 'Failed to render mermaid diagram',
     },
 
-    artifacts: {
-        // Artifacts feature
-        title: 'Artifacts',
-        countSingular: '1 artifact',
-        countPlural: ({ count }: { count: number }) => `${count} artifacts`,
-        empty: 'No artifacts yet',
-        emptyDescription: 'Create your first artifact to get started',
-        new: 'New Artifact',
-        edit: 'Edit Artifact',
-        delete: 'Delete',
-        updateError: 'Failed to update artifact. Please try again.',
-        notFound: 'Artifact not found',
-        discardChanges: 'Discard changes?',
-        discardChangesDescription: 'You have unsaved changes. Are you sure you want to discard them?',
-        deleteConfirm: 'Delete artifact?',
-        deleteConfirmDescription: 'This action cannot be undone',
-        titleLabel: 'TITLE',
-        titlePlaceholder: 'Enter a title for your artifact',
-        bodyLabel: 'CONTENT',
-        bodyPlaceholder: 'Write your content here...',
-        emptyFieldsError: 'Please enter a title or content',
-        createError: 'Failed to create artifact. Please try again.',
-        save: 'Save',
-        saving: 'Saving...',
-        loading: 'Loading artifacts...',
-        error: 'Failed to load artifact',
-    },
 
-    friends: {
-        // Friends feature
-        title: 'Friends',
-        manageFriends: 'Manage your friends and connections',
-        searchTitle: 'Find Friends',
-        pendingRequests: 'Friend Requests',
-        myFriends: 'My Friends',
-        noFriendsYet: "You don't have any friends yet",
-        findFriends: 'Find Friends',
-        remove: 'Remove',
-        pendingRequest: 'Pending',
-        sentOn: ({ date }: { date: string }) => `Sent on ${date}`,
-        accept: 'Accept',
-        reject: 'Reject',
-        addFriend: 'Add Friend',
-        alreadyFriends: 'Already Friends',
-        requestPending: 'Request Pending',
-        searchInstructions: 'Enter a username to search for friends',
-        searchPlaceholder: 'Enter username...',
-        searching: 'Searching...',
-        userNotFound: 'User not found',
-        noUserFound: 'No user found with that username',
-        checkUsername: 'Please check the username and try again',
-        howToFind: 'How to Find Friends',
-        findInstructions: 'Search for friends by their username. Both you and your friend need to have GitHub connected to send friend requests.',
-        requestSent: 'Friend request sent!',
-        requestAccepted: 'Friend request accepted!',
-        requestRejected: 'Friend request rejected',
-        friendRemoved: 'Friend removed',
-        confirmRemove: 'Remove Friend',
-        confirmRemoveMessage: 'Are you sure you want to remove this friend?',
-        cannotAddYourself: 'You cannot send a friend request to yourself',
-        bothMustHaveGithub: 'Both users must have GitHub connected to become friends',
-        status: {
-            none: 'Not connected',
-            requested: 'Request sent',
-            pending: 'Request pending',
-            friend: 'Friends',
-            rejected: 'Rejected',
-        },
-        acceptRequest: 'Accept Request',
-        removeFriend: 'Remove Friend',
-        removeFriendConfirm: ({ name }: { name: string }) => `Are you sure you want to remove ${name} as a friend?`,
-        requestSentDescription: ({ name }: { name: string }) => `Your friend request has been sent to ${name}`,
-        requestFriendship: 'Request friendship',
-        cancelRequest: 'Cancel friendship request',
-        cancelRequestConfirm: ({ name }: { name: string }) => `Cancel your friendship request to ${name}?`,
-        denyRequest: 'Deny friendship',
-        nowFriendsWith: ({ name }: { name: string }) => `You are now friends with ${name}`,
-    },
 
-    usage: {
-        // Usage panel strings
-        today: 'Today',
-        last7Days: 'Last 7 days',
-        last30Days: 'Last 30 days',
-        totalTokens: 'Total Tokens',
-        totalCost: 'Total Cost',
-        tokens: 'Tokens',
-        cost: 'Cost',
-        usageOverTime: 'Usage over time',
-        byModel: 'By Model',
-        noData: 'No usage data available',
-    },
 
     imageUpload: {
         permissionTitle: 'Photo Library Access',
@@ -1124,13 +908,6 @@ export const en: TranslationStructure = {
         notSupportedMessage: 'This agent does not support image attachments. Images were not sent.',
     },
 
-    feed: {
-        // Feed notifications for friend requests and acceptances
-        friendRequestFrom: ({ name }: { name: string }) => `${name} sent you a friend request`,
-        friendRequestGeneric: 'New friend request',
-        friendAccepted: ({ name }: { name: string }) => `You are now friends with ${name}`,
-        friendAcceptedGeneric: 'Friend request accepted',
-    },
 
     harness: {
         stateRunning: 'running',

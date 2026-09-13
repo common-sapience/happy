@@ -46,8 +46,9 @@ vi.mock('axios', () => ({
 
 vi.mock('@/configuration', () => ({
     configuration: {
-        serverUrl: 'https://server.test'
-    }
+        relayUrl: 'https://relay.example.test'
+    },
+    requireRelayUrl: () => 'https://relay.example.test'
 }));
 
 vi.mock('@/ui/logger', () => ({
@@ -345,7 +346,7 @@ describe('ApiSessionClient v3 messages API migration', () => {
                 return {
                     data: {
                         ref: 'sessions/test-session-id/attachments/codex-image.enc',
-                        uploadUrl: 'https://server.test/v1/sessions/test-session-id/attachments/codex-image.enc',
+                        uploadUrl: 'https://relay.example.test/v1/sessions/test-session-id/attachments/codex-image.enc',
                         method: 'PUT',
                     },
                 };
@@ -614,7 +615,7 @@ describe('ApiSessionClient v3 messages API migration', () => {
         await (client as any).fetchMessages();
 
         expect(mockAxiosGet).toHaveBeenCalledTimes(1);
-        expect(mockAxiosGet.mock.calls[0][0]).toBe('https://server.test/v3/sessions/test-session-id/messages');
+        expect(mockAxiosGet.mock.calls[0][0]).toBe('https://relay.example.test/v3/sessions/test-session-id/messages');
         expect(mockAxiosGet.mock.calls[0][1].params).toEqual({
             after_seq: 0,
             limit: 100

@@ -137,14 +137,8 @@ export function parseBackupSecretKey(formattedKey: string): string {
  */
 export function isValidSecretKey(key: string): boolean {
     try {
-        // Try parsing as formatted key first
-        if (key.includes('-')) {
-            const parsed = parseBackupSecretKey(key);
-            return decodeBase64(parsed, 'base64url').length === 32;
-        }
-
-        // Try as base64url
-        return decodeBase64(key, 'base64url').length === 32;
+        normalizeSecretKey(key);
+        return true;
     } catch {
         return false;
     }
@@ -156,24 +150,17 @@ export function isValidSecretKey(key: string): boolean {
  * @returns Base64url encoded secret key
  */
 export function normalizeSecretKey(key: string): string {
-    // Trim whitespace
     const trimmed = key.trim();
-    
-    // Check if it looks like a formatted key (contains dashes or spaces between groups)
-    // or has been typed with spaces/formatting
-    if (/[-\s]/.test(trimmed) || trimmed.length > 50) {
-        return parseBackupSecretKey(trimmed);
-    }
 
-    // Otherwise try to parse as base64url
+    // A base64url key can itself contain '-' and '_', so the presence of a dash
+    // does not make it a grouped backup key: read it as the key it already is
+    // before falling back to the grouped format.
     try {
-        const bytes = decodeBase64(trimmed, 'base64url');
-        if (bytes.length !== 32) {
-            throw new Error('Invalid secret key');
+        if (decodeBase64(trimmed, 'base64url').length === 32) {
+            return trimmed;
         }
-        return trimmed;
-    } catch (error) {
-        // If base64 parsing fails, try parsing as formatted key anyway
-        return parseBackupSecretKey(trimmed);
+    } catch {
+        // Not base64url at all; the grouped parser reports why.
     }
+    return parseBackupSecretKey(trimmed);
 }

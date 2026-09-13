@@ -100,12 +100,6 @@ export const es: TranslationStructure = {
         whatRow: 'El otro ordenador se une a esta cuenta',
         whatHint: 'Podrá ejecutar agents para ti y aparecerá en la lista de ordenadores de la página de cuenta. Quítalo allí cuando quieras.',
     },
-    voiceStatusBar: {
-        tapToEnd: 'toca para finalizar',
-        connecting: 'Conectando…',
-        error: 'Error de conexión',
-        active: 'Asistente de voz activo',
-    },
 
     tabs: {
         // Tab navigation labels
@@ -114,12 +108,6 @@ export const es: TranslationStructure = {
         settings: 'Cuenta',
     },
 
-    inbox: {
-        // Inbox screen
-        emptyTitle: 'Bandeja vacía',
-        emptyDescription: 'Conéctate con amigos para empezar a compartir sesiones',
-        updates: 'Actualizaciones',
-    },
 
     common: {
         // Simple string constants
@@ -214,7 +202,6 @@ export const es: TranslationStructure = {
         developer: 'Desarrollador',
         developerTools: 'Herramientas de desarrollador',
         about: 'Acerca de',
-        aboutFooter: 'Happy Coder es un cliente móvil para Codex y Claude Code. Todo está cifrado de extremo a extremo y tu cuenta se guarda solo en tu dispositivo. No está afiliado con Anthropic.',
         whatsNew: 'Novedades',
         whatsNewSubtitle: 'Ve las últimas actualizaciones y mejoras',
         reportIssue: 'Reportar un problema',
@@ -392,44 +379,45 @@ export const es: TranslationStructure = {
         placeholder: 'Escriba un comando o busque...',
     },
 
-    server: {
-        // Used by Server Configuration screen (app/(app)/server.tsx)
-        serverConfiguration: 'Configuración del servidor',
-        enterServerUrl: 'Ingresa una URL de servidor',
-        notValidHappyServer: 'No es un servidor Happy válido',
-        changeServer: 'Cambiar servidor',
-        continueWithServer: '¿Continuar con este servidor?',
-        resetToDefault: 'Restablecer por defecto',
-        resetServerDefault: '¿Restablecer servidor por defecto?',
-        validating: 'Validando...',
-        validatingServer: 'Validando servidor...',
-        serverReturnedError: 'El servidor devolvió un error',
-        failedToConnectToServer: 'Falló al conectar con el servidor',
-        currentlyUsingCustomServer: 'Actualmente usando servidor personalizado',
-        customServerUrlLabel: 'URL del servidor personalizado',
-        advancedFeatureFooter: 'Esta es una característica avanzada. Solo cambia el servidor si sabes lo que haces. Necesitarás cerrar sesión e iniciarla nuevamente después de cambiar servidores.',
-        services: 'Servicios',
-        useCustomServerForVoice: 'Usar servidor personalizado para voz',
-        customServerVoiceEnabled: 'Las credenciales y el uso de voz utilizan tu servidor personalizado',
-        customServerVoiceDisabled: 'La voz utiliza Happy Cloud y tu suscripción de Happy',
-        customServerVoiceFooter: 'Cuando está desactivado, iniciar la voz contacta con Happy Cloud y ElevenLabs. Actívalo solo si tu servidor personalizado está configurado para voz.',
+    relay: {
+        // Used by the relay address entry (components/RelayAddressEntry.tsx)
+        title: 'Relé',
+        firstRunTitle: 'Indica tu relé',
+        firstRunBody: 'Esta app llega a tus ordenadores a través de un relé que tú ejecutas. No hay ninguno por defecto, así que introduce su dirección para continuar.',
+        addressLabel: 'Dirección del relé',
+        addressPlaceholder: 'https://relay.example.com',
+        addressEmpty: 'Introduce la dirección del relé',
+        addressProtocol: 'La dirección debe empezar por http:// o https://',
+        addressFormat: 'Esa dirección no es válida',
+        checking: 'Comprobando el relé...',
+        checkingShort: 'Comprobando...',
+        notARelay: 'Nada respondió como relé en esa dirección',
+        unreachable: 'No se pudo contactar con esa dirección',
+        returnedError: 'El relé devolvió un error',
+        current: 'Este ordenador se conecta al relé de arriba',
+        changeTitle: 'Cambiar de relé',
+        changeBody: 'Tu cuenta vive en el relé que dejas, así que tendrás que iniciar sesión otra vez en el nuevo. ¿Continuar?',
+        forget: 'Olvidar relé',
+        forgetTitle: 'Olvidar este relé',
+        forgetBody: 'La app volverá a pedir una dirección y seguirá sin sesión hasta que le des una.',
+        footer: 'Los agentes se ejecutan en tus ordenadores; el relé solo pasa mensajes cifrados entre ellos y esta app. Cambiarlo cierra tu sesión.',
     },
 
     sessionInfo: {
+        title: 'Detalles del agent',
         // Used by Session Info screen (app/(app)/session/[id]/info.tsx)
         killSession: 'Terminar sesión',
         killSessionConfirm: '¿Seguro que quieres terminar esta sesión?',
         archiveSession: 'Archivar agent',
         archiveSessionConfirm: '¿Seguro que quieres archivar esta sesión?',
-        happySessionIdCopied: 'ID de sesión de Happy copiado al portapapeles',
-        failedToCopySessionId: 'Falló al copiar ID de sesión de Happy',
-        happySessionId: 'ID de sesión de Happy',
-        claudeCodeSessionId: 'ID de sesión de Claude Code',
-        claudeCodeSessionIdCopied: 'ID de sesión de Claude Code copiado al portapapeles',
+        agentIdCopied: 'Id del agent copiado al portapapeles',
+        failedToCopyAgentId: 'No se pudo copiar el id del agent',
+        agentId: 'Id del agent',
+        engineSessionId: 'Id de sesión del motor',
+        engineSessionIdCopied: 'Id de sesión del motor copiado al portapapeles',
         codexThreadId: 'ID del hilo de Codex',
         codexThreadIdCopied: 'ID del hilo de Codex copiado al portapapeles',
-        aiProvider: 'Proveedor de IA',
-        failedToCopyClaudeCodeSessionId: 'Falló al copiar ID de sesión de Claude Code',
+        failedToCopyEngineSessionId: 'No se pudo copiar el id de sesión del motor',
         failedToCopyCodexThreadId: 'Falló al copiar ID del hilo de Codex',
         metadataCopied: 'Detalles del agent copiados al portapapeles',
         failedToCopyMetadata: 'No se pudieron copiar los detalles del agent',
@@ -607,10 +595,6 @@ export const es: TranslationStructure = {
         toggle: 'Modo zen',
     },
 
-    toolView: {
-        input: 'Entrada',
-        output: 'Salida',
-    },
 
     toolGroup: {
         ran: 'Ejecutado',
@@ -623,71 +607,6 @@ export const es: TranslationStructure = {
         hide: 'Ocultar',
     },
 
-    tools: {
-        fullView: {
-            description: 'Descripción',
-            inputParams: 'Parámetros de entrada',
-            output: 'Salida',
-            error: 'Error',
-            completed: 'Herramienta completada exitosamente',
-            noOutput: 'No se produjo salida',
-            running: 'La herramienta está ejecutándose...',
-            rawJsonDevMode: 'JSON crudo (modo desarrollador)',
-        },
-        taskView: {
-            initializing: 'Inicializando agente...',
-            moreTools: ({ count }: { count: number }) => `+${count} más ${plural({ count, singular: 'herramienta', plural: 'herramientas' })}`,
-        },
-        multiEdit: {
-            editNumber: ({ index, total }: { index: number; total: number }) => `Edición ${index} de ${total}`,
-            replaceAll: 'Reemplazar todo',
-        },
-        names: {
-            task: 'Tarea',
-            terminal: 'Terminal',
-            searchFiles: 'Buscar archivos',
-            search: 'Buscar',
-            searchContent: 'Buscar contenido',
-            listFiles: 'Listar archivos',
-            planProposal: 'Propuesta de plan',
-            readFile: 'Leer archivo',
-            editFile: 'Editar archivo',
-            writeFile: 'Escribir archivo',
-            fetchUrl: 'Obtener URL',
-            readNotebook: 'Leer cuaderno',
-            editNotebook: 'Editar cuaderno',
-            todoList: 'Lista de tareas',
-            webSearch: 'Búsqueda web',
-            reasoning: 'Razonamiento',
-            applyChanges: 'Actualizar archivo',
-            viewDiff: 'Cambios del archivo actual',
-            question: 'Pregunta',
-        },
-        desc: {
-            terminalCmd: ({ cmd }: { cmd: string }) => `Terminal(cmd: ${cmd})`,
-            searchPattern: ({ pattern }: { pattern: string }) => `Buscar(patrón: ${pattern})`,
-            searchPath: ({ basename }: { basename: string }) => `Buscar(ruta: ${basename})`,
-            fetchUrlHost: ({ host }: { host: string }) => `Obtener URL(url: ${host})`,
-            editNotebookMode: ({ path, mode }: { path: string; mode: string }) => `Editar cuaderno(archivo: ${path}, modo: ${mode})`,
-            todoListCount: ({ count }: { count: number }) => `Lista de tareas(cantidad: ${count})`,
-            webSearchQuery: ({ query }: { query: string }) => `Búsqueda web(consulta: ${query})`,
-            grepPattern: ({ pattern }: { pattern: string }) => `grep(patrón: ${pattern})`,
-            multiEditEdits: ({ path, count }: { path: string; count: number }) => `${path} (${count} ediciones)`,
-            readingFile: ({ file }: { file: string }) => `Leyendo ${file}`,
-            writingFile: ({ file }: { file: string }) => `Escribiendo ${file}`,
-            modifyingFile: ({ file }: { file: string }) => `Modificando ${file}`,
-            modifyingFiles: ({ count }: { count: number }) => `Modificando ${count} archivos`,
-            modifyingMultipleFiles: ({ file, count }: { file: string; count: number }) => `${file} y ${count} más`,
-            showingDiff: 'Mostrando cambios',
-        },
-        askUserQuestion: {
-            submit: 'Enviar respuesta',
-            multipleQuestions: ({ count }: { count: number }) => `${count} ${plural({ count, singular: 'pregunta', plural: 'preguntas' })}`,
-            other: 'Otro',
-            otherDescription: 'Escribe tu propia respuesta',
-            otherPlaceholder: 'Escribe tu respuesta...',
-        }
-    },
 
     files: {
         changes: 'Cambios',
@@ -738,51 +657,7 @@ export const es: TranslationStructure = {
         noChanges: 'Sin cambios',
         binaryFile: 'Archivo binario no mostrado',
     },
-    sideChat: {
-        panelTitle: 'Chat lateral',
-        emptyTitle: 'Inicia un chat lateral',
-        emptySubtitle: 'Pregunta algo al agente por separado. Hereda el contexto de este chat pero permanece aislado — nada de aquí afecta a la conversación principal.',
-        startButton: 'Iniciar chat lateral',
-        creating: 'Iniciando chat lateral…',
-        unavailable: 'Esta sesión aún no puede iniciar un chat lateral — espera a que el agente esté en línea.',
-        composerPlaceholder: 'Mensaje al chat lateral…',
-        expand: 'Abrir en pantalla completa',
-        tabLabel: ({ index }: { index: number }) => `Chat lateral ${index}`,
-        newChat: 'Nuevo chat lateral',
-        close: 'Cerrar chat lateral',
-    },
 
-    settingsVoice: {
-        // Voice settings screen
-        languageTitle: 'Idioma',
-        languageDescription: 'Elige tu idioma preferido para las interacciones con el asistente de voz. Esta configuración se sincroniza en todos tus dispositivos.',
-        preferredLanguage: 'Idioma preferido',
-        preferredLanguageSubtitle: 'Idioma usado para respuestas del asistente de voz',
-        language: {
-            searchPlaceholder: 'Buscar idiomas...',
-            title: 'Idiomas',
-            footer: ({ count }: { count: number }) => `${count} ${plural({ count, singular: 'idioma', plural: 'idiomas' })} disponibles`,
-            autoDetect: 'Detectar automáticamente',
-        },
-        // Bring your own agent
-        byoTitle: 'Trae tu propio agente',
-        byoDescription: 'Usa tu propio agente de ElevenLabs en lugar del predeterminado de Happy. No se requiere suscripción — conéctate directamente con tu propia cuenta de ElevenLabs. Tu agente debe definir dos herramientas de cliente: messageClaudeCode (envía texto al agente de código) y processPermissionRequest (permite o deniega el uso de herramientas). Recibe el contexto de la sesión a través de la variable dinámica {{initialConversationContext}}.',
-        customAgentId: 'ElevenLabs Agent ID',
-        customAgentIdNotSet: 'No configurado',
-        customAgentIdDescription: 'Ingresa tu ElevenLabs Agent ID. Déjalo vacío para usar el predeterminado de Happy.',
-        customAgentIdPlaceholder: 'e.g. abc123def456',
-        bypassToken: 'Conexión directa',
-        bypassTokenSubtitle: 'Omite el servidor de Happy, conéctate directamente a ElevenLabs',
-        promptGuideTitle: 'Guía de prompt del agente',
-        promptGuideDescription: 'Tu agente de ElevenLabs necesita:\n\n• Herramienta: messageClaudeCode — parámetro: message (string). Envía un mensaje a la sesión de código activa.\n• Herramienta: processPermissionRequest — parámetro: decision ("allow" o "deny"). Aprueba o deniega un permiso de herramienta pendiente.\n• Variable dinámica: {{initialConversationContext}} — recibe el historial y contexto de la sesión al iniciar.\n\nEl agente actúa como puente de voz entre el usuario y los agentes de código. Debe ser conciso, responder solo cuando se le habla e informar cuando un agente de código termina su trabajo.',
-        usageTitle: 'Uso (últimos 30 días)',
-        usageFooter: 'Tiempo de voz utilizado en los últimos 30 días. Plan gratuito: 20 min. Suscrito: 5 horas. Máx. 100 conversaciones al mes.',
-        usageLabel: 'Tiempo de voz',
-        conversationsLabel: 'Conversaciones',
-        usageUsed: ({ used, limit }: { used: string; limit: string }) => `${used} usado de ${limit}`,
-        supportTitle: 'Mejorar voz',
-        supportSubtitle: 'Más tiempo de voz y apoya el desarrollo',
-    },
 
     settingsAccount: {
         // Account settings screen
@@ -799,7 +674,6 @@ export const es: TranslationStructure = {
         name: 'Nombre',
         github: 'GitHub',
         tapToDisconnect: 'Toque para desconectar',
-        server: 'Servidor',
         backup: 'Copia de seguridad',
         backupDescription: 'Tu clave secreta es la única forma de recuperar tu cuenta. Guárdala en un lugar seguro como un administrador de contraseñas.',
         secretKey: 'Clave secreta',
@@ -911,11 +785,11 @@ export const es: TranslationStructure = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: 'Cliente móvil de Codex y Claude Code',
+        title: 'Un agente que maneja tu ordenador',
         subtitle: 'Cifrado de extremo a extremo y tu cuenta se guarda solo en tu dispositivo.',
         createAccount: 'Crear cuenta',
         linkOrRestoreAccount: 'Vincular o restaurar cuenta',
-        loginWithMobileApp: 'Iniciar sesión con aplicación móvil',
+        loginWithMobileApp: 'Desde otro ordenador',
     },
 
     review: {
@@ -1002,98 +876,8 @@ export const es: TranslationStructure = {
         mermaidRenderFailed: 'Error al renderizar el diagrama mermaid',
     },
 
-    artifacts: {
-        // Artifacts feature
-        title: 'Artefactos',
-        countSingular: '1 artefacto',
-        countPlural: ({ count }: { count: number }) => `${count} artefactos`,
-        empty: 'No hay artefactos aún',
-        emptyDescription: 'Crea tu primer artefacto para comenzar',
-        new: 'Nuevo artefacto',
-        edit: 'Editar artefacto',
-        delete: 'Eliminar',
-        updateError: 'No se pudo actualizar el artefacto. Por favor, intenta de nuevo.',
-        notFound: 'Artefacto no encontrado',
-        discardChanges: '¿Descartar cambios?',
-        discardChangesDescription: 'Tienes cambios sin guardar. ¿Estás seguro de que quieres descartarlos?',
-        deleteConfirm: '¿Eliminar artefacto?',
-        deleteConfirmDescription: 'Esta acción no se puede deshacer',
-        titleLabel: 'TÍTULO',
-        titlePlaceholder: 'Ingresa un título para tu artefacto',
-        bodyLabel: 'CONTENIDO',
-        bodyPlaceholder: 'Escribe tu contenido aquí...',
-        emptyFieldsError: 'Por favor, ingresa un título o contenido',
-        createError: 'No se pudo crear el artefacto. Por favor, intenta de nuevo.',
-        save: 'Guardar',
-        saving: 'Guardando...',
-        loading: 'Cargando artefactos...',
-        error: 'Error al cargar el artefacto',
-    },
 
-    friends: {
-        // Friends feature
-        title: 'Amigos',
-        manageFriends: 'Administra tus amigos y conexiones',
-        searchTitle: 'Buscar amigos',
-        pendingRequests: 'Solicitudes de amistad',
-        myFriends: 'Mis amigos',
-        noFriendsYet: 'Aún no tienes amigos',
-        findFriends: 'Buscar amigos',
-        remove: 'Eliminar',
-        pendingRequest: 'Pendiente',
-        sentOn: ({ date }: { date: string }) => `Enviado el ${date}`,
-        accept: 'Aceptar',
-        reject: 'Rechazar',
-        addFriend: 'Agregar amigo',
-        alreadyFriends: 'Ya son amigos',
-        requestPending: 'Solicitud pendiente',
-        searchInstructions: 'Ingresa un nombre de usuario para buscar amigos',
-        searchPlaceholder: 'Ingresa nombre de usuario...',
-        searching: 'Buscando...',
-        userNotFound: 'Usuario no encontrado',
-        noUserFound: 'No se encontró ningún usuario con ese nombre',
-        checkUsername: 'Por favor, verifica el nombre de usuario e intenta de nuevo',
-        howToFind: 'Cómo encontrar amigos',
-        findInstructions: 'Busca amigos por su nombre de usuario. Tanto tú como tu amigo deben tener GitHub conectado para enviar solicitudes de amistad.',
-        requestSent: '¡Solicitud de amistad enviada!',
-        requestAccepted: '¡Solicitud de amistad aceptada!',
-        requestRejected: 'Solicitud de amistad rechazada',
-        friendRemoved: 'Amigo eliminado',
-        confirmRemove: 'Eliminar amigo',
-        confirmRemoveMessage: '¿Estás seguro de que quieres eliminar a este amigo?',
-        cannotAddYourself: 'No puedes enviarte una solicitud de amistad a ti mismo',
-        bothMustHaveGithub: 'Ambos usuarios deben tener GitHub conectado para ser amigos',
-        status: {
-            none: 'No conectado',
-            requested: 'Solicitud enviada',
-            pending: 'Solicitud pendiente',
-            friend: 'Amigos',
-            rejected: 'Rechazada',
-        },
-        acceptRequest: 'Aceptar solicitud',
-        removeFriend: 'Eliminar de amigos',
-        removeFriendConfirm: ({ name }: { name: string }) => `¿Estás seguro de que quieres eliminar a ${name} de tus amigos?`,
-        requestSentDescription: ({ name }: { name: string }) => `Tu solicitud de amistad ha sido enviada a ${name}`,
-        requestFriendship: 'Solicitar amistad',
-        cancelRequest: 'Cancelar solicitud de amistad',
-        cancelRequestConfirm: ({ name }: { name: string }) => `¿Cancelar tu solicitud de amistad a ${name}?`,
-        denyRequest: 'Rechazar solicitud',
-        nowFriendsWith: ({ name }: { name: string }) => `Ahora eres amigo de ${name}`,
-    },
 
-    usage: {
-        // Usage panel strings
-        today: 'Hoy',
-        last7Days: 'Últimos 7 días',
-        last30Days: 'Últimos 30 días',
-        totalTokens: 'Tokens totales',
-        totalCost: 'Costo total',
-        tokens: 'Tokens',
-        cost: 'Costo',
-        usageOverTime: 'Uso a lo largo del tiempo',
-        byModel: 'Por modelo',
-        noData: 'No hay datos de uso disponibles',
-    },
 
     imageUpload: {
         permissionTitle: 'Acceso a la biblioteca de fotos',
@@ -1110,13 +894,6 @@ export const es: TranslationStructure = {
         notSupportedMessage: 'Este agente no admite archivos adjuntos de imagen. Las imágenes no se enviaron.',
     },
 
-    feed: {
-        // Feed notifications for friend requests and acceptances
-        friendRequestFrom: ({ name }: { name: string }) => `${name} te envió una solicitud de amistad`,
-        friendRequestGeneric: 'Nueva solicitud de amistad',
-        friendAccepted: ({ name }: { name: string }) => `Ahora eres amigo de ${name}`,
-        friendAcceptedGeneric: 'Solicitud de amistad aceptada',
-    },
 
     harness: {
         stateRunning: 'trabajando',

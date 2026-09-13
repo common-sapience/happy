@@ -16,13 +16,12 @@ import { ChatHeaderView } from '@/components/ChatHeaderView';
 import { ChatList } from '@/components/ChatList';
 import { Deferred } from '@/components/Deferred';
 import { EmptyState } from '@/components/kit';
-import { Avatar } from '@/components/Avatar';
 import { useDraft } from '@/hooks/useDraft';
 import { useSessionVisibility } from '@/hooks/useSessionVisibility';
 import { useImagePicker } from '@/hooks/useImagePicker';
 import { Modal } from '@/modal';
 import { sessionAbort, sessionCancelCommunication, sessionGoalAction, sessionSetAgentModes } from '@/sync/ops';
-import { storage, useIsDataReady, useLocalSetting, useSessionGitStatus, useSessionMessages, useSessionPendingCommunications, useSessionProjectAvatar, useSessionUsage, useSetting } from '@/sync/storage';
+import { storage, useIsDataReady, useLocalSetting, useSessionGitStatus, useSessionMessages, useSessionPendingCommunications, useSessionUsage, useSetting } from '@/sync/storage';
 import { useSession } from '@/sync/storage';
 import { Session } from '@/sync/storageTypes';
 import { sync } from '@/sync/sync';
@@ -36,7 +35,7 @@ import { AllFilesDiffView } from '@/components/AllFilesDiffView';
 import { FileViewPanel } from '@/components/FileViewPanel';
 import { GitFileStatus } from '@/sync/gitStatusFiles';
 import { useOverlayNav } from '@/-session/sessionOverlayNav';
-import { formatPathRelativeToHome, getSessionAvatarId, getSessionName, useSessionStatus } from '@/utils/sessionUtils';
+import { formatPathRelativeToHome, getSessionName, useSessionStatus } from '@/utils/sessionUtils';
 import { useSessionQuickActions } from '@/hooks/useSessionQuickActions';
 import { isVersionSupported, MINIMUM_CLI_VERSION } from '@/utils/versionUtils';
 import * as Clipboard from 'expo-clipboard';
@@ -60,7 +59,6 @@ export const SessionView = React.memo((props: { id: string }) => {
     const router = useRouter();
     const isFocused = useIsFocused();
     const session = useSession(sessionId);
-    const projectAvatar = useSessionProjectAvatar(sessionId);
     const gitStatus = useSessionGitStatus(sessionId);
     const headerGit = React.useMemo(
         () => resolveSessionGitPresentation(session?.metadata, gitStatus),
@@ -250,22 +248,20 @@ export const SessionView = React.memo((props: { id: string }) => {
             isConnected,
         };
     }, [session, isDataReady]);
+    // The way into an agent's details is a labelled control, not a picture of it:
+    // the transcript header carries no avatar.
     const headerRight = session && deviceType === 'phone' && Platform.OS !== 'web'
         ? (
             <Pressable
                 onPress={() => router.push(`/session/${sessionId}/info`)}
                 hitSlop={10}
+                accessibilityLabel={t('sessionInfo.title')}
+                accessibilityRole="button"
             >
-                <Avatar
-                    bot={!!session.metadata?.bot}
-                    id={getSessionAvatarId(session)}
-                    size={28}
-                    monochrome={!headerProps.isConnected}
-                    flavor={session.metadata?.flavor}
-                    clientId={session.metadata?.client?.id}
-                    badgeLocation="sessionHeader"
-                    imageUrl={projectAvatar?.uri}
-                    thumbhash={projectAvatar?.thumbhash}
+                <Ionicons
+                    name="information-circle-outline"
+                    size={26}
+                    color={theme.colors.header.tint}
                 />
             </Pressable>
         )

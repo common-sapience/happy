@@ -9,10 +9,13 @@ import { existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import packageJson from '../package.json'
+import { RelayNotConfiguredError, resolveRelayEndpoint } from './utils/relayEndpoint'
 
 class Configuration {
-  public readonly serverUrl: string
-  public readonly webappUrl: string
+  /** The relay this computer connects to, or null while none is configured. */
+  public readonly relayUrl: string | null
+  /** The controller the terminal auth flow opens, or null while none is configured. */
+  public readonly webappUrl: string | null
   public readonly isDaemonProcess: boolean
 
   // Directories and paths (from persistence)
@@ -50,18 +53,21 @@ class Configuration {
     this.daemonLockFile = join(this.happyHomeDir, 'daemon.state.json.lock')
     this.sessionsFile = join(this.happyHomeDir, 'sessions.json')
 
-    // URL precedence (both): HAPPY_*_URL env > settings.<key> > default.
+    // URL precedence (both): HAPPY_*_URL env > settings.<key>. There is no
+    // fallback: nothing here names a server the operator did not choose.
     // Settings are read sync here (avoid circular import with persistence.ts).
-    // webappUrl must follow the same chain as serverUrl, otherwise `happy server`
-    // self-host points the API at localhost but auth still opens the prod webapp.
-    this.serverUrl =
-      process.env.HAPPY_SERVER_URL ||
-      readSettingsStringSync(this.settingsFile, 'serverUrl') ||
-      'https://api.cluster-fluster.com'
-    this.webappUrl =
-      process.env.HAPPY_WEBAPP_URL ||
-      readSettingsStringSync(this.settingsFile, 'webappUrl') ||
-      'https://app.happy.engineering'
+    // webappUrl must follow the same chain as relayUrl, otherwise `happy server`
+    // self-host points the API at localhost but auth still opens another origin.
+    const relay = resolveRelayEndpoint({
+      environment: process.env.HAPPY_SERVER_URL,
+      settings: readSettingsStringSync(this.settingsFile, 'serverUrl'),
+    })
+    this.relayUrl = relay.configured ? relay.url : null
+    const webapp = resolveRelayEndpoint({
+      environment: process.env.HAPPY_WEBAPP_URL,
+      settings: readSettingsStringSync(this.settingsFile, 'webappUrl'),
+    })
+    this.webappUrl = webapp.configured ? webapp.url : null
 
     this.isExperimentalEnabled = ['true', '1', 'yes'].includes(process.env.HAPPY_EXPERIMENTAL?.toLowerCase() || '');
     this.disableCaffeinate = ['true', '1', 'yes'].includes(process.env.HAPPY_DISABLE_CAFFEINATE?.toLowerCase() || '');
@@ -102,3 +108,15 @@ function readSettingsStringSync(settingsFile: string, key: 'serverUrl' | 'webapp
 }
 
 export const configuration: Configuration = new Configuration()
+
+/**
+ * The relay every request goes to. Callers that reach the network go through
+ * here so that an unconfigured install fails loudly instead of reaching a
+ * server nobody chose.
+ */
+export function requireRelayUrl(): string {
+  if (!configuration.relayUrl) {
+    throw new RelayNotConfiguredError()
+  }
+  return configuration.relayUrl
+}

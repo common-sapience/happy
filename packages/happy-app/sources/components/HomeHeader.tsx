@@ -4,7 +4,7 @@ import { useSocketStatus } from '@/sync/storage';
 import { Platform, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useSegments } from 'expo-router';
-import { getServerInfo } from '@/sync/serverConfig';
+import { getRelayLabel } from '@/sync/serverConfig';
 import { Image } from 'expo-image';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { t } from '@/text';
@@ -40,12 +40,15 @@ const stylesheet = StyleSheet.create((theme) => ({
 
 /**
  * The secondary line of the agent list's bar. A healthy socket says nothing: the
- * line is there to report a problem, and a custom server owns it outright.
+ * line is there to report a problem, and the relay address owns it outright.
  */
-function useHomeHeaderSubtitle(customSubtitle?: string): string | undefined {
+function useHomeHeaderSubtitle(customSubtitle?: string, reportSocket = true): string | undefined {
     const socketStatus = useSocketStatus();
     if (customSubtitle) {
         return customSubtitle;
+    }
+    if (!reportSocket) {
+        return undefined;
     }
     if (!shouldShowHomeConnectionStatus(socketStatus.status as HomeSocketStatus)) {
         return undefined;
@@ -86,13 +89,11 @@ export const HomeHeader = React.memo(() => {
 
 export const HomeHeaderNotAuth = React.memo(() => {
     useSegments(); // Re-rendered automatically when screen navigates back
-    const serverInfo = getServerInfo();
     const { theme } = useUnistyles();
-    const subtitle = useHomeHeaderSubtitle(
-        serverInfo.isCustom
-            ? serverInfo.hostname + (serverInfo.port ? `:${serverInfo.port}` : '')
-            : undefined,
-    );
+    // Before a relay is named there is nothing to be connected to, so the bar
+    // says nothing rather than reporting a socket that was never opened.
+    const relayLabel = getRelayLabel();
+    const subtitle = useHomeHeaderSubtitle(relayLabel ?? undefined, relayLabel !== null);
     return (
         <Header
             title={t('sidebar.agentsTitle')}

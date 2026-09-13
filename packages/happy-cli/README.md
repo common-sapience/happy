@@ -129,8 +129,8 @@ plaintext engine config.
 
 | Variable | Description |
 |----------|-------------|
-| `HAPPY_SERVER_URL` | Custom server URL (default: `https://api.cluster-fluster.com`) |
-| `HAPPY_WEBAPP_URL` | Custom web app URL (default: `https://app.happy.engineering`) |
+| `HAPPY_SERVER_URL` | Relay address. Required: no address is built in, and the daemon refuses to start without one |
+| `HAPPY_WEBAPP_URL` | Controller address the terminal auth flow opens. Without it, terminal auth reports that there is no page to open |
 | `HAPPY_HOME_DIR` | Custom home directory for Happy data (default: `~/.happy`) |
 | `HAPPY_DISABLE_CAFFEINATE` | Disable macOS sleep prevention |
 | `HAPPY_EXPERIMENTAL` | Enable experimental features |

@@ -111,12 +111,6 @@ export const pl: TranslationStructure = {
         whatRow: 'Drugi komputer dołącza do tego konta',
         whatHint: 'Będzie mógł uruchamiać dla ciebie agentów i pojawi się na liście komputerów na stronie konta. Usuniesz go tam, kiedy zechcesz.',
     },
-    voiceStatusBar: {
-        tapToEnd: 'dotknij, aby zakończyć',
-        connecting: 'Łączenie…',
-        error: 'Błąd połączenia',
-        active: 'Asystent głosowy aktywny',
-    },
 
     tabs: {
         // Tab navigation labels
@@ -125,12 +119,6 @@ export const pl: TranslationStructure = {
         settings: 'Konto',
     },
 
-    inbox: {
-        // Inbox screen
-        emptyTitle: 'Pusta skrzynka',
-        emptyDescription: 'Połącz się z przyjaciółmi, aby zacząć udostępniać sesje',
-        updates: 'Aktualizacje',
-    },
 
     common: {
         // Simple string constants
@@ -231,7 +219,6 @@ export const pl: TranslationStructure = {
         developer: 'Deweloper',
         developerTools: 'Narzędzia deweloperskie',
         about: 'O aplikacji',
-        aboutFooter: 'Happy Coder to mobilny klient Codex i Claude Code. Jest w pełni szyfrowany end-to-end, a Twoje konto jest przechowywane tylko na Twoim urządzeniu. Nie jest powiązany z Anthropic.',
         whatsNew: 'Co nowego',
         whatsNewSubtitle: 'Zobacz najnowsze aktualizacje i ulepszenia',
         reportIssue: 'Zgłoś problem',
@@ -409,44 +396,45 @@ export const pl: TranslationStructure = {
         placeholder: 'Wpisz polecenie lub wyszukaj...',
     },
 
-    server: {
-        // Used by Server Configuration screen (app/(app)/server.tsx)
-        serverConfiguration: 'Konfiguracja serwera',
-        enterServerUrl: 'Proszę wprowadzić URL serwera',
-        notValidHappyServer: 'To nie jest prawidłowy serwer Happy',
-        changeServer: 'Zmień serwer',
-        continueWithServer: 'Kontynuować z tym serwerem?',
-        resetToDefault: 'Resetuj do domyślnego',
-        resetServerDefault: 'Zresetować serwer do domyślnego?',
-        validating: 'Sprawdzanie...',
-        validatingServer: 'Sprawdzanie serwera...',
-        serverReturnedError: 'Serwer zwrócił błąd',
-        failedToConnectToServer: 'Nie udało się połączyć z serwerem',
-        currentlyUsingCustomServer: 'Aktualnie używany jest niestandardowy serwer',
-        customServerUrlLabel: 'URL niestandardowego serwera',
-        advancedFeatureFooter: 'To jest zaawansowana funkcja. Zmieniaj serwer tylko jeśli wiesz, co robisz. Po zmianie serwera będziesz musiał się wylogować i zalogować ponownie.',
-        services: 'Usługi',
-        useCustomServerForVoice: 'Użyj niestandardowego serwera dla głosu',
-        customServerVoiceEnabled: 'Dane uwierzytelniające i użycie głosu korzystają z niestandardowego serwera',
-        customServerVoiceDisabled: 'Głos korzysta z Happy Cloud i subskrypcji Happy',
-        customServerVoiceFooter: 'Gdy ta opcja jest wyłączona, uruchomienie głosu łączy się z Happy Cloud i ElevenLabs. Włącz ją tylko wtedy, gdy niestandardowy serwer jest skonfigurowany do obsługi głosu.',
+    relay: {
+        // Used by the relay address entry (components/RelayAddressEntry.tsx)
+        title: 'Przekaźnik',
+        firstRunTitle: 'Wskaż przekaźnik',
+        firstRunBody: 'Aplikacja łączy się z twoimi komputerami przez przekaźnik, który sam uruchamiasz. Nie ma adresu domyślnego, podaj go, aby kontynuować.',
+        addressLabel: 'Adres przekaźnika',
+        addressPlaceholder: 'https://relay.example.com',
+        addressEmpty: 'Podaj adres przekaźnika',
+        addressProtocol: 'Adres musi zaczynać się od http:// lub https://',
+        addressFormat: 'To nie jest prawidłowy adres',
+        checking: 'Sprawdzanie przekaźnika...',
+        checkingShort: 'Sprawdzanie...',
+        notARelay: 'Pod tym adresem nic nie odpowiedziało jako przekaźnik',
+        unreachable: 'Nie udało się połączyć z tym adresem',
+        returnedError: 'Przekaźnik zwrócił błąd',
+        current: 'Ten komputer łączy się z przekaźnikiem powyżej',
+        changeTitle: 'Zmień przekaźnik',
+        changeBody: 'Twoje konto zostaje na dotychczasowym przekaźniku, więc na nowym trzeba zalogować się ponownie. Kontynuować?',
+        forget: 'Zapomnij przekaźnik',
+        forgetTitle: 'Zapomnieć ten przekaźnik',
+        forgetBody: 'Aplikacja znów poprosi o adres i pozostanie wylogowana, dopóki go nie podasz.',
+        footer: 'Agenci działają na twoich komputerach; przekaźnik tylko przekazuje zaszyfrowane wiadomości między nimi a aplikacją. Zmiana adresu wylogowuje.',
     },
 
     sessionInfo: {
+        title: 'Szczegóły agenta',
         // Used by Session Info screen (app/(app)/session/[id]/info.tsx)
         killSession: 'Zakończ sesję',
         killSessionConfirm: 'Czy na pewno chcesz zakończyć tę sesję?',
         archiveSession: 'Zarchiwizuj agenta',
         archiveSessionConfirm: 'Czy na pewno chcesz zarchiwizować tę sesję?',
-        happySessionIdCopied: 'ID sesji Happy skopiowane do schowka',
-        failedToCopySessionId: 'Nie udało się skopiować ID sesji Happy',
-        happySessionId: 'ID sesji Happy',
-        claudeCodeSessionId: 'ID sesji Claude Code',
-        claudeCodeSessionIdCopied: 'ID sesji Claude Code skopiowane do schowka',
+        agentIdCopied: 'Identyfikator agenta skopiowany do schowka',
+        failedToCopyAgentId: 'Nie udało się skopiować identyfikatora agenta',
+        agentId: 'Identyfikator agenta',
+        engineSessionId: 'Identyfikator sesji silnika',
+        engineSessionIdCopied: 'Identyfikator sesji silnika skopiowany do schowka',
         codexThreadId: 'ID wątku Codex',
         codexThreadIdCopied: 'ID wątku Codex skopiowane do schowka',
-        aiProvider: 'Dostawca AI',
-        failedToCopyClaudeCodeSessionId: 'Nie udało się skopiować ID sesji Claude Code',
+        failedToCopyEngineSessionId: 'Nie udało się skopiować identyfikatora sesji silnika',
         failedToCopyCodexThreadId: 'Nie udało się skopiować ID wątku Codex',
         metadataCopied: 'Szczegóły agenta skopiowane do schowka',
         failedToCopyMetadata: 'Nie udało się skopiować szczegółów agenta',
@@ -623,10 +611,6 @@ export const pl: TranslationStructure = {
         toggle: 'Tryb zen',
     },
 
-    toolView: {
-        input: 'Wejście',
-        output: 'Wyjście',
-    },
 
     toolGroup: {
         ran: 'Wykonano',
@@ -639,71 +623,6 @@ export const pl: TranslationStructure = {
         hide: 'Ukryj',
     },
 
-    tools: {
-        fullView: {
-            description: 'Opis',
-            inputParams: 'Parametry wejściowe',
-            output: 'Wyjście',
-            error: 'Błąd',
-            completed: 'Narzędzie ukończone pomyślnie',
-            noOutput: 'Nie wygenerowano żadnego wyjścia',
-            running: 'Narzędzie działa...',
-            rawJsonDevMode: 'Surowy JSON (tryb deweloperski)',
-        },
-        taskView: {
-            initializing: 'Inicjalizacja agenta...',
-            moreTools: ({ count }: { count: number }) => `+${count} ${plural({ count, one: 'więcej narzędzie', few: 'więcej narzędzia', many: 'więcej narzędzi' })}`,
-        },
-        multiEdit: {
-            editNumber: ({ index, total }: { index: number; total: number }) => `Edycja ${index} z ${total}`,
-            replaceAll: 'Zamień wszystkie',
-        },
-        names: {
-            task: 'Zadanie',
-            terminal: 'Terminal',
-            searchFiles: 'Wyszukaj pliki',
-            search: 'Wyszukaj',
-            searchContent: 'Wyszukaj zawartość',
-            listFiles: 'Lista plików',
-            planProposal: 'Propozycja planu',
-            readFile: 'Czytaj plik',
-            editFile: 'Edytuj plik',
-            writeFile: 'Zapisz plik',
-            fetchUrl: 'Pobierz URL',
-            readNotebook: 'Czytaj notatnik',
-            editNotebook: 'Edytuj notatnik',
-            todoList: 'Lista zadań',
-            webSearch: 'Wyszukiwanie w sieci',
-            reasoning: 'Rozumowanie',
-            applyChanges: 'Zaktualizuj plik',
-            viewDiff: 'Bieżące zmiany pliku',
-            question: 'Pytanie',
-        },
-        desc: {
-            terminalCmd: ({ cmd }: { cmd: string }) => `Terminal(cmd: ${cmd})`,
-            searchPattern: ({ pattern }: { pattern: string }) => `Wyszukaj(wzorzec: ${pattern})`,
-            searchPath: ({ basename }: { basename: string }) => `Wyszukaj(ścieżka: ${basename})`,
-            fetchUrlHost: ({ host }: { host: string }) => `Pobierz URL(url: ${host})`,
-            editNotebookMode: ({ path, mode }: { path: string; mode: string }) => `Edytuj notatnik(plik: ${path}, tryb: ${mode})`,
-            todoListCount: ({ count }: { count: number }) => `Lista zadań(liczba: ${count})`,
-            webSearchQuery: ({ query }: { query: string }) => `Wyszukiwanie w sieci(zapytanie: ${query})`,
-            grepPattern: ({ pattern }: { pattern: string }) => `grep(wzorzec: ${pattern})`,
-            multiEditEdits: ({ path, count }: { path: string; count: number }) => `${path} (${count} ${plural({ count, one: 'edycja', few: 'edycje', many: 'edycji' })})`,
-            readingFile: ({ file }: { file: string }) => `Odczytywanie ${file}`,
-            writingFile: ({ file }: { file: string }) => `Zapisywanie ${file}`,
-            modifyingFile: ({ file }: { file: string }) => `Modyfikowanie ${file}`,
-            modifyingFiles: ({ count }: { count: number }) => `Modyfikowanie ${count} ${plural({ count, one: 'pliku', few: 'plików', many: 'plików' })}`,
-            modifyingMultipleFiles: ({ file, count }: { file: string; count: number }) => `${file} i ${count} ${plural({ count, one: 'więcej', few: 'więcej', many: 'więcej' })}`,
-            showingDiff: 'Pokazywanie zmian',
-        },
-        askUserQuestion: {
-            submit: 'Wyślij odpowiedź',
-            multipleQuestions: ({ count }: { count: number }) => `${count} ${plural({ count, one: 'pytanie', few: 'pytania', many: 'pytań' })}`,
-            other: 'Inne',
-            otherDescription: 'Wpisz własną odpowiedź',
-            otherPlaceholder: 'Wpisz swoją odpowiedź...',
-        }
-    },
 
     files: {
         changes: 'Zmiany',
@@ -754,51 +673,7 @@ export const pl: TranslationStructure = {
         noChanges: 'Brak zmian',
         binaryFile: 'Plik binarny nie jest wyświetlany',
     },
-    sideChat: {
-        panelTitle: 'Czat boczny',
-        emptyTitle: 'Rozpocznij czat boczny',
-        emptySubtitle: 'Zapytaj agenta o coś na boku. Dziedziczy kontekst tego czatu, ale pozostaje odizolowany — nic tutaj nie wpływa na główną rozmowę.',
-        startButton: 'Rozpocznij czat boczny',
-        creating: 'Uruchamianie czatu bocznego…',
-        unavailable: 'Ta sesja nie może jeszcze rozpocząć czatu bocznego — poczekaj, aż agent będzie online.',
-        composerPlaceholder: 'Napisz na czacie bocznym…',
-        expand: 'Otwórz na pełnym ekranie',
-        tabLabel: ({ index }: { index: number }) => `Czat boczny ${index}`,
-        newChat: 'Nowy czat boczny',
-        close: 'Zamknij czat boczny',
-    },
 
-    settingsVoice: {
-        // Voice settings screen
-        languageTitle: 'Język',
-        languageDescription: 'Wybierz preferowany język dla interakcji z asystentem głosowym. To ustawienie synchronizuje się na wszystkich Twoich urządzeniach.',
-        preferredLanguage: 'Preferowany język',
-        preferredLanguageSubtitle: 'Język używany do odpowiedzi asystenta głosowego',
-        language: {
-            searchPlaceholder: 'Wyszukaj języki...',
-            title: 'Języki',
-            footer: ({ count }: { count: number }) => `Dostępnych ${count} ${plural({ count, one: 'język', few: 'języki', many: 'języków' })}`,
-            autoDetect: 'Automatyczne wykrywanie',
-        },
-        // Bring your own agent
-        byoTitle: 'Użyj własnego agenta',
-        byoDescription: 'Użyj własnego agenta ElevenLabs zamiast domyślnego Happy. Subskrypcja nie jest wymagana — połącz się bezpośrednio ze swoim kontem ElevenLabs. Twój agent musi definiować dwa narzędzia klienckie: messageClaudeCode (wysyła tekst do agenta kodującego) i processPermissionRequest (zezwala lub odmawia użycia narzędzi). Otrzymuje kontekst sesji przez zmienną dynamiczną {{initialConversationContext}}.',
-        customAgentId: 'ElevenLabs Agent ID',
-        customAgentIdNotSet: 'Nie skonfigurowano',
-        customAgentIdDescription: 'Wprowadź swój ElevenLabs Agent ID. Pozostaw puste, aby użyć domyślnego Happy.',
-        customAgentIdPlaceholder: 'e.g. abc123def456',
-        bypassToken: 'Połączenie bezpośrednie',
-        bypassTokenSubtitle: 'Pomiń serwer Happy, połącz się bezpośrednio z ElevenLabs',
-        promptGuideTitle: 'Przewodnik po promptach agenta',
-        promptGuideDescription: 'Twój agent ElevenLabs potrzebuje:\n\n• Narzędzie: messageClaudeCode — parametr: message (string). Wysyła wiadomość do aktywnej sesji kodowania.\n• Narzędzie: processPermissionRequest — parametr: decision ("allow" lub "deny"). Zatwierdza lub odrzuca oczekujące uprawnienie narzędzia.\n• Zmienna dynamiczna: {{initialConversationContext}} — otrzymuje historię sesji i kontekst przy uruchomieniu.\n\nAgent działa jako most głosowy między użytkownikiem a agentami kodującymi. Powinien być zwięzły, odpowiadać tylko gdy jest adresowany i raportować, gdy agent kodujący zakończy pracę.',
-        usageTitle: 'Użycie (ostatnie 30 dni)',
-        usageFooter: 'Czas głosowy wykorzystany w ostatnich 30 dniach. Darmowy plan: 20 min. Z subskrypcją: 5 godzin. Maks. 100 rozmów miesięcznie.',
-        usageLabel: 'Czas głosowy',
-        conversationsLabel: 'Rozmowy',
-        usageUsed: ({ used, limit }: { used: string; limit: string }) => `${used} wykorzystano z ${limit}`,
-        supportTitle: 'Ulepsz głos',
-        supportSubtitle: 'Więcej czasu głosowego i wsparcie rozwoju',
-    },
 
     settingsAccount: {
         // Account settings screen
@@ -815,7 +690,6 @@ export const pl: TranslationStructure = {
         name: 'Nazwa',
         github: 'GitHub',
         tapToDisconnect: 'Dotknij, aby rozłączyć',
-        server: 'Serwer',
         backup: 'Kopia zapasowa',
         backupDescription: 'Twój klucz tajny to jedyny sposób na odzyskanie konta. Zapisz go w bezpiecznym miejscu, takim jak menedżer haseł.',
         secretKey: 'Klucz tajny',
@@ -927,11 +801,11 @@ export const pl: TranslationStructure = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: 'Mobilny klient Codex i Claude Code',
+        title: 'Agent, który obsługuje twój komputer',
         subtitle: 'Szyfrowanie end-to-end, a Twoje konto jest przechowywane tylko na Twoim urządzeniu.',
         createAccount: 'Utwórz konto',
         linkOrRestoreAccount: 'Połącz lub przywróć konto',
-        loginWithMobileApp: 'Zaloguj się przez aplikację mobilną',
+        loginWithMobileApp: 'Z innego komputera',
     },
 
     review: {
@@ -1018,111 +892,8 @@ export const pl: TranslationStructure = {
         mermaidRenderFailed: 'Nie udało się wyświetlić diagramu mermaid',
     },
 
-    artifacts: {
-        // Artifacts feature
-        title: 'Artefakty',
-        countSingular: '1 artefakt',
-        countPlural: ({ count }: { count: number }) => {
-            const n = Math.abs(count);
-            const n10 = n % 10;
-            const n100 = n % 100;
-            
-            // Polish plural rules: 1 (singular), 2-4 (few), 5+ (many)
-            if (n === 1) {
-                return `${count} artefakt`;
-            }
-            if (n10 >= 2 && n10 <= 4 && (n100 < 12 || n100 > 14)) {
-                return `${count} artefakty`;
-            }
-            return `${count} artefaktów`;
-        },
-        empty: 'Brak artefaktów',
-        emptyDescription: 'Utwórz pierwszy artefakt, aby rozpocząć',
-        new: 'Nowy artefakt',
-        edit: 'Edytuj artefakt',
-        delete: 'Usuń',
-        updateError: 'Nie udało się zaktualizować artefaktu. Spróbuj ponownie.',
-        notFound: 'Artefakt nie został znaleziony',
-        discardChanges: 'Odrzucić zmiany?',
-        discardChangesDescription: 'Masz niezapisane zmiany. Czy na pewno chcesz je odrzucić?',
-        deleteConfirm: 'Usunąć artefakt?',
-        deleteConfirmDescription: 'Tej operacji nie można cofnąć',
-        titleLabel: 'TYTUŁ',
-        titlePlaceholder: 'Wprowadź tytuł dla swojego artefaktu',
-        bodyLabel: 'TREŚĆ',
-        bodyPlaceholder: 'Napisz swoją treść tutaj...',
-        emptyFieldsError: 'Proszę wprowadzić tytuł lub treść',
-        createError: 'Nie udało się utworzyć artefaktu. Spróbuj ponownie.',
-        save: 'Zapisz',
-        saving: 'Zapisywanie...',
-        loading: 'Ładowanie artefaktów...',
-        error: 'Nie udało się załadować artefaktu',
-    },
 
-    friends: {
-        // Friends feature
-        title: 'Przyjaciele',
-        manageFriends: 'Zarządzaj swoimi przyjaciółmi i połączeniami',
-        searchTitle: 'Znajdź przyjaciół',
-        pendingRequests: 'Zaproszenia do znajomych',
-        myFriends: 'Moi przyjaciele',
-        noFriendsYet: 'Nie masz jeszcze żadnych przyjaciół',
-        findFriends: 'Znajdź przyjaciół',
-        remove: 'Usuń',
-        pendingRequest: 'Oczekujące',
-        sentOn: ({ date }: { date: string }) => `Wysłano ${date}`,
-        accept: 'Akceptuj',
-        reject: 'Odrzuć',
-        addFriend: 'Dodaj do znajomych',
-        alreadyFriends: 'Już jesteście znajomymi',
-        requestPending: 'Zaproszenie oczekuje',
-        searchInstructions: 'Wprowadź nazwę użytkownika, aby znaleźć przyjaciół',
-        searchPlaceholder: 'Wprowadź nazwę użytkownika...',
-        searching: 'Szukanie...',
-        userNotFound: 'Nie znaleziono użytkownika',
-        noUserFound: 'Nie znaleziono użytkownika o tej nazwie',
-        checkUsername: 'Sprawdź nazwę użytkownika i spróbuj ponownie',
-        howToFind: 'Jak znaleźć przyjaciół',
-        findInstructions: 'Szukaj przyjaciół po nazwie użytkownika. Zarówno ty, jak i twój przyjaciel musicie mieć połączony GitHub, aby wysyłać zaproszenia do znajomych.',
-        requestSent: 'Zaproszenie do znajomych wysłane!',
-        requestAccepted: 'Zaproszenie do znajomych zaakceptowane!',
-        requestRejected: 'Zaproszenie do znajomych odrzucone',
-        friendRemoved: 'Przyjaciel usunięty',
-        confirmRemove: 'Usuń przyjaciela',
-        confirmRemoveMessage: 'Czy na pewno chcesz usunąć tego przyjaciela?',
-        cannotAddYourself: 'Nie możesz wysłać zaproszenia do siebie',
-        bothMustHaveGithub: 'Obaj użytkownicy muszą mieć połączony GitHub, aby zostać przyjaciółmi',
-        status: {
-            none: 'Nie połączono',
-            requested: 'Zaproszenie wysłane',
-            pending: 'Zaproszenie oczekuje',
-            friend: 'Przyjaciele',
-            rejected: 'Odrzucone',
-        },
-        acceptRequest: 'Zaakceptuj zaproszenie',
-        removeFriend: 'Usuń z przyjaciół',
-        removeFriendConfirm: ({ name }: { name: string }) => `Czy na pewno chcesz usunąć ${name} z przyjaciół?`,
-        requestSentDescription: ({ name }: { name: string }) => `Twoje zaproszenie do grona przyjaciół zostało wysłane do ${name}`,
-        requestFriendship: 'Wyślij zaproszenie do znajomych',
-        cancelRequest: 'Anuluj zaproszenie do znajomych',
-        cancelRequestConfirm: ({ name }: { name: string }) => `Anulować zaproszenie do znajomych wysłane do ${name}?`,
-        denyRequest: 'Odrzuć zaproszenie',
-        nowFriendsWith: ({ name }: { name: string }) => `Teraz jesteś w gronie znajomych z ${name}`,
-    },
 
-    usage: {
-        // Usage panel strings
-        today: 'Dzisiaj',
-        last7Days: 'Ostatnie 7 dni',
-        last30Days: 'Ostatnie 30 dni',
-        totalTokens: 'Łącznie tokenów',
-        totalCost: 'Całkowity koszt',
-        tokens: 'Tokeny',
-        cost: 'Koszt',
-        usageOverTime: 'Użycie w czasie',
-        byModel: 'Według modelu',
-        noData: 'Brak danych o użyciu',
-    },
 
     imageUpload: {
         permissionTitle: 'Dostęp do biblioteki zdjęć',
@@ -1139,13 +910,6 @@ export const pl: TranslationStructure = {
         notSupportedMessage: 'Ten agent nie obsługuje załączników obrazów. Obrazy nie zostały wysłane.',
     },
 
-    feed: {
-        // Feed notifications for friend requests and acceptances
-        friendRequestFrom: ({ name }: { name: string }) => `${name} wysłał Ci zaproszenie do znajomych`,
-        friendRequestGeneric: 'Nowe zaproszenie do znajomych',
-        friendAccepted: ({ name }: { name: string }) => `Jesteś teraz znajomym z ${name}`,
-        friendAcceptedGeneric: 'Zaproszenie do znajomych zaakceptowane',
-    },
 
     harness: {
         stateRunning: 'pracuje',

@@ -5,7 +5,7 @@ import { ApiSessionClient } from './apiSession';
 import { ApiMachineClient } from './apiMachine';
 import { decodeBase64, encodeBase64, getRandomBytes, encrypt, decrypt, libsodiumEncryptForPublicKey } from './encryption';
 import { PushNotificationClient } from './pushNotifications';
-import { configuration } from '@/configuration';
+import { configuration, requireRelayUrl } from '@/configuration';
 import chalk from 'chalk';
 import { Credentials } from '@/persistence';
 import { connectionState, isNetworkError } from '@/utils/serverConnectionErrors';
@@ -21,7 +21,7 @@ export class ApiClient {
 
   private constructor(credential: Credentials) {
     this.credential = credential
-    this.pushClient = new PushNotificationClient(credential.token, configuration.serverUrl)
+    this.pushClient = new PushNotificationClient(credential.token, requireRelayUrl())
   }
 
   /**
@@ -58,7 +58,7 @@ export class ApiClient {
     // Create session
     try {
       const response = await axios.post<CreateSessionResponse>(
-        `${configuration.serverUrl}/v1/sessions`,
+        `${requireRelayUrl()}/v1/sessions`,
         {
           tag: opts.tag,
           metadata: encodeBase64(encrypt(encryptionKey, encryptionVariant, opts.metadata)),
@@ -99,7 +99,7 @@ export class ApiClient {
             operation: 'Session creation',
             caller: 'api.getOrCreateSession',
             errorCode,
-            url: `${configuration.serverUrl}/v1/sessions`
+            url: `${requireRelayUrl()}/v1/sessions`
           });
           return null;
         }
@@ -114,7 +114,7 @@ export class ApiClient {
         connectionState.fail({
           operation: 'Session creation',
           errorCode: '404',
-          url: `${configuration.serverUrl}/v1/sessions`
+          url: `${requireRelayUrl()}/v1/sessions`
         });
         return null;
       }
@@ -126,7 +126,7 @@ export class ApiClient {
           connectionState.fail({
             operation: 'Session creation',
             errorCode: String(status),
-            url: `${configuration.serverUrl}/v1/sessions`,
+            url: `${requireRelayUrl()}/v1/sessions`,
             details: ['Server encountered an error, will retry automatically']
           });
           return null;
@@ -179,7 +179,7 @@ export class ApiClient {
     // Create machine
     try {
       const response = await axios.post(
-        `${configuration.serverUrl}/v1/machines`,
+        `${requireRelayUrl()}/v1/machines`,
         {
           id: opts.machineId,
           metadata: encodeBase64(encrypt(encryptionKey, encryptionVariant, opts.metadata)),
@@ -218,7 +218,7 @@ export class ApiClient {
           operation: 'Machine registration',
           caller: 'api.getOrCreateMachine',
           errorCode: error.code,
-          url: `${configuration.serverUrl}/v1/machines`
+          url: `${requireRelayUrl()}/v1/machines`
         });
         return createMinimalMachine();
       }
@@ -253,7 +253,7 @@ export class ApiClient {
           connectionState.fail({
             operation: 'Machine registration',
             errorCode: String(status),
-            url: `${configuration.serverUrl}/v1/machines`,
+            url: `${requireRelayUrl()}/v1/machines`,
             details: ['Server encountered an error, will retry automatically']
           });
           return createMinimalMachine();
@@ -264,7 +264,7 @@ export class ApiClient {
           connectionState.fail({
             operation: 'Machine registration',
             errorCode: '404',
-            url: `${configuration.serverUrl}/v1/machines`
+            url: `${requireRelayUrl()}/v1/machines`
           });
           return createMinimalMachine();
         }

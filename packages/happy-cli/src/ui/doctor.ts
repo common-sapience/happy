@@ -15,6 +15,9 @@ import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { projectPath } from '@/projectPath'
 import packageJson from '../../package.json'
+import { isPackagedExecutable } from '@/utils/packagedExecutable'
+import { resolveEngineCommand } from '@/agent/acp/acpAgentConfig'
+import { detectCLIAvailability } from '@/utils/detectCLI'
 
 /**
  * Get relevant environment information for debugging
@@ -32,7 +35,7 @@ export function getEnvironmentInfo(): Record<string, any> {
         workingDirectory: process.cwd(),
         processArgv: process.argv,
         happyDir: configuration?.happyHomeDir,
-        serverUrl: configuration?.serverUrl,
+        relayUrl: configuration?.relayUrl,
         logsDir: configuration?.logsDir,
         processPid: process.pid,
         nodeVersion: process.version,
@@ -189,6 +192,13 @@ export async function runDoctorCommand(): Promise<void> {
         console.log(chalk.yellow('No log files found'));
     }
 
+    // Engine diagnostics: which engine a session would start, and where it came from
+    console.log(chalk.bold('\n⚙️  Engine'));
+    console.log(`Shipped With Desktop App: ${isPackagedExecutable() ? chalk.green('✓ Yes') : chalk.gray('No')}`);
+    console.log(`Daemon Executable: ${chalk.blue(process.execPath)}`);
+    console.log(`Engine Command: ${chalk.blue(resolveEngineCommand())}`);
+    console.log(`Engine Available: ${detectCLIAvailability().opencode ? chalk.green('✓ Yes') : chalk.red('❌ No')}`);
+
     // Daemon spawn diagnostics
     console.log(chalk.bold('\n🔧 Daemon Spawn Diagnostics'));
     const projectRoot = projectPath();
@@ -221,8 +231,7 @@ export async function runDoctorCommand(): Promise<void> {
 
     // Support and bug reports
     console.log(chalk.bold('\n🐛 Support & Bug Reports'));
-    console.log(`Report issues: ${chalk.blue('https://github.com/slopus/happy-cli/issues')}`);
-    console.log(`Documentation: ${chalk.blue('https://happy.engineering/')}`);
+    console.log(`Report issues: ${chalk.blue('https://github.com/common-sapience/happy/issues')}`);
 
     // ── Concise useful info last (visible without scrolling) ──
 
@@ -235,7 +244,7 @@ export async function runDoctorCommand(): Promise<void> {
     // Configuration
     console.log(chalk.bold('\n⚙️  Configuration'));
     console.log(`Happy Home: ${chalk.blue(configuration.happyHomeDir)}`);
-    console.log(`Server URL: ${chalk.blue(configuration.serverUrl)}`);
+    console.log(`Relay: ${configuration.relayUrl ? chalk.blue(configuration.relayUrl) : chalk.yellow('not configured')}`);
     console.log(`Logs Dir: ${chalk.blue(configuration.logsDir)}`);
 
     // Authentication

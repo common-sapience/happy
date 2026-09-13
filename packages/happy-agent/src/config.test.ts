@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { loadConfig } from './config';
+import { loadConfig, RELAY_NOT_CONFIGURED_MESSAGE } from './config';
 
 describe('config', () => {
     const originalEnv = { ...process.env };
@@ -16,17 +16,18 @@ describe('config', () => {
     });
 
     describe('defaults', () => {
-        it('uses default server URL', () => {
-            const config = loadConfig();
-            expect(config.serverUrl).toBe('https://api.cluster-fluster.com');
+        it('refuses to run without a relay address instead of picking one', () => {
+            expect(() => loadConfig()).toThrow(RELAY_NOT_CONFIGURED_MESSAGE);
         });
 
         it('uses default home directory', () => {
+            process.env.HAPPY_SERVER_URL = 'https://relay.example.test';
             const config = loadConfig();
             expect(config.homeDir).toBe(join(homedir(), '.happy'));
         });
 
         it('derives credential path from home directory', () => {
+            process.env.HAPPY_SERVER_URL = 'https://relay.example.test';
             const config = loadConfig();
             expect(config.credentialPath).toBe(join(homedir(), '.happy', 'agent.key'));
         });
@@ -40,12 +41,14 @@ describe('config', () => {
         });
 
         it('overrides home directory with HAPPY_HOME_DIR', () => {
+            process.env.HAPPY_SERVER_URL = 'https://relay.example.test';
             process.env.HAPPY_HOME_DIR = '/tmp/custom-happy';
             const config = loadConfig();
             expect(config.homeDir).toBe('/tmp/custom-happy');
         });
 
         it('derives credential path from overridden home directory', () => {
+            process.env.HAPPY_SERVER_URL = 'https://relay.example.test';
             process.env.HAPPY_HOME_DIR = '/tmp/custom-happy';
             const config = loadConfig();
             expect(config.credentialPath).toBe('/tmp/custom-happy/agent.key');

@@ -124,6 +124,7 @@ vi.mock('@/utils/copySessionMetadataToClipboard', () => ({
 }));
 vi.mock('@/utils/versionUtils', () => ({ isVersionSupported: () => true, MINIMUM_CLI_VERSION: '1' }));
 
+import { Typography } from '@/constants/Typography';
 import { ChatHeaderView } from './ChatHeaderView';
 import { Header, createPlainHeader } from './navigation/Header';
 import { GitLineChanges } from './GitLineChanges';
@@ -278,7 +279,7 @@ function expectCountTypography(renderer: ReturnType<typeof create>) {
     expect(counts.length).toBeGreaterThan(0);
     for (const count of counts) {
         expect(flattenStyle(count.props.style)).toMatchObject({
-            fontFamily: 'IBMPlexSans-Regular', fontSize: 11, fontWeight: '600',
+            ...Typography.default('semiBold'), fontSize: 11,
         });
     }
 }

@@ -111,12 +111,6 @@ export const ru: TranslationStructure = {
         whatRow: 'Другой компьютер присоединяется к этой записи',
         whatHint: 'После этого он сможет запускать агентов для вас и появится в списке компьютеров на странице учётной записи. Удалить его можно там в любой момент.',
     },
-    voiceStatusBar: {
-        tapToEnd: 'нажмите, чтобы завершить',
-        connecting: 'Подключение…',
-        error: 'Ошибка соединения',
-        active: 'Голосовой ассистент активен',
-    },
 
     tabs: {
         // Tab navigation labels
@@ -125,12 +119,6 @@ export const ru: TranslationStructure = {
         settings: 'Аккаунт',
     },
 
-    inbox: {
-        // Inbox screen
-        emptyTitle: 'Входящие пусты',
-        emptyDescription: 'Подключитесь к друзьям, чтобы начать делиться сессиями',
-        updates: 'Обновления',
-    },
 
     common: {
         // Simple string constants
@@ -200,7 +188,6 @@ export const ru: TranslationStructure = {
         developer: 'Разработчик',
         developerTools: 'Инструменты разработчика',
         about: 'О программе',
-        aboutFooter: 'Happy Coder — мобильное приложение для работы с Codex и Claude Code. Использует сквозное шифрование, все данные аккаунта хранятся только на вашем устройстве. Не связано с Anthropic.',
         whatsNew: 'Что нового',
         whatsNewSubtitle: 'Посмотреть последние обновления и улучшения',
         reportIssue: 'Сообщить о проблеме',
@@ -346,44 +333,45 @@ export const ru: TranslationStructure = {
         viewAll: 'Показать всех агентов',
     },
 
-    server: {
-        // Used by Server Configuration screen (app/(app)/server.tsx)
-        serverConfiguration: 'Настройка сервера',
-        enterServerUrl: 'Пожалуйста, введите URL сервера',
-        notValidHappyServer: 'Это не валидный сервер Happy',
-        changeServer: 'Изменить сервер',
-        continueWithServer: 'Продолжить с этим сервером?',
-        resetToDefault: 'Сбросить по умолчанию',
-        resetServerDefault: 'Сбросить сервер по умолчанию?',
-        validating: 'Проверка...',
-        validatingServer: 'Проверка сервера...',
-        serverReturnedError: 'Сервер вернул ошибку',
-        failedToConnectToServer: 'Не удалось подключиться к серверу',
-        currentlyUsingCustomServer: 'Сейчас используется пользовательский сервер',
-        customServerUrlLabel: 'URL пользовательского сервера',
-        advancedFeatureFooter: 'Это расширенная функция. Изменяйте сервер только если знаете, что делаете. Вам нужно будет выйти и войти снова после изменения серверов.',
-        services: 'Сервисы',
-        useCustomServerForVoice: 'Использовать пользовательский сервер для голоса',
-        customServerVoiceEnabled: 'Голосовые учетные данные и данные об использовании обрабатываются вашим сервером',
-        customServerVoiceDisabled: 'Голос использует Happy Cloud и вашу подписку Happy',
-        customServerVoiceFooter: 'Если выключено, при запуске голосового режима используются Happy Cloud и ElevenLabs. Включайте только если на вашем сервере настроена голосовая связь.',
+    relay: {
+        // Used by the relay address entry (components/RelayAddressEntry.tsx)
+        title: 'Релей',
+        firstRunTitle: 'Укажите релей',
+        firstRunBody: 'Приложение обращается к вашим компьютерам через релей, который вы запускаете. Адреса по умолчанию нет, введите его, чтобы продолжить.',
+        addressLabel: 'Адрес релея',
+        addressPlaceholder: 'https://relay.example.com',
+        addressEmpty: 'Введите адрес релея',
+        addressProtocol: 'Адрес должен начинаться с http:// или https://',
+        addressFormat: 'Это не корректный адрес',
+        checking: 'Проверка релея...',
+        checkingShort: 'Проверка...',
+        notARelay: 'По этому адресу релей не ответил',
+        unreachable: 'Не удалось подключиться к этому адресу',
+        returnedError: 'Релей вернул ошибку',
+        current: 'Этот компьютер подключается к указанному выше релею',
+        changeTitle: 'Изменить релей',
+        changeBody: 'Аккаунт остаётся на прежнем релее, поэтому на новом придётся войти заново. Продолжить?',
+        forget: 'Забыть релей',
+        forgetTitle: 'Забыть этот релей',
+        forgetBody: 'Приложение снова запросит адрес и останется без входа, пока вы его не укажете.',
+        footer: 'Агенты работают на ваших компьютерах; релей только передаёт зашифрованные сообщения между ними и приложением. Его изменение завершит сеанс.',
     },
 
     sessionInfo: {
+        title: 'Детали агента',
         // Used by Session Info screen (app/(app)/session/[id]/info.tsx)
         killSession: 'Завершить сессию',
         killSessionConfirm: 'Вы уверены, что хотите завершить эту сессию?',
         archiveSession: 'Архивировать агента',
         archiveSessionConfirm: 'Вы уверены, что хотите архивировать эту сессию?',
-        happySessionIdCopied: 'ID сессии Happy скопирован в буфер обмена',
-        failedToCopySessionId: 'Не удалось скопировать ID сессии Happy',
-        happySessionId: 'ID сессии Happy',
-        claudeCodeSessionId: 'ID сессии Claude Code',
-        claudeCodeSessionIdCopied: 'ID сессии Claude Code скопирован в буфер обмена',
+        agentIdCopied: 'Идентификатор агента скопирован в буфер обмена',
+        failedToCopyAgentId: 'Не удалось скопировать идентификатор агента',
+        agentId: 'Идентификатор агента',
+        engineSessionId: 'Идентификатор сессии движка',
+        engineSessionIdCopied: 'Идентификатор сессии движка скопирован в буфер обмена',
         codexThreadId: 'ID треда Codex',
         codexThreadIdCopied: 'ID треда Codex скопирован в буфер обмена',
-        aiProvider: 'Поставщик ИИ',
-        failedToCopyClaudeCodeSessionId: 'Не удалось скопировать ID сессии Claude Code',
+        failedToCopyEngineSessionId: 'Не удалось скопировать идентификатор сессии движка',
         failedToCopyCodexThreadId: 'Не удалось скопировать ID треда Codex',
         metadataCopied: 'Детали агента скопированы в буфер обмена',
         failedToCopyMetadata: 'Не удалось скопировать детали агента',
@@ -623,10 +611,6 @@ export const ru: TranslationStructure = {
         toggle: 'Дзен-режим',
     },
 
-    toolView: {
-        input: 'Входные данные',
-        output: 'Результат',
-    },
 
     toolGroup: {
         ran: 'Выполнено',
@@ -639,71 +623,6 @@ export const ru: TranslationStructure = {
         hide: 'Скрыть',
     },
 
-    tools: {
-        fullView: {
-            description: 'Описание',
-            inputParams: 'Входные параметры',
-            output: 'Результат',
-            error: 'Ошибка',
-            completed: 'Инструмент выполнен успешно',
-            noOutput: 'Результат не получен',
-            running: 'Выполняется...',
-            rawJsonDevMode: 'Исходный JSON (режим разработчика)',
-        },
-        taskView: {
-            initializing: 'Инициализация агента...',
-            moreTools: ({ count }: { count: number }) => `+${count} ещё ${plural({ count, one: 'инструмент', few: 'инструмента', many: 'инструментов' })}`,
-        },
-        multiEdit: {
-            editNumber: ({ index, total }: { index: number; total: number }) => `Правка ${index} из ${total}`,
-            replaceAll: 'Заменить все',
-        },
-        names: {
-            task: 'Задача',
-            terminal: 'Терминал',
-            searchFiles: 'Поиск файлов',
-            search: 'Поиск',
-            searchContent: 'Поиск содержимого',
-            listFiles: 'Список файлов',
-            planProposal: 'Предложение плана',
-            readFile: 'Чтение файла',
-            editFile: 'Редактирование файла',
-            writeFile: 'Запись файла',
-            fetchUrl: 'Получение URL',
-            readNotebook: 'Чтение блокнота',
-            editNotebook: 'Редактирование блокнота',
-            todoList: 'Список задач',
-            webSearch: 'Веб-поиск',
-            reasoning: 'Рассуждение',
-            applyChanges: 'Обновить файл',
-            viewDiff: 'Текущие изменения файла',
-            question: 'Вопрос',
-        },
-        desc: {
-            terminalCmd: ({ cmd }: { cmd: string }) => `Терминал(команда: ${cmd})`,
-            searchPattern: ({ pattern }: { pattern: string }) => `Поиск(шаблон: ${pattern})`,
-            searchPath: ({ basename }: { basename: string }) => `Поиск(путь: ${basename})`,
-            fetchUrlHost: ({ host }: { host: string }) => `Получение URL(адрес: ${host})`,
-            editNotebookMode: ({ path, mode }: { path: string; mode: string }) => `Редактирование блокнота(файл: ${path}, режим: ${mode})`,
-            todoListCount: ({ count }: { count: number }) => `Список задач(количество: ${count})`,
-            webSearchQuery: ({ query }: { query: string }) => `Веб-поиск(запрос: ${query})`,
-            grepPattern: ({ pattern }: { pattern: string }) => `grep(шаблон: ${pattern})`,
-            multiEditEdits: ({ path, count }: { path: string; count: number }) => `${path} (${count} ${plural({ count, one: 'правка', few: 'правки', many: 'правок' })})`,
-            readingFile: ({ file }: { file: string }) => `Чтение ${file}`,
-            writingFile: ({ file }: { file: string }) => `Запись ${file}`,
-            modifyingFile: ({ file }: { file: string }) => `Изменение ${file}`,
-            modifyingFiles: ({ count }: { count: number }) => `Изменение ${count} ${plural({ count, one: 'файла', few: 'файлов', many: 'файлов' })}`,
-            modifyingMultipleFiles: ({ file, count }: { file: string; count: number }) => `${file} и ещё ${count}`,
-            showingDiff: 'Показ изменений',
-        },
-        askUserQuestion: {
-            submit: 'Отправить ответ',
-            multipleQuestions: ({ count }: { count: number }) => `${count} ${plural({ count, one: 'вопрос', few: 'вопроса', many: 'вопросов' })}`,
-            other: 'Другое',
-            otherDescription: 'Введите свой ответ',
-            otherPlaceholder: 'Введите ваш ответ...',
-        }
-    },
 
     files: {
         changes: 'Изменения',
@@ -756,51 +675,7 @@ export const ru: TranslationStructure = {
         noChanges: 'Нет изменений',
         binaryFile: 'Бинарный файл не показан',
     },
-    sideChat: {
-        panelTitle: 'Боковой чат',
-        emptyTitle: 'Начните боковой чат',
-        emptySubtitle: 'Спросите агента что-нибудь в стороне. Он наследует контекст этого чата, но остаётся изолированным — ничто здесь не затрагивает основной разговор.',
-        startButton: 'Начать боковой чат',
-        creating: 'Запуск бокового чата…',
-        unavailable: 'Эта сессия пока не может начать боковой чат — дождитесь, когда агент выйдет в сеть.',
-        composerPlaceholder: 'Написать в боковой чат…',
-        expand: 'Открыть на весь экран',
-        tabLabel: ({ index }: { index: number }) => `Боковой чат ${index}`,
-        newChat: 'Новый боковой чат',
-        close: 'Закрыть боковой чат',
-    },
 
-    settingsVoice: {
-        // Voice settings screen
-        languageTitle: 'Язык',
-        languageDescription: 'Выберите предпочтительный язык для взаимодействия с голосовым помощником. Эта настройка синхронизируется на всех ваших устройствах.',
-        preferredLanguage: 'Предпочтительный язык',
-        preferredLanguageSubtitle: 'Язык, используемый для ответов голосового помощника',
-        language: {
-            searchPlaceholder: 'Поиск языков...',
-            title: 'Языки',
-            footer: ({ count }: { count: number }) => `Доступно ${count} ${plural({ count, one: 'язык', few: 'языка', many: 'языков' })}`,
-            autoDetect: 'Автоопределение',
-        },
-        // Bring your own agent
-        byoTitle: 'Используйте своего агента',
-        byoDescription: 'Используйте собственного агента ElevenLabs вместо стандартного Happy. Подписка не требуется — подключайтесь напрямую через свой аккаунт ElevenLabs. Ваш агент должен определить два клиентских инструмента: messageClaudeCode (отправляет текст агенту кодирования) и processPermissionRequest (разрешает или запрещает использование инструментов). Контекст сессии передаётся через динамическую переменную {{initialConversationContext}}.',
-        customAgentId: 'ElevenLabs Agent ID',
-        customAgentIdNotSet: 'Не настроено',
-        customAgentIdDescription: 'Введите ваш ElevenLabs Agent ID. Оставьте пустым, чтобы использовать стандартный Happy.',
-        customAgentIdPlaceholder: 'e.g. abc123def456',
-        bypassToken: 'Прямое подключение',
-        bypassTokenSubtitle: 'Пропустить сервер Happy, подключиться напрямую к ElevenLabs',
-        promptGuideTitle: 'Руководство по промптам агента',
-        promptGuideDescription: 'Вашему агенту ElevenLabs необходимы:\n\n• Инструмент: messageClaudeCode — параметр: message (string). Отправляет сообщение в активную сессию кодирования.\n• Инструмент: processPermissionRequest — параметр: decision ("allow" или "deny"). Одобряет или отклоняет ожидающее разрешение на использование инструмента.\n• Динамическая переменная: {{initialConversationContext}} — получает историю и контекст сессии при запуске.\n\nАгент выступает голосовым мостом между пользователем и агентами кодирования. Он должен быть кратким, отвечать только при обращении и сообщать, когда агент кодирования завершает работу.',
-        usageTitle: 'Использование (последние 30 дней)',
-        usageFooter: 'Время голосового общения за последние 30 дней. Бесплатный тариф: 20 мин. С подпиской: 5 часов. Макс. 100 разговоров в месяц.',
-        usageLabel: 'Голосовое время',
-        conversationsLabel: 'Разговоры',
-        usageUsed: ({ used, limit }: { used: string; limit: string }) => `${used} использовано из ${limit}`,
-        supportTitle: 'Улучшить голос',
-        supportSubtitle: 'Больше голосового времени и поддержка разработки',
-    },
 
     settingsAccount: {
         // Account settings screen
@@ -817,7 +692,6 @@ export const ru: TranslationStructure = {
         name: 'Имя',
         github: 'GitHub',
         tapToDisconnect: 'Нажмите для отключения',
-        server: 'Сервер',
         backup: 'Резервная копия',
         backupDescription: 'Ваш секретный ключ - единственный способ восстановить ваш аккаунт. Сохраните его в безопасном месте, например в менеджере паролей.',
         secretKey: 'Секретный ключ',
@@ -917,11 +791,11 @@ export const ru: TranslationStructure = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: 'Мобильный клиент Codex и Claude Code',
+        title: 'Агент, который работает за вашим компьютером',
         subtitle: 'Сквозное шифрование, аккаунт хранится только на вашем устройстве.',
         createAccount: 'Создать аккаунт',
         linkOrRestoreAccount: 'Связать или восстановить аккаунт',
-        loginWithMobileApp: 'Войти через мобильное приложение',
+        loginWithMobileApp: 'С другого компьютера',
     },
 
     review: {
@@ -1020,110 +894,8 @@ export const ru: TranslationStructure = {
         mermaidRenderFailed: 'Не удалось отобразить диаграмму mermaid',
     },
 
-    artifacts: {
-        // Artifacts feature
-        title: 'Артефакты',
-        countSingular: '1 артефакт',
-        countPlural: ({ count }: { count: number }) => {
-            const n = Math.abs(count);
-            const n10 = n % 10;
-            const n100 = n % 100;
-            
-            if (n10 === 1 && n100 !== 11) {
-                return `${count} артефакт`;
-            }
-            if (n10 >= 2 && n10 <= 4 && (n100 < 10 || n100 >= 20)) {
-                return `${count} артефакта`;
-            }
-            return `${count} артефактов`;
-        },
-        empty: 'Артефактов пока нет',
-        emptyDescription: 'Создайте первый артефакт, чтобы начать',
-        new: 'Новый артефакт',
-        edit: 'Редактировать артефакт',
-        delete: 'Удалить',
-        updateError: 'Не удалось обновить артефакт. Пожалуйста, попробуйте еще раз.',
-        notFound: 'Артефакт не найден',
-        discardChanges: 'Отменить изменения?',
-        discardChangesDescription: 'У вас есть несохраненные изменения. Вы уверены, что хотите их отменить?',
-        deleteConfirm: 'Удалить артефакт?',
-        deleteConfirmDescription: 'Это действие нельзя отменить',
-        titleLabel: 'ЗАГОЛОВОК',
-        titlePlaceholder: 'Введите заголовок для вашего артефакта',
-        bodyLabel: 'СОДЕРЖИМОЕ',
-        bodyPlaceholder: 'Напишите ваш контент здесь...',
-        emptyFieldsError: 'Пожалуйста, введите заголовок или содержимое',
-        createError: 'Не удалось создать артефакт. Пожалуйста, попробуйте снова.',
-        save: 'Сохранить',
-        saving: 'Сохранение...',
-        loading: 'Загрузка артефактов...',
-        error: 'Не удалось загрузить артефакт',
-    },
 
-    friends: {
-        // Friends feature
-        title: 'Друзья',
-        manageFriends: 'Управляйте своими друзьями и связями',
-        searchTitle: 'Найти друзей',
-        pendingRequests: 'Запросы в друзья',
-        myFriends: 'Мои друзья',
-        noFriendsYet: 'У вас пока нет друзей',
-        findFriends: 'Найти друзей',
-        remove: 'Удалить',
-        pendingRequest: 'Ожидается',
-        sentOn: ({ date }: { date: string }) => `Отправлено ${date}`,
-        accept: 'Принять',
-        reject: 'Отклонить',
-        addFriend: 'Добавить в друзья',
-        alreadyFriends: 'Уже в друзьях',
-        requestPending: 'Запрос отправлен',
-        searchInstructions: 'Введите имя пользователя для поиска друзей',
-        searchPlaceholder: 'Введите имя пользователя...',
-        searching: 'Поиск...',
-        userNotFound: 'Пользователь не найден',
-        noUserFound: 'Пользователь с таким именем не найден',
-        checkUsername: 'Пожалуйста, проверьте имя пользователя и попробуйте снова',
-        howToFind: 'Как найти друзей',
-        findInstructions: 'Ищите друзей по имени пользователя. И вы, и ваш друг должны подключить GitHub для отправки запросов в друзья.',
-        requestSent: 'Запрос в друзья отправлен!',
-        requestAccepted: 'Запрос в друзья принят!',
-        requestRejected: 'Запрос в друзья отклонён',
-        friendRemoved: 'Друг удалён',
-        confirmRemove: 'Удалить из друзей',
-        confirmRemoveMessage: 'Вы уверены, что хотите удалить этого друга?',
-        cannotAddYourself: 'Вы не можете отправить запрос в друзья самому себе',
-        bothMustHaveGithub: 'Оба пользователя должны подключить GitHub, чтобы стать друзьями',
-        status: {
-            none: 'Не подключен',
-            requested: 'Запрос отправлен',
-            pending: 'Запрос ожидается',
-            friend: 'Друзья',
-            rejected: 'Отклонено',
-        },
-        acceptRequest: 'Принять запрос',
-        removeFriend: 'Удалить из друзей',
-        removeFriendConfirm: ({ name }: { name: string }) => `Вы уверены, что хотите удалить ${name} из друзей?`,
-        requestSentDescription: ({ name }: { name: string }) => `Ваш запрос в друзья отправлен пользователю ${name}`,
-        requestFriendship: 'Отправить запрос в друзья',
-        cancelRequest: 'Отменить запрос в друзья',
-        cancelRequestConfirm: ({ name }: { name: string }) => `Отменить ваш запрос в друзья к ${name}?`,
-        denyRequest: 'Отклонить запрос',
-        nowFriendsWith: ({ name }: { name: string }) => `Теперь вы друзья с ${name}`,
-    },
 
-    usage: {
-        // Usage panel strings
-        today: 'Сегодня',
-        last7Days: 'Последние 7 дней',
-        last30Days: 'Последние 30 дней',
-        totalTokens: 'Всего токенов',
-        totalCost: 'Общая стоимость',
-        tokens: 'Токены',
-        cost: 'Стоимость',
-        usageOverTime: 'Использование во времени',
-        byModel: 'По модели',
-        noData: 'Данные об использовании недоступны',
-    },
 
     imageUpload: {
         permissionTitle: 'Доступ к библиотеке фото',
@@ -1140,13 +912,6 @@ export const ru: TranslationStructure = {
         notSupportedMessage: 'Этот агент не поддерживает вложения изображений. Изображения не были отправлены.',
     },
 
-    feed: {
-        // Feed notifications for friend requests and acceptances
-        friendRequestFrom: ({ name }: { name: string }) => `${name} отправил вам запрос в друзья`,
-        friendRequestGeneric: 'Новый запрос в друзья',
-        friendAccepted: ({ name }: { name: string }) => `Вы теперь друзья с ${name}`,
-        friendAcceptedGeneric: 'Запрос в друзья принят',
-    },
 
     harness: {
         stateRunning: 'работает',

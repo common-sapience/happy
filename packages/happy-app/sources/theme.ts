@@ -636,3 +636,10 @@ export type Theme = typeof lightTheme;
  * identical in both themes, so this is the same single source as `theme.motion`.
  */
 export const motion = sharedSpacing.motion;
+
+/**
+ * The type scale on its own, for the font helpers that resolve a family at
+ * module scope and so cannot reach a theme. Both themes carry the same values,
+ * so this is the same single source as `theme.typography`.
+ */
+export const typography = sharedSpacing.typography;

@@ -32,10 +32,12 @@ vi.mock('./encryption', () => ({
 }));
 
 // Mock configuration
-vi.mock('./configuration', () => ({
+vi.mock('@/configuration', () => ({
     configuration: {
-        serverUrl: 'https://api.example.com'
-    }
+        relayUrl: 'https://relay.example.test',
+        currentCliVersion: 'test'
+    },
+    requireRelayUrl: () => 'https://relay.example.test'
 }));
 
 // Mock libsodium encryption

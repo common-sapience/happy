@@ -10,6 +10,7 @@ import { useConnectAccount } from '@/hooks/useConnectAccount';
 import { Modal } from '@/modal';
 import { useUnistyles } from 'react-native-unistyles';
 import { normalizeLoginRequestCode } from '@/components/account/loginRequestCode';
+import { Typography } from '@/constants/Typography';
 import { t } from '@/text';
 
 /**
@@ -71,7 +72,7 @@ export default function AddComputerScreen() {
                             borderRadius: 8,
                             padding: 14,
                             minHeight: 88,
-                            fontFamily: 'IBMPlexMono-Regular',
+                            ...Typography.mono(),
                             fontSize: 13,
                             textAlignVertical: 'top',
                         }}
