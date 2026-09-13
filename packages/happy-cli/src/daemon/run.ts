@@ -35,6 +35,13 @@ import {
 import { startHappyTerminalDaemon } from './happyTerminalBoot';
 import { ENGINE_AGENT_NAME } from '@/agent/acp/acpAgentConfig';
 import { buildEngineSessionLaunchArgs, rejectNonEngineSpawn } from './engineLaunch';
+import { ensureMemoryDirectory } from '@/modules/memory/memoryDirectory';
+import {
+  DREAM_AGENT_PROFILE,
+  DREAM_PROMPT,
+  INITIAL_PROMPT_ENV_VAR,
+  MemoryConsolidationRunner,
+} from '@/modules/memory/memoryConsolidation';
 
 /** Shell-escape a string for safe interpolation into tmux commands. */
 function shellescape(s: string): string {
@@ -579,6 +586,33 @@ export async function startDaemon(): Promise<void> {
       });
     };
 
+    /**
+     * ENG-19 / T-15: the memory consolidation pass is an ordinary engine session with three
+     * things fixed — the shared memory directory as its cwd, the `dream` profile, and the one
+     * prompt that loads the dream skill. Everything else (spawn, tracking, teardown) is the
+     * normal session path, so a pass cannot drift from how a user session runs.
+     */
+    const memoryConsolidation = new MemoryConsolidationRunner({
+      startDreamSession: async (): Promise<string> => {
+        const memoryDirectory = await ensureMemoryDirectory();
+        const result = await spawnSession({
+          directory: memoryDirectory,
+          agent: ENGINE_AGENT_NAME,
+          agentProfile: DREAM_AGENT_PROFILE,
+          approvedNewDirectoryCreation: true,
+          environmentVariables: { [INITIAL_PROMPT_ENV_VAR]: DREAM_PROMPT },
+        });
+        if (result.type !== 'success') {
+          throw new Error(
+            result.type === 'error'
+              ? `Could not start the memory consolidation pass: ${result.errorMessage}`
+              : `Could not start the memory consolidation pass in ${memoryDirectory}`,
+          );
+        }
+        return result.sessionId;
+      },
+    });
+
     const findTrackedSessionById = (happySessionId: string): TrackedSession | undefined => {
       for (const session of pidToTrackedSession.values()) {
         if (session.happySessionId === happySessionId) return session;
@@ -655,6 +689,10 @@ export async function startDaemon(): Promise<void> {
         logger.debug(`[DAEMON RUN] Removing exited process PID ${pid} from tracking`);
       }
       pidToTrackedSession.delete(pid);
+      // T-15 counts finished sessions, so the count moves here and nowhere else.
+      memoryConsolidation.recordSessionEnded(session?.happySessionId).catch((error) => {
+        logger.debug('[DAEMON RUN] Could not record the finished session for memory consolidation:', error);
+      });
     };
 
     // Start control server
@@ -761,6 +799,7 @@ export async function startDaemon(): Promise<void> {
       spawnSession,
       stopSession,
       archiveSession,
+      runDream: () => memoryConsolidation.runNow(),
       requestShutdown: () => requestShutdown('happy-app')
     });
 
@@ -769,9 +808,10 @@ export async function startDaemon(): Promise<void> {
 
     // Every 60 seconds:
     // 1. Prune stale sessions
-    // 2. Check if daemon needs update
-    // 3. If outdated, restart with latest version
-    // 4. Write heartbeat
+    // 2. Run the memory consolidation pass when it is due
+    // 3. Check if daemon needs update
+    // 4. If outdated, restart with latest version
+    // 5. Write heartbeat
     const heartbeatIntervalMs = parseInt(process.env.HAPPY_DAEMON_HEARTBEAT_INTERVAL || '60000');
     let heartbeatRunning = false
     const restartOnStaleVersionAndHeartbeat = setInterval(async () => {
@@ -794,6 +834,14 @@ export async function startDaemon(): Promise<void> {
           logger.debug(`[DAEMON RUN] Removing stale session with PID ${pid} (process no longer exists)`);
           pidToTrackedSession.delete(pid);
         }
+      }
+
+      // Consolidate memory when a threshold has been reached (ENG-19, T-15). The heartbeat is
+      // the daemon's only idle moment, and the pass refuses to start a second copy of itself.
+      try {
+        await memoryConsolidation.runIfDue();
+      } catch (error) {
+        logger.debug('[DAEMON RUN] Memory consolidation pass could not start:', error);
       }
 
       // Check if daemon needs update by detecting whether `dist/index.mjs` was

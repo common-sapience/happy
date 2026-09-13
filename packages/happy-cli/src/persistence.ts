@@ -31,6 +31,20 @@ interface Settings {
    * Any paired control end may flip it.
    */
   permissionConfirmationEnabled?: boolean
+  /**
+   * Memory consolidation thresholds for this host (ENG-19, T-15). A pass runs
+   * once this many sessions have finished since the last one, or once this many
+   * hours have passed with at least one finished session. Both fall back to the
+   * defaults in `@/modules/memory/memoryConsolidation`.
+   */
+  dreamAfterSessions?: number
+  dreamAfterHours?: number
+  /**
+   * browser-use switches for this host (ENG-04). Unset means the daemon names
+   * nothing and the engine keeps its own default: headed, no auto-connect.
+   */
+  browserHeadless?: boolean
+  browserAutoConnect?: boolean
   serverUrl?: string
   webappUrl?: string
 }

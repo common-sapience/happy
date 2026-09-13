@@ -38,6 +38,8 @@ export interface CreateSessionMetadataOptions {
     parentSessionId?: string;
     /** Marks this session as a hidden side chat of `parentSessionId`. */
     isSideChat?: boolean;
+    /** Marks a session the host started for its own housekeeping (ENG-19). */
+    internal?: boolean;
 }
 
 /**
@@ -97,6 +99,7 @@ export function createSessionMetadata(opts: CreateSessionMetadataOptions): Sessi
         ...(gitBranch ? { gitBranch } : {}),
         ...(opts.parentSessionId ? { parentSessionId: opts.parentSessionId } : {}),
         ...(opts.isSideChat ? { isSideChat: true } : {}),
+        ...(opts.internal ? { internal: true } : {}),
     };
 
     return { state, metadata };

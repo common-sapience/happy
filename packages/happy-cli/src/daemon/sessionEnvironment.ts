@@ -15,6 +15,9 @@ export const SESSION_SCOPED_ENV_KEYS = [
     'HAPPY_FORK_CLAUDE_SESSION_ID',
     'HAPPY_FORK_CODEX_THREAD_ID',
     'HAPPY_SIDE_CHAT',
+    // The one prompt a background session is started with (ENG-19's consolidation
+    // pass). A later session inheriting it would run someone else's instruction.
+    'HAPPY_INITIAL_PROMPT',
     'CODEX_THREAD_ID',
 ] as const;
 

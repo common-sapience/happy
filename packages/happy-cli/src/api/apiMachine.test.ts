@@ -226,6 +226,7 @@ describe('HOST-10 / HOST-12 machine spawn RPC', () => {
             spawnSession,
             stopSession: vi.fn(() => true),
             archiveSession: vi.fn(async () => {}),
+            runDream: vi.fn(async () => 'dream-session-1'),
             requestShutdown: vi.fn()
         });
         return registeredHandlers.get('spawn-happy-session')!;
@@ -234,7 +235,7 @@ describe('HOST-10 / HOST-12 machine spawn RPC', () => {
     it('HOST-10: registers no other-agent RPC', () => {
         registerHandlers();
 
-        expect([...registeredHandlers.keys()].sort()).toEqual(['archive-session', 'spawn-happy-session', 'stop-daemon', 'stop-session']);
+        expect([...registeredHandlers.keys()].sort()).toEqual(['archive-session', 'run-dream', 'spawn-happy-session', 'stop-daemon', 'stop-session']);
     });
 
     it('HOST-12: forwards the requested agent profile to the daemon', async () => {
@@ -267,6 +268,7 @@ describe('RL-07 archive RPC and the plaintext marker', () => {
             spawnSession: vi.fn(async () => ({ type: 'success' as const, sessionId: 'session-1' })),
             stopSession: vi.fn(() => true),
             archiveSession,
+            runDream: vi.fn(async () => 'dream-session-1'),
             requestShutdown: vi.fn()
         });
         return registeredHandlers.get('archive-session')!;
@@ -389,5 +391,43 @@ describe('RL-07 the daemon writes the archive marker with the metadata', () => {
             .rejects.toThrow('Relay rejected the metadata write for session session-1');
 
         client.shutdown();
+    });
+});
+
+describe('ENG-19 / T-15 run-dream RPC', () => {
+    const runDream = vi.fn(async () => 'dream-session-1');
+
+    const registerHandlers = () => {
+        registeredHandlers.clear();
+        runDream.mockClear();
+        const client = new ApiMachineClient('fake-token', makeMachine());
+        client.setRPCHandlers({
+            spawnSession: vi.fn(async () => ({ type: 'success' as const, sessionId: 'session-1' })),
+            stopSession: vi.fn(() => true),
+            archiveSession: vi.fn(async () => {}),
+            runDream,
+            requestShutdown: vi.fn()
+        });
+        return registeredHandlers.get('run-dream')!;
+    };
+
+    it('takes no parameters and answers with the started pass', async () => {
+        const run = registerHandlers();
+
+        await expect(run({})).resolves.toEqual({ started: true, sessionId: 'dream-session-1' });
+        expect(runDream).toHaveBeenCalledTimes(1);
+    });
+
+    it('tolerates a caller that sends no params object at all', async () => {
+        const run = registerHandlers();
+
+        await expect(run(undefined)).resolves.toEqual({ started: true, sessionId: 'dream-session-1' });
+    });
+
+    it('surfaces the refusal when a pass is already running', async () => {
+        const run = registerHandlers();
+        runDream.mockRejectedValueOnce(new Error('A memory consolidation pass is already running on this machine'));
+
+        await expect(run({})).rejects.toThrow('already running');
     });
 });

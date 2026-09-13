@@ -302,6 +302,12 @@ export type Metadata = {
    * inside the parent session's sidebar panel.
    */
   isSideChat?: boolean
+  /**
+   * Marks a session the host started for its own housekeeping rather than for a
+   * user — currently the memory consolidation pass (ENG-19). A control end hides
+   * these from the session list.
+   */
+  internal?: boolean
 };
 
 export type AgentState = {
