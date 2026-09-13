@@ -1111,6 +1111,15 @@ export const ru: TranslationStructure = {
         emptyTranscriptDescription: "Опишите задачу, и agent возьмётся за работу.",
     },
 
+    transcript: {
+        thinking: 'Думает',
+        thoughtFor: ({ duration }: { duration: string }) => `Думал ${duration}`,
+        showThinking: 'Показать, о чём думал',
+        hideThinking: 'Скрыть, о чём думал',
+        showRawCall: 'Показать подробности',
+        hideRawCall: 'Скрыть подробности',
+    },
+
     permissionRequest: {
         allowOnce: "Разрешить один раз",
         allowAlways: "Разрешать всегда",

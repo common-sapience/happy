@@ -1094,6 +1094,17 @@ export const en = {
         emptyTranscriptDescription: "Describe the task and this agent gets to work.",
     },
 
+    // DESK-20: the transcript's own rows — a thinking block and the raw call behind
+    // an activity line.
+    transcript: {
+        thinking: 'Thinking',
+        thoughtFor: ({ duration }: { duration: string }) => `Thought for ${duration}`,
+        showThinking: 'Show what it was thinking',
+        hideThinking: 'Hide what it was thinking',
+        showRawCall: 'Show the details',
+        hideRawCall: 'Hide the details',
+    },
+
     permissionRequest: {
         allowOnce: "Allow once",
         allowAlways: "Always allow",

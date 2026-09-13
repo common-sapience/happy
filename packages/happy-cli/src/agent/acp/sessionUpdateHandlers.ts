@@ -40,6 +40,8 @@ export interface SessionUpdate {
   messageChunk?: {
     textDelta?: string;
   };
+  title?: string;
+  rawInput?: unknown;
   plan?: unknown;
   thinking?: unknown;
   [key: string]: unknown;
@@ -293,8 +295,10 @@ export function startToolCall(
   // Emit running status
   ctx.emit({ type: 'status', status: 'running' });
 
-  // Parse args and emit tool-call event
-  const args = parseArgsFromContent(update.content);
+  // The call's own arguments when the engine sends them, and only otherwise the
+  // content it has produced so far: the controller names what a step acted on from
+  // these, and a content block describes the output rather than the target.
+  const args = parseArgsFromContent(update.rawInput ?? update.content);
 
   // Extract locations if present
   if (update.locations && Array.isArray(update.locations)) {
@@ -309,6 +313,7 @@ export function startToolCall(
   ctx.emit({
     type: 'tool-call',
     toolName: toolKindStr || 'unknown',
+    ...(typeof update.title === 'string' && update.title.length > 0 ? { title: update.title } : {}),
     args,
     callId: toolCallId,
   });

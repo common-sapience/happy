@@ -1079,6 +1079,15 @@ export const ca: TranslationStructure = {
         emptyTranscriptDescription: "Descriu la tasca i aquest agent es posa a treballar.",
     },
 
+    transcript: {
+        thinking: 'Pensant',
+        thoughtFor: ({ duration }: { duration: string }) => `Ha pensat durant ${duration}`,
+        showThinking: 'Mostra què estava pensant',
+        hideThinking: 'Amaga què estava pensant',
+        showRawCall: 'Mostra els detalls',
+        hideRawCall: 'Amaga els detalls',
+    },
+
     permissionRequest: {
         allowOnce: "Permet una vegada",
         allowAlways: "Permet sempre",

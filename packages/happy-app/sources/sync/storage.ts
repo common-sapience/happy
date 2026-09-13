@@ -7,7 +7,6 @@ import { Session, Machine, GitStatus, SessionAgentModesPatch } from "./storageTy
 import type { GitStatusFiles } from "./gitStatusFiles";
 import type { ProjectFilesList } from "./projectFiles";
 import {
-    selectAgentFormCommunication,
     selectPendingCommunications,
     type PendingAgentCommunication,
 } from "./agentCommunications";
@@ -26,7 +25,7 @@ import { isAgentModePushPending } from "./agentModesPending";
 import { loadSessionLastMessageSentAt, saveSessionLastMessageSentAt } from "./persistence";
 import React from "react";
 import { sync } from "./sync";
-import { isMutableTool } from "@/components/tools/knownTools";
+import { isMutableActivity } from "@/components/kit/kitTranscriptRow";
 import { isSessionArchived } from './sessionArchived';
 import { buildAgentListEntries, isInternalSession } from './agentListView';
 import { indexSessionsById } from './sessionIdentity';
@@ -310,7 +309,7 @@ export const storage = create<StorageState>()((set, get) => {
             if (!toolCallMessage || toolCallMessage.kind !== 'tool-call') {
                 return true;
             }
-            return toolCallMessage.tool?.name ? isMutableTool(toolCallMessage.tool?.name) : true;
+            return toolCallMessage.tool?.name ? isMutableActivity(toolCallMessage.tool.name) : true;
         },
         getActiveSessions: () => {
             const state = get();
@@ -1220,11 +1219,6 @@ export function useSessionPendingCommunications(sessionId: string): PendingAgent
  * object whose `questions` is a fresh array, so shallow compares those by
  * identity and never settles.
  */
-export function useSessionAgentFormCommunication(sessionId: string, toolUseId: string) {
-    return storage(useDeepEqual((state) =>
-        selectAgentFormCommunication(state.sessions[sessionId]?.agentState ?? null, toolUseId)));
-}
-
 export function useSessionGitStatus(sessionId: string): GitStatus | null {
     return storage(useShallow((state) => {
         const pathKey = state.getSessionPathKey(sessionId);

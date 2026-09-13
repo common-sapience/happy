@@ -80,14 +80,6 @@ export default function RootLayout() {
                 }}
             />
             <Stack.Screen
-                name="session/[id]/message/[messageId]"
-                options={{
-                    headerShown: true,
-                    headerBackTitle: t('common.back'),
-                    headerTitle: t('common.message')
-                }}
-            />
-            <Stack.Screen
                 name="session/[id]/info"
                 options={{
                     headerShown: true,

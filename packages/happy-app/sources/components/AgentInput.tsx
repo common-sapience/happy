@@ -13,7 +13,6 @@ import { PermissionMode, ModelMode } from './PermissionModeSelector';
 import { groupModelModesByProvider } from './modelModeOptions';
 import { hapticsLight, hapticsError } from './haptics';
 import { Shaker, ShakeInstance } from './Shaker';
-import { StatusDot } from './StatusDot';
 import { useActiveWord } from './autocomplete/useActiveWord';
 import { useActiveSuggestions } from './autocomplete/useActiveSuggestions';
 import { AgentInputAutocomplete } from './AgentInputAutocomplete';
@@ -64,17 +63,6 @@ interface AgentInputProps {
     metadata?: Metadata | null;
     onAbort?: () => void | Promise<void>;
     showAbortButton?: boolean;
-    connectionStatus?: {
-        text: string;
-        color: string;
-        dotColor: string;
-        isPulsing?: boolean;
-        cliStatus?: {
-            claude: boolean | null;
-            codex: boolean | null;
-            gemini?: boolean | null;
-        };
-    };
     autocompletePrefixes: string[];
     autocompleteSuggestions: (query: string) => Promise<{ key: string, text: string, component: React.ElementType }[]>;
     usageData?: {
@@ -450,104 +438,6 @@ const getContextStatus = (contextSize: number, alwaysShow: boolean = false, them
 // the input's keystroke-derived state (hasText / inputState) flips. Their
 // props are derived from session metadata, not from the textarea content,
 // so memo skips re-render on typing entirely.
-
-type StatusRowProps = {
-    connectionStatus?: AgentInputProps['connectionStatus'];
-};
-
-const AgentInputStatusRow = React.memo(function AgentInputStatusRow(p: StatusRowProps) {
-    const { theme } = useUnistyles();
-    if (!p.connectionStatus) {
-        return null;
-    }
-    return (
-        <View style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingHorizontal: 16,
-            paddingBottom: 4,
-            minHeight: 20,
-        }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 11 }}>
-                {p.connectionStatus && (
-                    <>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                            <StatusDot
-                                color={p.connectionStatus.dotColor}
-                                isPulsing={p.connectionStatus.isPulsing}
-                                size={6}
-                                // Optically centers the dot against the 11pt text baseline.
-                                style={{ marginTop: 1 }}
-                            />
-                            <Text style={{
-                                fontSize: 11,
-                                color: p.connectionStatus.color,
-                                ...Typography.default()
-                            }}>
-                                {p.connectionStatus.text}
-                            </Text>
-                        </View>
-                        {p.connectionStatus.cliStatus && (
-                            <>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                    <Text style={{
-                                        fontSize: 11,
-                                        color: p.connectionStatus.cliStatus.claude ? theme.colors.success : theme.colors.textDestructive,
-                                        ...Typography.default()
-                                    }}>
-                                        {p.connectionStatus.cliStatus.claude ? '✓' : '✗'}
-                                    </Text>
-                                    <Text style={{
-                                        fontSize: 11,
-                                        color: p.connectionStatus.cliStatus.claude ? theme.colors.success : theme.colors.textDestructive,
-                                        ...Typography.default()
-                                    }}>
-                                        claude
-                                    </Text>
-                                </View>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                    <Text style={{
-                                        fontSize: 11,
-                                        color: p.connectionStatus.cliStatus.codex ? theme.colors.success : theme.colors.textDestructive,
-                                        ...Typography.default()
-                                    }}>
-                                        {p.connectionStatus.cliStatus.codex ? '✓' : '✗'}
-                                    </Text>
-                                    <Text style={{
-                                        fontSize: 11,
-                                        color: p.connectionStatus.cliStatus.codex ? theme.colors.success : theme.colors.textDestructive,
-                                        ...Typography.default()
-                                    }}>
-                                        codex
-                                    </Text>
-                                </View>
-                                {p.connectionStatus.cliStatus.gemini !== undefined && (
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                        <Text style={{
-                                            fontSize: 11,
-                                            color: p.connectionStatus.cliStatus.gemini ? theme.colors.success : theme.colors.textDestructive,
-                                            ...Typography.default()
-                                        }}>
-                                            {p.connectionStatus.cliStatus.gemini ? '✓' : '✗'}
-                                        </Text>
-                                        <Text style={{
-                                            fontSize: 11,
-                                            color: p.connectionStatus.cliStatus.gemini ? theme.colors.success : theme.colors.textDestructive,
-                                            ...Typography.default()
-                                        }}>
-                                            gemini
-                                        </Text>
-                                    </View>
-                                )}
-                            </>
-                        )}
-                    </>
-                )}
-            </View>
-        </View>
-    );
-});
 
 // Grayscale ring that fills and darkens with context usage — reads at a
 // glance without color, sized to sit beside the 11pt status text.
@@ -1829,10 +1719,6 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                 )}
 
                 <AnimatedFade visible={props.showStatusDetails !== false}>
-                    <AgentInputStatusRow
-                        connectionStatus={props.connectionStatus}
-                    />
-
                     <AgentInputContextChips
                         machineName={props.machineName}
                         onMachineClick={props.onMachineClick}

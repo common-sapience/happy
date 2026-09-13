@@ -130,20 +130,6 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
             }
         });
 
-        // Dev commands (if in development)
-        if (__DEV__) {
-            cmds.push({
-                id: 'dev-menu',
-                title: 'Developer Menu',
-                subtitle: 'Access developer tools',
-                icon: 'code-slash-outline',
-                category: 'Developer',
-                action: () => {
-                    router.push('/dev');
-                }
-            });
-        }
-
         return cmds;
     }, [browserSafeShortcuts, router, logout, sessions, navigateToSession, preferredModifier]);
 

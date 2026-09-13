@@ -1110,6 +1110,15 @@ export const pl: TranslationStructure = {
         emptyTranscriptDescription: "Opisz zadanie, a agent zabierze się do pracy.",
     },
 
+    transcript: {
+        thinking: 'Myśli',
+        thoughtFor: ({ duration }: { duration: string }) => `Myślał ${duration}`,
+        showThinking: 'Pokaż, o czym myślał',
+        hideThinking: 'Ukryj, o czym myślał',
+        showRawCall: 'Pokaż szczegóły',
+        hideRawCall: 'Ukryj szczegóły',
+    },
+
     permissionRequest: {
         allowOnce: "Pozwól raz",
         allowAlways: "Pozwalaj zawsze",

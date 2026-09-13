@@ -184,7 +184,8 @@ describe('AcpSessionManager tool mapping', () => {
     const envelopes = mapper.mapMessage({
       type: 'tool-call',
       callId: 'acp-call-1',
-      toolName: 'ReadFile',
+      toolName: 'read',
+      title: 'README.md',
       args: { path: 'README.md' },
     });
 
@@ -192,12 +193,30 @@ describe('AcpSessionManager tool mapping', () => {
     expect(envelopes[0].ev.t).toBe('tool-call-start');
     if (envelopes[0].ev.t === 'tool-call-start') {
       expect(isCuid(envelopes[0].ev.call)).toBe(true);
-      expect(envelopes[0].ev.name).toBe('ReadFile');
-      expect(envelopes[0].ev.title).toBe('ReadFile');
-      expect(envelopes[0].ev.description).toContain('ReadFile');
+      expect(envelopes[0].ev.name).toBe('read');
+      expect(envelopes[0].ev.title).toBe('README.md');
       expect(envelopes[0].ev.args).toEqual({ path: 'README.md' });
     }
     expect(envelopes[0].turn).toBe(start.turn);
+  });
+
+  // DESK-01: the controller writes the words a reader sees, so the engine's tool
+  // category is forwarded as it is and never dressed up as a sentence here.
+  it('sends no description and no stand-in title of its own', () => {
+    const mapper = new AcpSessionManager();
+    mapper.startTurn();
+
+    const envelopes = mapper.mapMessage({
+      type: 'tool-call',
+      callId: 'acp-call-2',
+      toolName: 'execute',
+      args: { command: 'make check' },
+    });
+
+    if (envelopes[0].ev.t === 'tool-call-start') {
+      expect(envelopes[0].ev.title).toBe('');
+      expect(envelopes[0].ev.description).toBe('');
+    }
   });
 
   it('maps tool-result to paired tool-call-end', () => {

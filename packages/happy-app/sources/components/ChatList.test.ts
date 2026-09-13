@@ -55,24 +55,28 @@ vi.mock('@shopify/flash-list', async () => {
 
 vi.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0 }) }));
 vi.mock('@/utils/responsive', () => ({ useHeaderHeight: () => 0 }));
-vi.mock('react-native-unistyles', () => ({
-    useUnistyles: () => ({
-        theme: {
-            colors: {
-                divider: 'divider',
-                shadow: { color: 'shadow', opacity: 1 },
-                surface: 'surface',
-                text: 'text',
-            },
+vi.mock('react-native-unistyles', () => {
+    const theme = {
+        colors: {
+            divider: 'divider',
+            shadow: { color: 'shadow', opacity: 1 },
+            surface: 'surface',
+            text: 'text',
+            textSecondary: 'textSecondary',
         },
-    }),
-    StyleSheet: { create: (factory: (theme: any) => unknown) => factory({ colors: {
-        divider: 'divider',
-        shadow: { color: 'shadow', opacity: 1 },
-        surface: 'surface',
-        text: 'text',
-    } }) },
-}));
+        borderRadius: { pill: 9999 },
+        iconSize: { medium: 16 },
+        margins: { md: 12 },
+        minTouchTarget: 44,
+    };
+    return {
+        useUnistyles: () => ({ theme }),
+        StyleSheet: {
+            hairlineWidth: 1,
+            create: (factory: (value: typeof theme) => unknown) => factory(theme),
+        },
+    };
+});
 vi.mock('@expo/vector-icons', async () => {
     const ReactModule = await import('react');
     return { Octicons: (props: any) => ReactModule.createElement('Octicons', props) };
@@ -84,8 +88,6 @@ vi.mock('@/sync/storage', () => ({
 }));
 vi.mock('@/sync/storageTypes', () => ({}));
 vi.mock('@/sync/typesMessage', () => ({}));
-vi.mock('@/components/tools/knownTools', () => ({ knownTools: {} }));
-vi.mock('@/utils/toolDisplay', () => ({ isInteractiveQuestionToolName: () => false }));
 vi.mock('@/sync/sync', () => ({ sync: { loadOlderMessages: vi.fn() } }));
 vi.mock('@/sync/controlHandoff', () => ({ resolveControlMode: () => 'agent' }));
 vi.mock('@/sync/rig', () => ({ usesControlledSessionUi: () => false }));
@@ -106,9 +108,9 @@ vi.mock('./AgentWorkGroupHeader', async () => {
         AgentWorkGroupHeader: (props: any) => ReactModule.createElement('AgentWorkGroupHeader', props),
     };
 });
-vi.mock('./ChatFooter', async () => {
+vi.mock('./kit/TranscriptStatus', async () => {
     const ReactModule = await import('react');
-    return { ChatFooter: (props: any) => ReactModule.createElement('ChatFooter', props) };
+    return { TranscriptStatus: (props: any) => ReactModule.createElement('TranscriptStatus', props) };
 });
 
 import { ChatList } from './ChatList';

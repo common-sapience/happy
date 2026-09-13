@@ -15,22 +15,25 @@ import Animated, {
     withTiming,
 } from 'react-native-reanimated';
 import { useUnistyles } from 'react-native-unistyles';
+import { motion } from '@/theme';
 
-const enterEasing = Easing.out(Easing.cubic);
-const exitEasing = Easing.in(Easing.cubic);
+// Curves and durations come from the motion tokens, so every overlay in the app
+// enters and leaves on the same two timings (DESK-18).
+const enterEasing = Easing.bezier(...motion.easing.decelerate);
+const exitEasing = Easing.bezier(...motion.easing.standard);
 
 const backdropEntering = FadeIn
-    .duration(180)
+    .duration(motion.duration.base)
     .easing(enterEasing)
     .reduceMotion(ReduceMotion.System);
 
 const backdropExiting = FadeOut
-    .duration(140)
+    .duration(motion.duration.fast)
     .easing(exitEasing)
     .reduceMotion(ReduceMotion.System);
 
 const popupEntering = FadeIn
-    .duration(190)
+    .duration(motion.duration.base)
     .easing(enterEasing)
     .withInitialValues({
         opacity: 0,
@@ -39,22 +42,22 @@ const popupEntering = FadeIn
     .reduceMotion(ReduceMotion.System);
 
 const popupExiting = FadeOut
-    .duration(140)
+    .duration(motion.duration.fast)
     .easing(exitEasing)
     .reduceMotion(ReduceMotion.System);
 
 const collapsibleEntering = FadeInDown
-    .duration(180)
+    .duration(motion.duration.base)
     .easing(enterEasing)
     .reduceMotion(ReduceMotion.System);
 
 const collapsibleExiting = FadeOutUp
-    .duration(130)
+    .duration(motion.duration.fast)
     .easing(exitEasing)
     .reduceMotion(ReduceMotion.System);
 
 const collapsibleLayout = LinearTransition
-    .duration(180)
+    .duration(motion.duration.base)
     .easing(enterEasing)
     .reduceMotion(ReduceMotion.System);
 
@@ -263,7 +266,7 @@ export function AnimatedFade({
     const opacity = useSharedValue(visible ? 1 : 0);
     React.useEffect(() => {
         opacity.value = withTiming(visible ? 1 : 0, {
-            duration: visible ? 180 : 140,
+            duration: visible ? motion.duration.base : motion.duration.fast,
             easing: visible ? enterEasing : exitEasing,
             reduceMotion: ReduceMotion.System,
         });

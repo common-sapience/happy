@@ -2,12 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { groupMessagesForDisplay } from './useGroupedMessages';
 import { Message, ToolCallMessage } from '@/sync/typesMessage';
 
-vi.mock('@/components/tools/knownTools', () => ({
-    knownTools: {
-        Skill: { hidden: true },
-    },
-}));
-
 vi.mock('@/text', () => ({
     t: (key: string, params?: { count?: number }) => `${key}:${params?.count ?? ''}`,
 }));
@@ -213,16 +207,17 @@ describe('useGroupedMessages', () => {
         });
     });
 
-    it('excludes hidden tools from display entirely', () => {
-        const hidden: ToolCallMessage = {
-            ...toolMessage('tool-hidden', 3),
-            tool: {
-                ...toolMessage('tool-hidden', 3).tool,
-                name: 'Skill',
-            },
-        };
+    // DESK-20: every step the engine reports gets a line. Only a message the
+    // transcript draws nothing for — an empty reply — is dropped.
+    it('excludes messages the transcript renders nothing for', () => {
         const messages: Message[] = [
-            hidden,
+            {
+                kind: 'agent-text',
+                id: 'agent-empty',
+                localId: null,
+                createdAt: 3,
+                text: '   ',
+            },
             {
                 kind: 'user-text',
                 id: 'user',
@@ -237,6 +232,25 @@ describe('useGroupedMessages', () => {
 
         const flat = groupMessagesForDisplay(messages, false);
         expect(flat.map((item) => item.id)).toEqual(['user']);
+    });
+
+    it('keeps a step from a tool it has no word for', () => {
+        const messages: Message[] = [
+            {
+                ...toolMessage('tool-unknown', 3),
+                tool: { ...toolMessage('tool-unknown', 3).tool, name: 'mcp__server__method' },
+            },
+            {
+                kind: 'user-text',
+                id: 'user',
+                localId: null,
+                createdAt: 1,
+                text: 'hi',
+            },
+        ];
+
+        expect(groupMessagesForDisplay(messages, false).map((item) => item.id))
+            .toEqual(['user', 'tool-unknown']);
     });
 
     it('passes messages through chronologically when grouping is disabled', () => {

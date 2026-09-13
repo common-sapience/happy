@@ -1080,6 +1080,15 @@ export const zhHans: TranslationStructure = {
         emptyTranscriptDescription: "说清任务，这个 agent 就开始干活。",
     },
 
+    transcript: {
+        thinking: '思考中',
+        thoughtFor: ({ duration }: { duration: string }) => `思考了 ${duration}`,
+        showThinking: '查看思考过程',
+        hideThinking: '隐藏思考过程',
+        showRawCall: '查看详情',
+        hideRawCall: '隐藏详情',
+    },
+
     permissionRequest: {
         allowOnce: "允许一次",
         allowAlways: "始终允许",
