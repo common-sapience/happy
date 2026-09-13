@@ -37,24 +37,6 @@ vi.mock('react', () => ({
 vi.mock('@/sync/storage', () => ({
     useAllMachines: () => mocks.machines,
     useSessions: () => mocks.sessions,
-    useSetting: () => mocks.defaultOverrides,
-}));
-
-vi.mock('@/sync/agentDefaults', () => ({
-    getCodeAgentDefaults: (_agentType: string, cliVersion?: string) => ({
-        permissionMode: cliVersion === '1.2.0' || cliVersion === '1.2.1-beta.1' ? 'default' : 'auto',
-        modelMode: 'default',
-        effortLevel: null,
-    }),
-    resolveAgentDefaultConfig: (
-        overrides: Record<string, unknown>,
-        agentType: string,
-        cliVersion?: string,
-    ) => overrides[agentType] ?? ({
-        permissionMode: cliVersion === '1.2.0' || cliVersion === '1.2.1-beta.1' ? 'default' : 'auto',
-        modelMode: 'default',
-        effortLevel: null,
-    }),
 }));
 
 vi.mock('@/sync/ops', () => ({
@@ -96,37 +78,6 @@ vi.mock('@/utils/worktree', () => ({
 
 vi.mock('@/utils/time', () => ({ delay: mocks.delay }));
 
-vi.mock('@/components/modelModeOptions', () => ({
-    filterPermissionModesForCli: (modes: any[], cliVersion?: string) => (
-        cliVersion === '1.2.0' || cliVersion === '1.2.1-beta.1'
-            ? modes.filter((mode) => mode.key !== 'auto')
-            : modes
-    ),
-    getHardcodedPermissionModes: () => [
-        { key: 'auto', name: 'Auto' },
-        { key: 'default', name: 'Default' },
-        { key: 'safe-yolo', name: 'Safe YOLO' },
-        { key: 'yolo', name: 'YOLO' },
-        { key: 'bypassPermissions', name: 'YOLO' },
-    ],
-    getHardcodedModelModes: () => [
-        { key: 'default', name: 'Default' },
-        { key: 'opus', name: 'Opus' },
-    ],
-    getEffortLevelsForModel: () => [
-        { key: 'medium', name: 'Medium' },
-    ],
-    getSupportsWorktree: (agentType: string) => agentType !== 'openclaw',
-    includeConfiguredModel: (
-        _flavor: string,
-        models: Array<{ key: string; name: string }>,
-        configuredModelKey?: string | null,
-    ) => configuredModelKey
-        && configuredModelKey !== 'default'
-        && !models.some((model) => model.key === configuredModelKey)
-        ? [...models, { key: configuredModelKey, name: configuredModelKey }]
-        : models,
-}));
 
 vi.mock('@/modal', () => ({
     Modal: {
@@ -142,38 +93,6 @@ vi.mock('@/text', () => ({
 import { completeSpawnRequest } from '@/sync/spawnRequestId';
 import { useStartSessionFromDraft } from './useStartSessionFromDraft';
 
-function createRigMachine(metadata: Record<string, unknown> = {}) {
-    return {
-        id: 'machine-1',
-        online: true,
-        metadata: {
-            homeDir: '/Users/dev',
-            machineKind: 'rig',
-            rigOnly: true,
-            cliAvailability: {
-                rig: true,
-                claude: false,
-                codex: false,
-                gemini: false,
-                openclaw: false,
-                detectedAt: 1,
-            },
-            capabilities: { newSession: true, resume: false, worktrees: false },
-            defaults: {
-                providerId: 'codex', modelId: 'model', permissionMode: 'auto', effort: 'high',
-            },
-            models: [{
-                providerId: 'codex', id: 'model', name: 'Model', providerName: 'Codex',
-                thinkingLevels: ['high'], defaultThinkingLevel: 'high',
-            }],
-            operatingModes: [{
-                code: 'auto', value: 'Auto', description: 'Automatic review', kind: 'safe-yolo',
-            }],
-            ...metadata,
-        },
-    };
-}
-
 function createDraft(overrides: Record<string, unknown> = {}) {
     return {
         input: ' Start the implementation ',
@@ -182,8 +101,7 @@ function createDraft(overrides: Record<string, unknown> = {}) {
         selectedPath: '~/project',
         agentType: 'opencode',
         permissionMode: null,
-        modelMode: null,
-        effortLevel: null,
+        systemPromptAddition: null,
         sessionType: 'simple',
         worktreeKey: null,
         setInput: vi.fn(),
@@ -224,9 +142,7 @@ describe('useStartSessionFromDraft', () => {
             agentProfile: 'default',
         });
         expect(mocks.sessionSetAgentModes).toHaveBeenCalledWith('session-1', {
-            permissionMode: 'auto',
-            modelMode: 'default',
-            effortLevel: 'medium',
+            permissionMode: 'default',
         });
         expect(mocks.refreshSessions).toHaveBeenCalledOnce();
         expect(mocks.draft.setInput).toHaveBeenCalledWith('');
@@ -241,89 +157,50 @@ describe('useStartSessionFromDraft', () => {
             .toBeLessThan(mocks.sendMessage.mock.invocationCallOrder[0]);
     });
 
-    it('uses Default as the code default when the selected CLI is too old for Auto', async () => {
-        mocks.machines = [{
-            id: 'machine-1',
-            online: true,
-            metadata: { homeDir: '/Users/dev', happyCliVersion: '1.2.0' },
-        }];
+    it('DESK-10: sends the profile the composer picked', async () => {
+        mocks.draft = createDraft({ permissionMode: 'plan' });
 
         const { startSession } = useStartSessionFromDraft();
 
         await expect(startSession()).resolves.toBe(true);
 
-        // The wire carries the agent profile (HOST-12); the permission pick stays a local
-        // selection pinned to the session afterwards.
         expect(mocks.machineSpawnNewSession).toHaveBeenCalledWith(expect.objectContaining({
             agent: 'opencode',
+            agentProfile: 'plan',
+        }));
+        expect(mocks.sessionSetAgentModes).toHaveBeenCalledWith('session-1', {
+            permissionMode: 'plan',
+        });
+    });
+
+    it('DESK-10: falls back to the everything-on profile when a stale draft names an unknown one', async () => {
+        mocks.draft = createDraft({ permissionMode: 'retired-profile' });
+
+        const { startSession } = useStartSessionFromDraft();
+
+        await expect(startSession()).resolves.toBe(true);
+
+        expect(mocks.machineSpawnNewSession).toHaveBeenCalledWith(expect.objectContaining({
             agentProfile: 'default',
         }));
-        expect(mocks.sessionSetAgentModes).toHaveBeenCalledWith('session-1', expect.objectContaining({
-            permissionMode: 'default',
-        }));
     });
 
-    it('keeps a user-selected YOLO override on an old CLI', async () => {
-        mocks.machines = [{
-            id: 'machine-1',
-            online: true,
-            metadata: { homeDir: '/Users/dev', happyCliVersion: '1.2.0' },
-        }];
-        mocks.defaultOverrides = {
-            opencode: {
-                permissionMode: 'bypassPermissions',
-                modelMode: 'default',
-                effortLevel: null,
-            },
-        };
+    it('DESK-10: opens the first message with the extra instructions', async () => {
+        mocks.draft = createDraft({ systemPromptAddition: '  Always run the tests  ' });
 
         const { startSession } = useStartSessionFromDraft();
 
         await expect(startSession()).resolves.toBe(true);
 
-        expect(mocks.sessionSetAgentModes).toHaveBeenCalledWith('session-1', expect.objectContaining({
-            permissionMode: 'bypassPermissions',
-        }));
+        expect(mocks.sendMessage).toHaveBeenCalledWith(
+            'session-1',
+            'Always run the tests\n\nStart the implementation',
+            { source: 'new_session', attachments: mocks.draft.attachments },
+        );
     });
 
-    it('starts with a custom model saved in agent settings', async () => {
-        mocks.defaultOverrides = {
-            opencode: {
-                permissionMode: 'default',
-                modelMode: 'my-workspace-model',
-                effortLevel: 'medium',
-            },
-        };
-
-        const { startSession } = useStartSessionFromDraft();
-
-        await expect(startSession()).resolves.toBe(true);
-        expect(mocks.sessionSetAgentModes).toHaveBeenCalledWith('session-1', {
-            permissionMode: 'default',
-            modelMode: 'my-workspace-model',
-            effortLevel: 'medium',
-        });
-    });
-
-    it('explains how to restart an offline legacy daemon when its paired Happy Agent is online', async () => {
-        const legacyMachine = {
-            id: 'machine-cli',
-            online: false,
-            metadata: {
-                homeDir: '/Users/dev',
-                siblingMachineId: 'machine-rig',
-                cliAvailability: { codex: true },
-            },
-        };
-        const rigMachine = {
-            ...createRigMachine({ siblingMachineId: 'machine-cli' }),
-            id: 'machine-rig',
-        };
-        mocks.machines = [legacyMachine, rigMachine];
-        mocks.draft = createDraft({
-            selectedMachineId: 'machine-cli',
-            agentType: 'codex',
-        });
+    it('refuses when the selected computer is offline', async () => {
+        mocks.machines = [{ id: 'machine-1', online: false, metadata: { homeDir: '/Users/dev' } }];
 
         const { startSession } = useStartSessionFromDraft();
 
@@ -334,20 +211,6 @@ describe('useStartSessionFromDraft', () => {
             'Happy CLI is offline on your computer. Run `happy daemon start` on your computer, then try again.',
         );
         expect(mocks.machineSpawnNewSession).not.toHaveBeenCalled();
-    });
-
-    it('refuses when the selected computer registers no daemon', async () => {
-        mocks.machines = [createRigMachine()];
-
-        const { startSession } = useStartSessionFromDraft();
-
-        await expect(startSession()).resolves.toBe(false);
-
-        expect(mocks.machineSpawnNewSession).not.toHaveBeenCalled();
-        expect(mocks.alert).toHaveBeenCalledWith(
-            'common.error',
-            'Happy CLI is not available on your computer. Run `happy daemon start` on your computer, then try again.',
-        );
     });
 
     it('continues to launch an online legacy CLI target', async () => {
@@ -582,7 +445,7 @@ describe('useStartSessionFromDraft', () => {
         const { startSession } = useStartSessionFromDraft();
 
         await expect(startSession()).resolves.toBe(true);
-        expect(mocks.delay).toHaveBeenCalledWith(1_000);
+        expect(mocks.delay).toHaveBeenCalledWith(400);
     });
 
     it('keeps the draft in place when creation fails', async () => {

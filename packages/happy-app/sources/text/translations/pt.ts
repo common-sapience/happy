@@ -1075,7 +1075,25 @@ export const pt: TranslationStructure = {
         friendRequestGeneric: 'Novo pedido de amizade',
         friendAccepted: ({ name }: { name: string }) => `Agora você é amigo de ${name}`,
         friendAcceptedGeneric: 'Pedido de amizade aceito',
-    }
+    },
+    harness: {
+        stateRunning: 'trabalhando',
+        stateIdle: 'livre',
+        stateWaiting: 'aguarda sua resposta',
+        stateArchived: 'arquivado',
+        usedTool: 'usou uma ferramenta',
+        profileLabel: 'Perfil',
+        profileDefault: 'Padrão',
+        profileDefaultHint: 'tudo ativado',
+        profilePlan: 'Plano',
+        profilePlanHint: 'pensa antes de mudar algo',
+        profileBuild: 'Construir',
+        profileBuildHint: 'escreve código e executa comandos',
+        extraInstructions: 'Instruções adicionais',
+        extraInstructionsPlaceholder: 'O que este agente deve lembrar sempre',
+        noAgentsTitle: 'Ainda sem agentes',
+    },
+
 } as const;
 
 export type TranslationsPt = typeof pt;

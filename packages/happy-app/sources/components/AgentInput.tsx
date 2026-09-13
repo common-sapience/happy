@@ -10,7 +10,7 @@ import { layout } from './layout';
 import { MultiTextInput, KeyPressEvent } from './MultiTextInput';
 import { Typography } from '@/constants/Typography';
 import { PermissionMode, ModelMode } from './PermissionModeSelector';
-import { EffortLevel, groupModelModesByProvider } from './modelModeOptions';
+import { groupModelModesByProvider } from './modelModeOptions';
 import { hapticsLight, hapticsError } from './haptics';
 import { Shaker, ShakeInstance } from './Shaker';
 import { StatusDot } from './StatusDot';
@@ -34,8 +34,6 @@ import { AnimatedClickAwayBackdrop, AnimatedFade } from './AnimatedOverlay';
 import { BubblePressable } from './BubblePressable';
 import { resolveAgentInputPrimaryAction } from './agentInputPrimaryAction';
 import { NativeSettingsMenu, type NativeSettingsMenuGroup, type NativeSettingsMenuOption } from './NativeSettingsMenu';
-import { ProviderIcon } from './ProviderIcon';
-import { isRigMetadata } from '@/sync/rig';
 import {
     MOBILE_COMPOSER_LAYOUT,
     MOBILE_COMPOSER_METRICS,
@@ -63,9 +61,6 @@ interface AgentInputProps {
     modelMode?: ModelMode | null;
     availableModels?: ModelMode[];
     onModelModeChange?: (mode: ModelMode) => void;
-    effortLevel?: EffortLevel | null;
-    availableEffortLevels?: EffortLevel[];
-    onEffortLevelChange?: (level: EffortLevel) => void;
     metadata?: Metadata | null;
     onAbort?: () => void | Promise<void>;
     showAbortButton?: boolean;
@@ -120,15 +115,7 @@ interface AgentInputProps {
     onAddImages?: (images: AttachmentPreview[]) => void;
 }
 
-function permissionKindIcon(kind: string | null | undefined): React.ComponentProps<typeof Ionicons>['name'] {
-    if (kind === 'read-only') return 'lock-closed-outline';
-    if (kind === 'safe-yolo') return 'shield-checkmark-outline';
-    if (kind === 'yolo') return 'warning-outline';
-    return 'folder-open-outline';
-}
-
 const MOBILE_MODEL_MENU_GEOMETRY = resolveMobileComposerMenuGeometry('model');
-const MOBILE_EFFORT_MENU_GEOMETRY = resolveMobileComposerMenuGeometry('effort');
 const MOBILE_PERMISSION_MENU_GEOMETRY = resolveMobileComposerMenuGeometry('permission');
 const MOBILE_ACTION_ROW_GEOMETRY = resolveMobileComposerActionRowGeometry();
 const MOBILE_ICON_ACTION_GEOMETRY = resolveMobileComposerActionGeometry('icon');
@@ -337,8 +324,6 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
     mobileIconButton: MOBILE_ICON_ACTION_GEOMETRY,
     mobileModelMenuFrame: MOBILE_MODEL_MENU_GEOMETRY.frame,
     mobileModelMenuContent: MOBILE_MODEL_MENU_GEOMETRY.content,
-    mobileEffortMenuFrame: MOBILE_EFFORT_MENU_GEOMETRY.frame,
-    mobileEffortMenuContent: MOBILE_EFFORT_MENU_GEOMETRY.content,
     mobilePermissionMenuFrame: MOBILE_PERMISSION_MENU_GEOMETRY.frame,
     mobilePermissionMenuContent: MOBILE_PERMISSION_MENU_GEOMETRY.content,
     mobilePermissionButton: {
@@ -357,29 +342,11 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
         paddingRight: 0,
         gap: 7,
     },
-    mobileEffortButton: {
-        width: MOBILE_COMPOSER_METRICS.effortWidth,
-        flexShrink: 0,
-        height: MOBILE_COMPOSER_METRICS.secondaryActionHeight,
-        borderRadius: MOBILE_COMPOSER_METRICS.secondaryActionHeight / 2,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'flex-start',
-        paddingLeft: 2,
-        paddingRight: 0,
-        gap: 4,
-    },
     mobileModeText: {
         flexShrink: 1,
         minWidth: 0,
         fontSize: 14,
         color: theme.colors.text,
-        ...Typography.default(),
-    },
-    mobileModeSeparator: {
-        flexShrink: 0,
-        color: theme.colors.textSecondary,
-        fontSize: 14,
         ...Typography.default(),
     },
     actionButtonsLeft: {
@@ -814,10 +781,7 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
     const hasImages = (props.selectedImages?.length ?? 0) > 0;
     const hasComposerContent = hasText || hasImages;
 
-    // Check if this is a Codex, Gemini, or OpenClaw session
-    // Use metadata.flavor for existing sessions, agentType prop for new sessions
-    const isRig = isRigMetadata(props.metadata);
-    const isCodex = !isRig && (props.metadata?.flavor === 'codex' || props.agentType === 'codex');
+    const isCodex = props.metadata?.flavor === 'codex' || props.agentType === 'codex';
     const isGemini = props.metadata?.flavor === 'gemini' || props.agentType === 'gemini';
     const isOpenClaw = props.metadata?.flavor === 'openclaw' || props.agentType === 'openclaw';
     const displayPermissionMode = React.useMemo(() => (
@@ -835,11 +799,8 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
         () => groupModelModesByProvider(availableModels),
         [availableModels],
     );
-    const availableEffortLevels = props.availableEffortLevels ?? [];
     const modelLabel = props.modelMode?.name ?? t('agentInput.model.title');
-    const effortLabel = props.effortLevel?.name;
     const canOpenModelPicker = availableModels.length > 0 && !!props.onModelModeChange;
-    const canOpenEffortPicker = availableEffortLevels.length > 0 && !!props.onEffortLevelChange;
     const isSandboxEnabled = React.useMemo(() => {
         const sandbox = props.metadata?.sandbox as unknown;
         if (!sandbox) {
@@ -1083,10 +1044,10 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
         hapticsLight();
     }, [suggestions, inputState, props.autocompletePrefixes]);
 
-    // The compact composer has separate controls for permission, model, and
-    // effort. Keep a single popup state so only one selection surface is ever
-    // visible, including while we dismiss the keyboard on mobile.
-    type ComposerPicker = 'permission' | 'model' | 'effort';
+    // The compact composer has separate controls for the profile and the model.
+    // Keep a single popup state so only one selection surface is ever visible,
+    // including while we dismiss the keyboard on mobile.
+    type ComposerPicker = 'permission' | 'model';
     const [openPicker, setOpenPicker] = React.useState<ComposerPicker | null>(null);
     const pickerOpeningRef = React.useRef<ComposerPicker | null>(null);
     const pickerKeyboardSubscriptionRef = React.useRef<ReturnType<typeof Keyboard.addListener> | null>(null);
@@ -1144,11 +1105,6 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
         if (!canOpenModelPicker) return;
         handlePickerPress('model');
     }, [canOpenModelPicker, handlePickerPress]);
-
-    const handleEffortPress = React.useCallback(() => {
-        if (!canOpenEffortPicker) return;
-        handlePickerPress('effort');
-    }, [canOpenEffortPicker, handlePickerPress]);
 
     // Handle settings selection
     const handleSettingsSelect = React.useCallback((mode: PermissionMode) => {
@@ -1267,37 +1223,14 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                 },
             })));
         }
-        if (availableEffortLevels.length > 0 && props.onEffortLevelChange) {
-            groups.push({
-                key: 'effort',
-                label: props.effortLevel?.name ?? t('agentInput.effort.title'),
-                title: t('agentInput.effort.title'),
-                systemImage: 'bolt',
-                options: availableEffortLevels.map((level) => ({ key: level.key, label: level.name, disabled: level.disabled })),
-                selectedKey: props.effortLevel?.key,
-                onSelect: (key) => {
-                    const level = availableEffortLevels.find((candidate) => candidate.key === key);
-                    if (!level) return;
-                    hapticsLight();
-                    props.onEffortLevelChange?.(level);
-                },
-            });
-        }
         return groups;
-    }, [availableEffortLevels, availableModels, props.effortLevel?.key, props.modelMode?.key, props.onEffortLevelChange, props.onModelModeChange]);
+    }, [availableModels, props.modelMode?.key, props.onModelModeChange]);
 
     const modelProviderSettingsGroups = modelSettingsGroups.filter((group) => group.key.startsWith('model:'));
-    const effortSettingsGroup = modelSettingsGroups.find((group) => group.key === 'effort');
 
     const renderModelValue = () => (
         <Text style={styles.mobileModeText} numberOfLines={1}>
             {modelLabel}
-        </Text>
-    );
-
-    const renderEffortValue = () => (
-        <Text style={styles.mobileModeText} numberOfLines={1}>
-            {effortLabel ?? t('agentInput.effort.title')}
         </Text>
     );
 
@@ -1677,34 +1610,6 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                             )}
                         </View>
 
-                        {availableEffortLevels.length > 0 && props.onEffortLevelChange && (
-                            <>
-                                <View style={{ width: 1, backgroundColor: theme.colors.divider, marginVertical: 8 }} />
-                                <View style={{ paddingVertical: 8, flex: 1 }}>
-                                    <Text style={{
-                                        fontSize: 12,
-                                        fontWeight: '600',
-                                        color: theme.colors.textSecondary,
-                                        paddingHorizontal: 16,
-                                        paddingBottom: 4,
-                                        ...Typography.default('semiBold'),
-                                    }}>
-                                        {t('agentInput.effort.title')}
-                                    </Text>
-                                    {availableEffortLevels.map((level) => renderDesktopPickerOption(
-                                        level.key,
-                                        props.effortLevel?.key === level.key,
-                                        level.name,
-                                        level.description,
-                                        () => {
-                                            hapticsLight();
-                                            props.onEffortLevelChange?.(level);
-                                            closePicker();
-                                        },
-                                    ))}
-                                </View>
-                            </>
-                        )}
                     </View>
                 </FloatingOverlay>
             </View>
@@ -1803,13 +1708,6 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                                                     </View>
                                                     <View style={{ flex: 1 }}>
                                                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                                                            {mode.semanticKind && (
-                                                                <Ionicons
-                                                                    name={permissionKindIcon(mode.semanticKind)}
-                                                                    size={13}
-                                                                    color={isSelected ? theme.colors.radio.active : theme.colors.textSecondary}
-                                                                />
-                                                            )}
                                                             <Text style={{
                                                                 fontSize: 14,
                                                                 color: isSelected ? theme.colors.radio.active : theme.colors.text,
@@ -1889,7 +1787,6 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                                                         <View style={{ flex: 1 }}>
                                                             {model.providerName ? (
                                                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                                                                    <ProviderIcon kind={model.providerKind} size={12} />
                                                                     <Text style={{
                                                                         fontSize: 14,
                                                                         color: isSelected ? theme.colors.radio.active : theme.colors.text,
@@ -1933,76 +1830,6 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                                                 </Text>
                                             )}
                                         </View>
-                                        )}
-                                        {openPicker === 'effort' && availableEffortLevels.length > 0 && props.onEffortLevelChange && (
-                                                <View style={styles.overlaySection}>
-                                                    <Text style={styles.overlaySectionTitle}>
-                                                        {props.effortLevel?.name ?? t('agentInput.effort.title')}
-                                                    </Text>
-                                                    {availableEffortLevels.map((level) => {
-                                                        const isSelected = props.effortLevel?.key === level.key;
-                                                        return (
-                                                            <BubblePressable
-                                                                key={level.key}
-                                                                onPress={() => {
-                                                                    hapticsLight();
-                                                                    props.onEffortLevelChange?.(level);
-                                                                    closePicker();
-                                                                }}
-                                                                style={({ pressed }) => ({
-                                                                    flexDirection: 'row',
-                                                                    alignItems: 'flex-start',
-                                                                    paddingHorizontal: 16,
-                                                                    paddingVertical: 8,
-                                                                    marginHorizontal: 8,
-                                                                    borderRadius: 14,
-                                                                    backgroundColor: pressed
-                                                                        ? theme.colors.surfacePressedOverlay
-                                                                        : isSelected
-                                                                            ? theme.colors.glass.backgroundSubtle
-                                                                            : 'transparent',
-                                                                })}
-                                                            >
-                                                                <View style={{
-                                                                    width: 16,
-                                                                    height: 16,
-                                                                    borderRadius: 8,
-                                                                    borderWidth: 2,
-                                                                    borderColor: isSelected ? theme.colors.radio.active : theme.colors.radio.inactive,
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    marginRight: 12,
-                                                                    marginTop: 2,
-                                                                }}>
-                                                                    {isSelected && <View style={{
-                                                                        width: 6,
-                                                                        height: 6,
-                                                                        borderRadius: 3,
-                                                                        backgroundColor: theme.colors.radio.dot,
-                                                                    }} />}
-                                                                </View>
-                                                                <View style={{ flex: 1 }}>
-                                                                    <Text style={{
-                                                                        fontSize: 14,
-                                                                        color: isSelected ? theme.colors.radio.active : theme.colors.text,
-                                                                        ...Typography.default(),
-                                                                    }}>
-                                                                        {level.name}
-                                                                    </Text>
-                                                                    {!!level.description && (
-                                                                        <Text style={{
-                                                                            fontSize: 11,
-                                                                            color: theme.colors.textSecondary,
-                                                                            ...Typography.default(),
-                                                                        }}>
-                                                                            {level.description}
-                                                                        </Text>
-                                                                    )}
-                                                                </View>
-                                                            </BubblePressable>
-                                                        );
-                                                    })}
-                                                </View>
                                         )}
                                     </>
                                 )}
@@ -2166,43 +1993,6 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                                     </BubblePressable>
                                 )}
 
-                                {/* The separator lives between the two chips rather
-                                    than inside the effort label, which would wrap
-                                    it onto its own line in a narrow trigger. */}
-                                {effortSettingsGroup && (
-                                    <Text style={styles.mobileModeSeparator}>·</Text>
-                                )}
-
-                                {effortSettingsGroup && (
-                                    useNativeSettingsMenus ? (
-                                        <NativeSettingsMenu
-                                            accessibilityLabel={t('agentInput.effort.title')}
-                                            groups={[effortSettingsGroup]}
-                                            flat
-                                            triggerLabel={effortLabel ?? t('agentInput.effort.title')}
-                                            triggerAlignment="leading"
-                                            style={styles.mobileEffortMenuFrame}
-                                        >
-                                            <View style={styles.mobileEffortMenuContent}>
-                                                {renderEffortValue()}
-                                            </View>
-                                        </NativeSettingsMenu>
-                                    ) : (
-                                        <BubblePressable
-                                            onPress={handleEffortPress}
-                                            disabled={!canOpenEffortPicker}
-                                            hitSlop={6}
-                                            style={(p) => [
-                                                styles.mobileEffortButton,
-                                                { opacity: p.pressed && canOpenEffortPicker ? 0.7 : canOpenEffortPicker ? 1 : 0.58 },
-                                            ]}
-                                            accessibilityRole="button"
-                                            accessibilityLabel={t('agentInput.effort.title')}
-                                        >
-                                            {renderEffortValue()}
-                                        </BubblePressable>
-                                    )
-                                )}
                             </>
                         ) : <View style={{ flex: 1 }} />}
 

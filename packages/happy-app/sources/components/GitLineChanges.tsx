@@ -3,10 +3,10 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '@/components/StyledText';
 import { Typography } from '@/constants/Typography';
-import { compactCount, type VisibleRigGitLineChanges } from '@/utils/rigGitLineChanges';
+import { compactCount, type VisibleGitLineChanges } from '@/utils/gitLineChanges';
 
 /** One count style across grouped/flat lists, the chat subtitle and session details. */
-export const GitLineChanges = React.memo(({ changes }: { changes: VisibleRigGitLineChanges | null }) => {
+export const GitLineChanges = React.memo(({ changes }: { changes: VisibleGitLineChanges | null }) => {
     if (!changes) return null;
     return (
         <View style={styles.container}>

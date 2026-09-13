@@ -15,7 +15,6 @@ import { AgentWorkGroupItem, DisplayItem, TextItem, useGroupedMessages } from '@
 import { Octicons } from '@expo/vector-icons';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { resolveControlMode } from '@/sync/controlHandoff';
-import { usesControlledSessionUi } from '@/sync/rig';
 import { buildAgentTurnCopyTextByMessageId } from '@/utils/agentTurnCopy';
 import { perfSince, useCommitPerf } from '@/utils/perfLog';
 import { DiffSyntaxCell, SyntaxViewport, SYNTAX_VIEWABILITY } from './diff/syntax/viewport';
@@ -213,7 +212,7 @@ const OlderEnd = React.memo((props: { showOlderSpinner: boolean; topContentInset
 const NewerEnd = React.memo((props: { sessionId: string }) => {
     const session = useSession(props.sessionId)!;
     return (
-        <ChatFooter controlledByUser={usesControlledSessionUi(session.metadata) && (session.agentState?.controlledByUser || false)} />
+        <ChatFooter controlledByUser={session.agentState?.controlledByUser || false} />
     )
 });
 
@@ -256,7 +255,7 @@ const ChatListInternal = React.memo((props: {
     const [oldestRenderedId, setOldestRenderedId] = React.useState<string | null>(null);
     const listReadyRef = React.useRef(false);
     const session = useSession(props.sessionId);
-    const controlMode = resolveControlMode(usesControlledSessionUi(session?.metadata) ? session?.agentState?.controlledByUser : false);
+    const controlMode = resolveControlMode(session?.agentState?.controlledByUser);
     const previousControlModeRef = React.useRef(controlMode);
 
     React.useEffect(() => {

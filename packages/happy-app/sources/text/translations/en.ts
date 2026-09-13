@@ -1093,6 +1093,24 @@ export const en: TranslationStructure = {
         friendAcceptedGeneric: 'Friend request accepted',
     },
 
+    harness: {
+        stateRunning: 'running',
+        stateIdle: 'idle',
+        stateWaiting: 'waiting for your answer',
+        stateArchived: 'archived',
+        usedTool: 'used a tool',
+        profileLabel: 'Profile',
+        profileDefault: 'Default',
+        profileDefaultHint: 'everything switched on',
+        profilePlan: 'Plan',
+        profilePlanHint: 'thinks it through before changing anything',
+        profileBuild: 'Build',
+        profileBuildHint: 'writes code and runs commands',
+        extraInstructions: 'Extra instructions',
+        extraInstructionsPlaceholder: 'Anything this agent should always keep in mind',
+        noAgentsTitle: 'No agents yet',
+    },
+
 } as const;
 
 export type TranslationsEn = typeof en;

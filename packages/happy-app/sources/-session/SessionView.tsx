@@ -9,10 +9,7 @@ import { layout } from '@/components/layout';
 import {
     getAvailableModels,
     getAvailablePermissionModes,
-    getEffortLevelsForModel,
-    getRigCurrentModelOptionKey,
     resolveCurrentOption,
-    EffortLevel,
 } from '@/components/modelModeOptions';
 import { getSuggestions } from '@/components/autocomplete/suggestions';
 import { ChatHeaderView } from '@/components/ChatHeaderView';
@@ -24,11 +21,9 @@ import { useDraft } from '@/hooks/useDraft';
 import { useSessionVisibility } from '@/hooks/useSessionVisibility';
 import { useImagePicker } from '@/hooks/useImagePicker';
 import { Modal } from '@/modal';
-import { sessionAbort, sessionCancelCommunication, sessionGoalAction, sessionSetAgentModes, sessionKill, sessionArchive } from '@/sync/ops';
-import { storage, useIsDataReady, useLocalSetting, useSessionGitStatus, useSessionMessages, useSessionPendingCommunications, useSessionProjectAvatar, useSessionUsage, useSetting, useSideChatSessions } from '@/sync/storage';
+import { sessionAbort, sessionCancelCommunication, sessionGoalAction, sessionSetAgentModes } from '@/sync/ops';
+import { storage, useIsDataReady, useLocalSetting, useSessionGitStatus, useSessionMessages, useSessionPendingCommunications, useSessionProjectAvatar, useSessionUsage, useSetting } from '@/sync/storage';
 import { useSession } from '@/sync/storage';
-import { useHappyAction } from '@/hooks/useHappyAction';
-import { HappyError } from '@/utils/errors';
 import { Session } from '@/sync/storageTypes';
 import { sync } from '@/sync/sync';
 import { supportsImageAttachmentsForFlavor } from '@/sync/attachmentSupport';
@@ -58,20 +53,6 @@ import type { ModelMode, PermissionMode } from '@/components/PermissionModeSelec
 import { resolveAgentDefaultConfig } from '@/sync/agentDefaults';
 import { performAgentGoalAction } from './agentGoalActionHandler';
 import { MOBILE_GLASS_HEADER_HEIGHT } from '@/components/navigation/headerMetrics';
-import {
-    getRigReasoningSelection,
-    isRigMetadata,
-    isRigMetadataV1,
-    isRigModelSelectionEnabled,
-    isRigPermissionSelectionEnabled,
-    isRigReasoningSelectionEnabled,
-    rigCanAbort,
-    rigCanBrowseFiles,
-    rigCanReadFiles,
-    rigCanUseAttachments,
-    rigCanUseShell,
-} from '@/sync/rig';
-import { RigActivityBar } from '@/components/RigActivityBar';
 import { AnimatedFade } from '@/components/AnimatedOverlay';
 
 export const SessionView = React.memo((props: { id: string }) => {
@@ -111,7 +92,7 @@ export const SessionView = React.memo((props: { id: string }) => {
     const canShowSidebar = fileDiffsSidebarEnabled
         && (isRunningOnMac() || Platform.OS === 'web')
         && windowWidth >= SIDEBAR_MIN_WINDOW_WIDTH
-        && (!session || (rigCanBrowseFiles(session.metadata) && rigCanUseShell(session.metadata)))
+
         && isDataReady && !!session;
 
     const showSidebar = canShowSidebar && !zenMode;
@@ -177,85 +158,9 @@ export const SessionView = React.memo((props: { id: string }) => {
     }, []);
 
     // Side chats live inside the single "sideChat" panel as switchable tabs.
-    // Creation is unified into the sidebar panel picker (the top "+") so there
-    // is no separate per-tab add button. Which side chat is focused lives here
-    // (not in the panel) so the picker can create-and-focus a new one in one go.
-    const rawSideChats = useSideChatSessions(sessionId);
-    const [activeSideChatId, setActiveSideChatId] = React.useState<string | null>(null);
-    // Optimistically hide a side chat the instant it's closed. The server's
-    // /archive only flips active=false (not lifecycleState), so if the CLI is
-    // already dead the fallback archive wouldn't drop the tab via
-    // useSideChatSessions — this makes the tab disappear immediately regardless.
-    const [closedSideChatIds, setClosedSideChatIds] = React.useState<Set<string>>(() => new Set());
-    const sideChats = React.useMemo(
-        () => rawSideChats.filter((s) => !closedSideChatIds.has(s.id)),
-        [rawSideChats, closedSideChatIds],
-    );
-    // Prune closed ids once the underlying sessions actually leave the store, so
-    // the set can't grow without bound.
-    React.useEffect(() => {
-        setClosedSideChatIds((prev) => {
-            if (prev.size === 0) return prev;
-            const live = new Set(rawSideChats.map((s) => s.id));
-            const next = new Set<string>();
-            let changed = false;
-            prev.forEach((id) => { if (live.has(id)) next.add(id); else changed = true; });
-            return changed ? next : prev;
-        });
-    }, [rawSideChats]);
-
-    // Best-effort close: kill the agent, fall back to server-side archive.
-    const archiveSideChatSession = React.useCallback((id: string) => {
-        (async () => {
-            const killed = await sessionKill(id);
-            if (!killed.success) {
-                await sessionArchive(id);
-            }
-            try {
-                await sync.refreshSessions();
-            } catch {
-                // Broadcast sync reconciles shortly even if this flaked.
-            }
-        })();
-    }, []);
-
-    // Starting a side chat rode on the provider-specific fork RPC, which is
-    // gone with the other agents. Existing side chats still render.
-    const [creatingSideChat, createSideChat] = useHappyAction(async () => {
-        throw new HappyError(t('sideChat.unavailable'), false);
-    });
-
-    const closeSideChat = React.useCallback((id: string) => {
-        const idx = sideChats.findIndex((s) => s.id === id);
-        const neighbour = idx !== -1 ? (sideChats[idx - 1] ?? sideChats[idx + 1] ?? null) : null;
-        setActiveSideChatId(neighbour?.id ?? null);
-        setClosedSideChatIds((prev) => new Set(prev).add(id));
-        if (!neighbour) {
-            removeSidebarPanel('sideChat');
-        }
-        archiveSideChatSession(id);
-    }, [sideChats, removeSidebarPanel, archiveSideChatSession]);
-
-    // Closing the "Side chat" panel chip tears down every side chat at once.
-    const closeAllSideChats = React.useCallback(() => {
-        const ids = sideChats.map((s) => s.id);
-        setActiveSideChatId(null);
-        setClosedSideChatIds((prev) => {
-            const next = new Set(prev);
-            ids.forEach((id) => next.add(id));
-            return next;
-        });
-        removeSidebarPanel('sideChat');
-        ids.forEach(archiveSideChatSession);
-    }, [sideChats, removeSidebarPanel, archiveSideChatSession]);
-
     const closeSidebarPanel = React.useCallback((panel: SidebarMode) => {
-        if (panel === 'sideChat') {
-            closeAllSideChats();
-            return;
-        }
         removeSidebarPanel(panel);
-    }, [closeAllSideChats, removeSidebarPanel]);
+    }, [removeSidebarPanel]);
 
     // Overlay state is managed as a browser-style history stack so the
     // sidebar's back / forward arrows can navigate between chat ↔ diff ↔ file
@@ -520,13 +425,6 @@ export const SessionView = React.memo((props: { id: string }) => {
                         onSelectPanel={selectSidebarPanel}
                         onClosePanel={closeSidebarPanel}
                         onAllFilesFilePress={handleAllFilesFilePress}
-                        sideChats={sideChats}
-                        activeSideChatId={activeSideChatId}
-                        onSelectSideChat={setActiveSideChatId}
-                        onCloseSideChat={closeSideChat}
-                        onCreateSideChat={createSideChat}
-                        canCreateSideChat={false}
-                        creatingSideChat={creatingSideChat}
                     />
                 </View>
             </Animated.View>
@@ -691,57 +589,30 @@ export function SessionViewLoaded({
     const isCliOutdated = cliVersion && !isVersionSupported(cliVersion, MINIMUM_CLI_VERSION);
     const isAcknowledged = machineId && acknowledgedCliVersions[machineId] === cliVersion;
     const shouldShowCliWarning = isCliOutdated && !isAcknowledged;
-    const flavor = session.metadata?.flavor;
-    const isRig = isRigMetadata(session.metadata);
-    const agentDefaultOverrides = useSetting('agentDefaultOverrides');
-    const effectiveAgentDefaults = React.useMemo(() => (
-        resolveAgentDefaultConfig(agentDefaultOverrides, flavor, cliVersion)
-    ), [agentDefaultOverrides, cliVersion, flavor]);
+    // The engine publishes the models it can switch to, and nothing is invented
+    // when it publishes none: the picker is simply absent.
     const availableModels = React.useMemo(() => (
-        getAvailableModels(
-            flavor,
-            session.metadata,
-            t,
-            session.modelMode ?? (isRig ? null : effectiveAgentDefaults.modelMode),
-        )
-    ), [flavor, session.metadata, session.modelMode, effectiveAgentDefaults.modelMode, isRig]);
+        getAvailableModels(session.metadata)
+    ), [session.metadata]);
+    // The "mode" is the agent profile the engine runs this session under (ENG-17).
     const availableModes = React.useMemo(() => (
-        getAvailablePermissionModes(flavor, session.metadata, t, session.permissionMode)
-    ), [flavor, session.metadata, session.permissionMode]);
+        getAvailablePermissionModes(session.metadata, session.permissionMode)
+    ), [session.metadata, session.permissionMode]);
 
     const permissionMode = React.useMemo<PermissionMode | null>(() => (
         resolveCurrentOption(availableModes, [
             session.permissionMode,
-            ...(isRig ? [
-                session.metadata?.currentOperatingModeCode,
-                session.metadata?.permissionMode,
-                session.metadata?.session?.permissionMode,
-            ] : [
-                effectiveAgentDefaults.permissionMode,
-                session.metadata?.currentOperatingModeCode,
-            ]),
+            session.metadata?.currentOperatingModeCode,
+            session.metadata?.agentProfile,
         ])
-    ), [availableModes, session.permissionMode, effectiveAgentDefaults.permissionMode, session.metadata?.currentOperatingModeCode, session.metadata?.permissionMode, session.metadata?.session?.permissionMode, isRig]);
+    ), [availableModes, session.permissionMode, session.metadata?.currentOperatingModeCode, session.metadata?.agentProfile]);
 
     const modelMode = React.useMemo<ModelMode | null>(() => (
         resolveCurrentOption(availableModels, [
             session.modelMode,
-            isRig ? getRigCurrentModelOptionKey(session.metadata) : effectiveAgentDefaults.modelMode,
-            isRig ? undefined : session.metadata?.currentModelCode,
+            session.metadata?.currentModelCode,
         ])
-    ), [availableModels, session.modelMode, effectiveAgentDefaults.modelMode, session.metadata, isRig]);
-
-    // Effort level state
-    const modelKey = modelMode?.key ?? 'default';
-    const availableEffortLevels = React.useMemo<EffortLevel[]>(() => (
-        getEffortLevelsForModel(flavor, modelKey, session.metadata)
-    ), [flavor, modelKey, session.metadata]);
-    const effortLevel = React.useMemo<EffortLevel | null>(() => (
-        resolveCurrentOption(availableEffortLevels, [
-            session.effortLevel,
-            isRig ? getRigReasoningSelection(session.metadata, modelKey) : effectiveAgentDefaults.effortLevel,
-        ])
-    ), [availableEffortLevels, session.effortLevel, effectiveAgentDefaults.effortLevel, session.metadata, modelKey, isRig]);
+    ), [availableModels, session.modelMode, session.metadata?.currentModelCode]);
 
     const sessionStatus = useSessionStatus(session);
     const sessionUsage = useSessionUsage(sessionId);
@@ -751,9 +622,7 @@ export function SessionViewLoaded({
 
     // Attachment availability is capability-driven by the active session.
     const { selectedImages, pickImages, removeImage, clearImages, addImages } = useImagePicker();
-    const canUseAttachments = isRigMetadataV1(session.metadata)
-        ? rigCanUseAttachments(session.metadata)
-        : supportsImageAttachmentsForFlavor(session.metadata?.flavor);
+    const canUseAttachments = supportsImageAttachmentsForFlavor(session.metadata?.flavor);
     React.useEffect(() => {
         if (!canUseAttachments && selectedImages.length > 0) {
             clearImages();
@@ -784,18 +653,7 @@ export function SessionViewLoaded({
     }, [sessionId]);
 
     const updateModelMode = React.useCallback((mode: ModelMode) => {
-        const nextEffortLevels = getEffortLevelsForModel(flavor, mode.key, session.metadata);
-        const currentEffortSupported = session.effortLevel
-            ? nextEffortLevels.some((level) => level.key === session.effortLevel)
-            : true;
-        sessionSetAgentModes(sessionId, {
-            modelMode: mode.key,
-            ...(!currentEffortSupported ? { effortLevel: mode.defaultThinkingLevel ?? null } : {}),
-        });
-    }, [sessionId, flavor, session.metadata, session.effortLevel]);
-
-    const updateEffortLevel = React.useCallback((level: EffortLevel) => {
-        sessionSetAgentModes(sessionId, { effortLevel: level.key });
+        sessionSetAgentModes(sessionId, { modelMode: mode.key });
     }, [sessionId]);
 
     // Memoize header-dependent styles to prevent re-renders
@@ -942,20 +800,17 @@ export function SessionViewLoaded({
                 placeholder={t('session.inputPlaceholder')}
                 sessionId={sessionId}
                 permissionMode={permissionMode}
-                onPermissionModeChange={isRigPermissionSelectionEnabled(session.metadata) ? updatePermissionMode : undefined}
+                onPermissionModeChange={availableModes.length > 1 ? updatePermissionMode : undefined}
                 availableModes={availableModes}
                 modelMode={modelMode}
                 availableModels={availableModels}
-                onModelModeChange={isRigModelSelectionEnabled(session.metadata) ? updateModelMode : undefined}
-                effortLevel={effortLevel}
-                availableEffortLevels={availableEffortLevels}
-                onEffortLevelChange={isRigReasoningSelectionEnabled(session.metadata) ? updateEffortLevel : undefined}
+                onModelModeChange={availableModels.length > 0 ? updateModelMode : undefined}
                 metadata={session.metadata}
                 connectionStatus={connectionStatus}
-                blockSend={isRig && session.thinking && session.metadata?.capabilities?.steering !== true}
+
                 onSend={handleSend}
-                onAbort={isDisconnected || !rigCanAbort(session.metadata) ? undefined : handleAbort}
-                showAbortButton={rigCanAbort(session.metadata) && (
+                onAbort={isDisconnected ? undefined : handleAbort}
+                showAbortButton={(
                     sessionStatus.state === 'thinking'
                     // A pending selection or permission request parks the agent inside
                     // a tool call. Keep Stop reachable on every platform while either
@@ -964,7 +819,7 @@ export function SessionViewLoaded({
                     || sessionStatus.state === 'input_required'
                     || (Platform.OS === 'web' && sessionStatus.state === 'waiting')
                 )}
-                onFileViewerPress={experiments && !isTablet && rigCanBrowseFiles(session.metadata) && rigCanReadFiles(session.metadata) ? handleFileViewerPress : undefined}
+                onFileViewerPress={experiments && !isTablet ? handleFileViewerPress : undefined}
                 selectedImages={canUseAttachments ? selectedImages : undefined}
                 onPickImages={canUseAttachments ? pickImages : undefined}
                 onRemoveImage={canUseAttachments ? removeImage : undefined}
@@ -983,7 +838,7 @@ export function SessionViewLoaded({
 
     // A session whose host process is gone says so and nothing more: bringing one back belongs to
     // the archived-agent panel (DESK-14), which asks the host rather than printing a command.
-    const inactiveHint = isDisconnected && !isRig ? (
+    const inactiveHint = isDisconnected ? (
         <AnimatedFade visible={showBottomDockDetails}>
             <CenteredInputWidth horizontalPadding={sessionInputHorizontalPadding}>
                 <InactiveArchivedHint />
@@ -1009,9 +864,6 @@ export function SessionViewLoaded({
                 <CenteredInputWidth horizontalPadding={sessionInputHorizontalPadding}>
                     <AgentQuestionBanner sessionId={sessionId} />
                 </CenteredInputWidth>
-            </AnimatedFade>
-            <AnimatedFade visible={showBottomDockDetails}>
-                <RigActivityBar metadata={session.metadata} />
             </AnimatedFade>
             {composer}
         </>

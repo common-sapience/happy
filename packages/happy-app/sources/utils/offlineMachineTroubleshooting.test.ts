@@ -19,7 +19,6 @@ function choice(options: {
             activeAt: options.activeAt,
             metadata: options.happyHomeDir ? { happyHomeDir: options.happyHomeDir } : null,
         } as MachineChoice['happyMachine'],
-        rigMachine: null,
         online: false,
         activeAt: options.activeAt,
     };

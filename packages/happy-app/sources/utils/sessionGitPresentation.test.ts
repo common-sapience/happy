@@ -30,12 +30,6 @@ const files: GitStatusFiles = {
     totalStaged: 1,
     totalUnstaged: 1,
 };
-const rig: Metadata = {
-    ...metadata,
-    client: { id: 'rig', name: 'Happy Agent', version: '1' },
-    git: { changedFiles: 5, insertions: 150, deletions: 40, countsExact: false },
-};
-
 describe('session git presentation', () => {
     it('prefers the workspace name over branch and path', () => {
         expect(resolveSessionGitPresentation({
@@ -59,26 +53,6 @@ describe('session git presentation', () => {
         expect(resolveSessionGitPresentation(null, null).subtitle).toBeUndefined();
     });
 
-    it('uses Happy Agent statistics without a file cache and preserves approximation', () => {
-        expect(resolveSessionGitPresentation(rig, null)).toMatchObject({
-            changedFileCount: 5,
-            changes: { insertions: 150, deletions: 40, approximate: true },
-        });
-    });
-
-    it('does not replace workspace-comparison counts with a working-tree-only cache', () => {
-        expect(resolveSessionGitPresentation(rig, status, files)).toMatchObject({
-            changedFileCount: 5,
-            changes: { insertions: 150, deletions: 40, approximate: true },
-        });
-    });
-
-    it('clears stale cached counts when Happy Agent reports a clean workspace', () => {
-        expect(resolveSessionGitPresentation({
-            ...rig, git: { changedFiles: 0, insertions: 0, deletions: 0, countsExact: true },
-        }, status, files)).toMatchObject({ changedFileCount: 0, changes: null });
-    });
-
     it('counts both staged and unstaged lines, without counting the same file twice', () => {
         expect(resolveSessionGitPresentation(metadata, status, files)).toMatchObject({
             changedFileCount: 1,
@@ -93,14 +67,11 @@ describe('session git presentation', () => {
         });
     });
 
-    it('does not show line counts for binary-only changes', () => {
+    it('ignores a git summary left in metadata by an older build', () => {
         expect(resolveSessionGitPresentation({
-            ...rig, git: { changedFiles: 1, insertions: 0, deletions: 0, countsExact: true },
-        }, null)).toMatchObject({ changedFileCount: 1, changes: null });
-    });
-
-    it('does not use Happy Agent summaries for legacy sessions', () => {
-        expect(resolveSessionGitPresentation({ ...metadata, git: rig.git }, status).changes).toEqual({
+            ...metadata,
+            git: { changedFiles: 5, insertions: 150, deletions: 40, countsExact: false },
+        }, status).changes).toEqual({
             insertions: 120, deletions: 34, approximate: false,
         });
     });

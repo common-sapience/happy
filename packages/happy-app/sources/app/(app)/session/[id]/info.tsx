@@ -23,7 +23,6 @@ import { useHappyAction } from '@/hooks/useHappyAction';
 import { useSessionQuickActions } from '@/hooks/useSessionQuickActions';
 import { copySessionMetadataToClipboard, copySessionMetadataAndLogsToClipboard } from '@/utils/copySessionMetadataToClipboard';
 import { HappyError } from '@/utils/errors';
-import { getRigIdentity, isRigMetadata } from '@/sync/rig';
 import { MOBILE_GLASS_HEADER_HEIGHT } from '@/components/navigation/headerMetrics';
 
 function formatSandboxMetadata(sandbox: unknown, homeDir?: string): string {
@@ -357,44 +356,21 @@ function SessionInfoContent({ session }: { session: Session }) {
                                 showChevron={false}
                             />
                         )}
-                        {isRigMetadata(session.metadata) && (
-                            <Item
-                                title="Client"
-                                subtitle={`${session.metadata.client?.name ?? 'Rig'}${session.metadata.client?.version ? ` ${session.metadata.client.version}` : ''}`}
-                                icon={<Ionicons name="terminal-outline" size={29} color="#5856D6" />}
-                                showChevron={false}
-                            />
-                        )}
                         <Item
-                            title={t('sessionInfo.aiProvider')}
-                            subtitle={(() => {
-                                const rigIdentity = getRigIdentity(session.metadata);
-                                if (rigIdentity) return rigIdentity.providerName;
-                                const flavor = session.metadata.flavor || 'claude';
-                                if (flavor === 'claude') return 'Claude';
-                                if (flavor === 'gpt' || flavor === 'openai') return 'Codex';
-                                if (flavor === 'gemini') return 'Gemini';
-                                if (flavor === 'openclaw') return 'OpenClaw';
-                                return flavor;
-                            })()}
+                            title={t('harness.profileLabel')}
+                            subtitle={session.permissionMode
+                                ?? session.metadata.agentProfile
+                                ?? t('harness.profileDefault')}
                             icon={<Ionicons name="sparkles-outline" size={29} color="#5856D6" />}
                             showChevron={false}
                         />
-                        {getRigIdentity(session.metadata)?.modelName && (
-                            <Item
-                                title="Model"
-                                subtitle={getRigIdentity(session.metadata)!.modelName!}
-                                icon={<Ionicons name="hardware-chip-outline" size={29} color="#5856D6" />}
-                                showChevron={false}
-                            />
-                        )}
-                        {!isRigMetadata(session.metadata) && <Item
+                        <Item
                             title="Sandbox"
                             subtitle={formatSandboxMetadata(session.metadata.sandbox, session.metadata.homeDir)}
                             icon={<Ionicons name="shield-outline" size={29} color="#5856D6" />}
                             showChevron={false}
-                        />}
-                        {!isRigMetadata(session.metadata) && <Item
+                        />
+                        <Item
                             title="Dangerously Skip Permissions"
                             subtitle={formatDangerouslySkipPermissionsMetadata(
                                 session.metadata.dangerouslySkipPermissions,
@@ -404,7 +380,7 @@ function SessionInfoContent({ session }: { session: Session }) {
                             )}
                             icon={<Ionicons name="warning-outline" size={29} color="#5856D6" />}
                             showChevron={false}
-                        />}
+                        />
                         {session.metadata.hostPid && (
                             <Item
                                 title={t('sessionInfo.processId')}

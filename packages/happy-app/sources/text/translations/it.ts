@@ -1075,7 +1075,25 @@ export const it: TranslationStructure = {
         friendRequestGeneric: 'Nuova richiesta di amicizia',
         friendAccepted: ({ name }: { name: string }) => `Ora sei amico di ${name}`,
         friendAcceptedGeneric: 'Richiesta di amicizia accettata',
-    }
+    },
+    harness: {
+        stateRunning: 'al lavoro',
+        stateIdle: 'libero',
+        stateWaiting: 'attende la tua risposta',
+        stateArchived: 'archiviato',
+        usedTool: 'ha usato uno strumento',
+        profileLabel: 'Profilo',
+        profileDefault: 'Predefinito',
+        profileDefaultHint: 'tutto attivo',
+        profilePlan: 'Piano',
+        profilePlanHint: 'ragiona prima di cambiare qualcosa',
+        profileBuild: 'Costruisci',
+        profileBuildHint: 'scrive codice ed esegue comandi',
+        extraInstructions: 'Istruzioni aggiuntive',
+        extraInstructionsPlaceholder: 'Ciò che questo agente deve ricordare sempre',
+        noAgentsTitle: 'Nessun agente',
+    },
+
 } as const;
 
 export type TranslationsIt = typeof it;

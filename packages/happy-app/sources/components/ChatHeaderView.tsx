@@ -10,7 +10,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { MobileGlassSurface } from './MobileGlass';
 import { BubblePressable } from './BubblePressable';
 import { GitLineChanges } from './GitLineChanges';
-import type { VisibleRigGitLineChanges } from '@/utils/rigGitLineChanges';
+import type { VisibleGitLineChanges } from '@/utils/gitLineChanges';
 import {
     MOBILE_GLASS_CONTROL_RADIUS,
     MOBILE_GLASS_CONTROL_SIZE,
@@ -27,7 +27,7 @@ interface ChatHeaderViewProps {
     title: string;
     /** Workspace name when available, otherwise the git branch. */
     subtitle?: string;
-    gitChanges?: VisibleRigGitLineChanges | null;
+    gitChanges?: VisibleGitLineChanges | null;
     /** Extra path segment appended to the title with a separator (used for the file-view overlay). */
     extraPathSegment?: string;
     /** Optional content rendered at the right edge of the header (used by file-view / diff overlays). */

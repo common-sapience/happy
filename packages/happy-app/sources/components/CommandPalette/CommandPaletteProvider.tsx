@@ -33,11 +33,10 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
         typeof navigator === 'undefined' ? undefined : navigator
     ), []);
     const browserSafeShortcuts = useMemo(() => Platform.OS === 'web' && !isTauri(), []);
-    const visibleSessionShortcutIds = useMemo(() => getSessionShortcutIdsInDisplayOrder(
-        sessionListViewData,
-        machines,
-        t('status.unknown'),
-    ), [machines, sessionListViewData]);
+    const visibleSessionShortcutIds = useMemo(
+        () => getSessionShortcutIdsInDisplayOrder(sessionListViewData),
+        [sessionListViewData],
+    );
 
     // Define available commands
     const commands = useMemo((): Command[] => {

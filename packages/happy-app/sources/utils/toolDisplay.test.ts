@@ -124,8 +124,10 @@ describe('terminal tool display helpers', () => {
         describedTool.description = 'Updated the README';
         expect(getToolActivityLabel(describedTool)).toBe('Updated the README');
 
+        // DESK-01: a tool we have no word for reads as one, without naming the
+        // MCP server or its method in the activity row.
         expect(getToolActivityLabel(tool('mcp__linear__create_issue', {})))
-            .toBe('MCP: Linear Create Issue');
+            .toBe('harness.usedTool');
 
         const rigCommand = tool('exec_command', { cmd: 'git status --short' });
         rigCommand.description = 'Running Exec Command';
@@ -136,9 +138,8 @@ describe('terminal tool display helpers', () => {
         rigCoordination.description = 'Running Spawn Agent';
         expect(getToolActivityLabel(rigCoordination)).toBe('Spawn Agent');
 
-        const futureTool = tool('brand_new_rig_tool', {});
-        futureTool.description = 'Running Brand New Rig Tool';
-        expect(getToolActivityLabel(futureTool)).toBe('Brand New Rig Tool');
+        const browserTool = tool('browser_navigate', {});
+        expect(getToolActivityLabel(browserTool)).toBe('harness.usedTool');
     });
 
     it('uses compact rows for current and future non-interactive tools', () => {

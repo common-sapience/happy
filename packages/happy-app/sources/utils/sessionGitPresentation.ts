@@ -1,7 +1,6 @@
 import type { GitStatusFiles } from '@/sync/gitStatusFiles';
-import { getRigGitSummary } from '@/sync/rig';
 import type { GitStatus, Metadata } from '@/sync/storageTypes';
-import { visibleRigGitLineChanges, type VisibleRigGitLineChanges } from './rigGitLineChanges';
+import type { VisibleGitLineChanges } from './gitLineChanges';
 import { resolveStatusBarGitBranch } from './sessionStatusBar';
 
 export function resolveSessionGitPresentation(
@@ -11,23 +10,12 @@ export function resolveSessionGitPresentation(
 ): {
     subtitle: string | undefined;
     changedFileCount: number | null;
-    changes: VisibleRigGitLineChanges | null;
+    changes: VisibleGitLineChanges | null;
 } {
     const metadataBranch = typeof metadata?.gitBranch === 'string' ? metadata.gitBranch : null;
     const subtitle = metadata?.workspace?.name.trim()
         || resolveStatusBarGitBranch(gitStatus?.branch ?? gitStatusFiles?.branch, metadataBranch)
         || undefined;
-
-    // Happy Agent publishes the whole workspace comparison, including committed
-    // branch changes. A working-tree-only cache must not replace that summary.
-    const rigGit = getRigGitSummary(metadata);
-    if (rigGit) {
-        return {
-            subtitle,
-            changedFileCount: rigGit.changedFiles,
-            changes: visibleRigGitLineChanges(rigGit),
-        };
-    }
 
     const files = gitStatusFiles
         ? [...gitStatusFiles.stagedFiles, ...gitStatusFiles.unstagedFiles]

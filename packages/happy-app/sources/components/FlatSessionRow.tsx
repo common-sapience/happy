@@ -18,9 +18,9 @@ import type { FlatSessionRowData } from '@/utils/flatSessionList';
 import { formatSessionListTimestamp } from '@/utils/sessionListTimestamp';
 import type { Theme } from '@/theme';
 import { t } from '@/text';
-import { RigGitLineChanges } from './RigGitLineChanges';
 import { ShimmerText } from './ShimmerText';
 import { resolveFlatSessionRowPresentation } from '@/utils/flatSessionRowPresentation';
+import { agentListStateColor, agentListStateLabel, resolveAgentListState } from './agentListState';
 
 // Roughly three quarters of the row, the proportion a chat list uses: the row
 // is 10 + 61 + 10, so 60 leaves an even 10 either side of the avatar.
@@ -42,10 +42,13 @@ export function flatListBackgroundColor(theme: Theme): string {
 }
 
 /**
- * One session in the flat home list: avatar, title, the project and worktree it
- * runs in, and its status. The row spans the full width on the page background
- * with a hairline under it, so the list reads as one continuous column rather
- * than a stack of project cards.
+ * One agent in the list: avatar, title, the folder and worktree it runs in, and
+ * one of the four states DESK-11 allows. The row spans the full width on the
+ * page background with a hairline under it, so the list reads as one continuous
+ * column.
+ *
+ * There is no vendor mark anywhere on it: the product has one kind of agent, so
+ * naming its engine on every row would be noise (DESK-11).
  */
 export const FlatSessionRow = React.memo(({ row, selected, showBorder, archived }: {
     row: FlatSessionRowData;
@@ -90,12 +93,13 @@ export const FlatSessionRow = React.memo(({ row, selected, showBorder, archived 
         hasUnread: showUnreadDot,
         faded,
     });
+    // Colour and word together, never colour alone (design.md §5).
+    const listState = resolveAgentListState({ state: session.state, archived: !!archived });
+    const listStateLabel = agentListStateLabel(listState);
     const topRightAccessibilityLabel = presentation.topRight.type === 'dot'
-        ? session.state === 'input_required'
-            ? t('status.inputRequired')
-            : session.state === 'permission_required'
-                ? t('status.permissionRequired')
-                : t('status.unread')
+        ? listState === 'waiting'
+            ? listStateLabel
+            : t('status.unread')
         : undefined;
 
     // The same `lastActivityAt` the flat list sorts on, so the stamps run in
@@ -142,15 +146,11 @@ export const FlatSessionRow = React.memo(({ row, selected, showBorder, archived 
         >
             <View style={[styles.avatar, faded && styles.avatarFaded]}>
                 <Avatar
-                    bot={!!session.botId}
                     id={session.avatarId}
                     size={AVATAR_SIZE}
                     monochrome={faded}
-                    flavor={session.flavor}
-                    clientId={session.clientId}
                     imageUrl={session.projectAvatarUri}
                     thumbhash={session.projectAvatarThumbhash}
-                    badgeLocation="sessionList"
                 />
             </View>
 
@@ -223,14 +223,16 @@ export const FlatSessionRow = React.memo(({ row, selected, showBorder, archived 
                                 color={theme.colors.textSecondary}
                             />
                         )}
-                        {session.gitChangedFiles !== null && (
-                            <RigGitLineChanges
-                                changedFiles={session.gitChangedFiles}
-                                countsExact={session.gitCountsExact}
-                                deletions={session.gitDeletions ?? 0}
-                                insertions={session.gitInsertions ?? 0}
-                            />
-                        )}
+                        <StatusDot
+                            color={agentListStateColor(listState, theme)}
+                            isPulsing={listState === 'running'}
+                        />
+                        <Text
+                            style={[styles.state, { color: agentListStateColor(listState, theme) }]}
+                            numberOfLines={1}
+                        >
+                            {listStateLabel}
+                        </Text>
                     </View>
                 </View>
             </View>
@@ -379,7 +381,13 @@ const stylesheet = StyleSheet.create((theme) => ({
         flexDirection: 'row',
         alignItems: 'center',
         flexShrink: 0,
+        gap: 4,
         marginLeft: 'auto',
+    },
+    state: {
+        fontSize: 13,
+        lineHeight: 18,
+        ...Typography.default('regular'),
     },
     // Sits on the row itself rather than the text column, so centring the
     // avatar cannot drag it up off the row's bottom edge. Starts where the text

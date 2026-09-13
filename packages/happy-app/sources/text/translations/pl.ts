@@ -1108,6 +1108,24 @@ export const pl: TranslationStructure = {
         friendAcceptedGeneric: 'Zaproszenie do znajomych zaakceptowane',
     },
 
+    harness: {
+        stateRunning: 'pracuje',
+        stateIdle: 'bezczynny',
+        stateWaiting: 'czeka na twoją odpowiedź',
+        stateArchived: 'zarchiwizowany',
+        usedTool: 'użył narzędzia',
+        profileLabel: 'Profil',
+        profileDefault: 'Domyślny',
+        profileDefaultHint: 'wszystko włączone',
+        profilePlan: 'Plan',
+        profilePlanHint: 'najpierw przemyśli, nic nie zmienia',
+        profileBuild: 'Budowa',
+        profileBuildHint: 'pisze kod i uruchamia komendy',
+        extraInstructions: 'Dodatkowe wskazówki',
+        extraInstructionsPlaceholder: 'To, o czym agent ma zawsze pamiętać',
+        noAgentsTitle: 'Brak agentów',
+    },
+
 } as const;
 
 export type TranslationsPl = typeof pl;

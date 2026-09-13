@@ -1,13 +1,12 @@
 /**
- * Zustand store for new session draft state, backed by MMKV.
- * Persists the user's last-used configuration (machine, path, agent, model, permissions, etc.)
- * so the new session screen restores the same defaults on next visit.
+ * Zustand store for new agent draft state, backed by MMKV.
+ * Persists the user's last-used configuration (computer, folder, profile, extra
+ * instructions) so the new agent screen restores the same defaults on next visit.
  */
 import { create } from 'zustand';
 import {
     loadNewSessionDraft,
     saveNewSessionDraft,
-    type NewSessionDraft,
     type NewSessionAgentType,
     type NewSessionSessionType,
 } from '@/sync/persistence';
@@ -21,9 +20,9 @@ interface NewSessionDraftState {
     selectedMachineId: string | null;
     selectedPath: string | null;
     agentType: NewSessionAgentType;
+    /** The agent profile, under the wire name the daemon reads it as. */
     permissionMode: PermissionModeKey | null;
-    modelMode: string | null;
-    effortLevel: string | null;
+    systemPromptAddition: string | null;
     sessionType: NewSessionSessionType;
     worktreeKey: string | null;
 
@@ -41,8 +40,7 @@ interface NewSessionDraftState {
     setPath: (path: string | null) => void;
     setAgentType: (agent: NewSessionAgentType) => void;
     setPermissionMode: (mode: PermissionModeKey) => void;
-    setModelMode: (mode: string) => void;
-    setEffortLevel: (level: string) => void;
+    setSystemPromptAddition: (text: string | null) => void;
     setSessionType: (type: NewSessionSessionType) => void;
     setWorktreeKey: (key: string | null) => void;
 }
@@ -54,8 +52,7 @@ function persist(state: NewSessionDraftState) {
         selectedPath: state.selectedPath,
         agentType: state.agentType,
         permissionMode: state.permissionMode,
-        modelMode: state.modelMode,
-        effortLevel: state.effortLevel,
+        systemPromptAddition: state.systemPromptAddition,
         sessionType: state.sessionType,
         worktreeKey: state.worktreeKey,
         updatedAt: Date.now(),
@@ -73,8 +70,7 @@ export const useNewSessionDraft = create<NewSessionDraftState>()((set, get) => (
     selectedPath: initial?.selectedPath ?? null,
     agentType: initial?.agentType ?? ENGINE_AGENT,
     permissionMode: initial?.permissionMode ?? null,
-    modelMode: initial?.modelMode ?? null,
-    effortLevel: initial?.effortLevel ?? null,
+    systemPromptAddition: initial?.systemPromptAddition ?? null,
     sessionType: initial?.sessionType ?? 'simple',
     worktreeKey: initial?.worktreeKey ?? null,
 
@@ -85,8 +81,7 @@ export const useNewSessionDraft = create<NewSessionDraftState>()((set, get) => (
     setPath: (path) => { set({ selectedPath: path, worktreeKey: null }); persist(get()); },
     setAgentType: (agent) => { set({ agentType: agent }); persist(get()); },
     setPermissionMode: (mode) => { set({ permissionMode: mode }); persist(get()); },
-    setModelMode: (mode) => { set({ modelMode: mode }); persist(get()); },
-    setEffortLevel: (level) => { set({ effortLevel: level }); persist(get()); },
+    setSystemPromptAddition: (text) => { set({ systemPromptAddition: text }); persist(get()); },
     setSessionType: (type) => { set({ sessionType: type }); persist(get()); },
     setWorktreeKey: (key) => { set({ worktreeKey: key }); persist(get()); },
 }));
