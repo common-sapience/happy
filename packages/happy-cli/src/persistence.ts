@@ -127,25 +127,23 @@ export async function writeSettings(settings: Settings): Promise<void> {
   await writeFile(configuration.settingsFile, JSON.stringify(settingsWithVersion, null, 2))
 }
 
-/**
- * Atomically update settings with multi-process safety via file locking
- * @param updater Function that takes current settings and returns updated settings
- * @returns The updated settings
- */
-export async function updateSettings(
-  updater: (current: Settings) => Settings | Promise<Settings>
-): Promise<Settings> {
-  // Timing constants
-  const LOCK_RETRY_INTERVAL_MS = 100;  // How long to wait between lock attempts
-  const MAX_LOCK_ATTEMPTS = 50;        // Maximum number of attempts (5 seconds total)
-  const STALE_LOCK_TIMEOUT_MS = 10000; // Consider lock stale after 10 seconds
+// Lock timing, shared by every file this module serialises writes to
+const LOCK_RETRY_INTERVAL_MS = 100;  // How long to wait between lock attempts
+const MAX_LOCK_ATTEMPTS = 50;        // Maximum number of attempts (5 seconds total)
+const STALE_LOCK_TIMEOUT_MS = 10000; // Consider lock stale after 10 seconds
 
-  const lockFile = configuration.settingsFile + '.lock';
-  const tmpFile = configuration.settingsFile + '.tmp';
-  let fileHandle;
+/**
+ * Runs `body` while holding an exclusive lock beside `file`, so two processes
+ * cannot read-modify-write the same file at once. One lock protocol for every
+ * file under HAPPY_HOME_DIR: the daemon, a session and a desktop handoff all
+ * contend for the same files, and each one inventing its own would let a writer
+ * lose another's change.
+ */
+export async function withFileLock<T>(file: string, body: () => Promise<T>): Promise<T> {
+  const lockFile = file + '.lock';
+  let fileHandle: FileHandle | undefined;
   let attempts = 0;
 
-  // Acquire exclusive lock with retries
   while (attempts < MAX_LOCK_ATTEMPTS) {
     try {
       // O_CREAT | O_EXCL | O_WRONLY = create exclusively, fail if exists
@@ -153,11 +151,9 @@ export async function updateSettings(
       break;
     } catch (err: any) {
       if (err.code === 'EEXIST') {
-        // Lock file exists, wait and retry
         attempts++;
         await new Promise(resolve => setTimeout(resolve, LOCK_RETRY_INTERVAL_MS));
 
-        // Check for stale lock
         try {
           const stats = await stat(lockFile);
           if (Date.now() - stats.mtimeMs > STALE_LOCK_TIMEOUT_MS) {
@@ -171,10 +167,28 @@ export async function updateSettings(
   }
 
   if (!fileHandle) {
-    throw new Error(`Failed to acquire settings lock after ${MAX_LOCK_ATTEMPTS * LOCK_RETRY_INTERVAL_MS / 1000} seconds`);
+    throw new Error(`Failed to acquire lock on ${file} after ${MAX_LOCK_ATTEMPTS * LOCK_RETRY_INTERVAL_MS / 1000} seconds`);
   }
 
   try {
+    return await body();
+  } finally {
+    await fileHandle.close();
+    await unlink(lockFile).catch(() => { });
+  }
+}
+
+/**
+ * Atomically update settings with multi-process safety via file locking
+ * @param updater Function that takes current settings and returns updated settings
+ * @returns The updated settings
+ */
+export async function updateSettings(
+  updater: (current: Settings) => Settings | Promise<Settings>
+): Promise<Settings> {
+  const tmpFile = configuration.settingsFile + '.tmp';
+
+  return withFileLock(configuration.settingsFile, async () => {
     // Read current settings with defaults
     const current = await readSettings() || { ...defaultSettings };
 
@@ -191,11 +205,7 @@ export async function updateSettings(
     await rename(tmpFile, configuration.settingsFile); // Atomic on POSIX
 
     return updated;
-  } finally {
-    // Release lock
-    await fileHandle.close();
-    await unlink(lockFile).catch(() => { }); // Remove lock file
-  }
+  });
 }
 
 //

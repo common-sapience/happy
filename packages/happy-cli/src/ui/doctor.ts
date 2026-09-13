@@ -18,6 +18,11 @@ import packageJson from '../../package.json'
 import { isPackagedExecutable } from '@/utils/packagedExecutable'
 import { resolveEngineCommand } from '@/agent/acp/acpAgentConfig'
 import { detectCLIAvailability } from '@/utils/detectCLI'
+import {
+    describePlatformCredentials,
+    engineCredentialsFile,
+    readEngineCredentials,
+} from '@/modules/credentials/engineCredentials'
 
 /**
  * Get relevant environment information for debugging
@@ -198,6 +203,20 @@ export async function runDoctorCommand(): Promise<void> {
     console.log(`Daemon Executable: ${chalk.blue(process.execPath)}`);
     console.log(`Engine Command: ${chalk.blue(resolveEngineCommand())}`);
     console.log(`Engine Available: ${detectCLIAvailability().opencode ? chalk.green('✓ Yes') : chalk.red('❌ No')}`);
+
+    // HOST-09 / DESK-12: whether a session started here can reach a model at all.
+    // Booleans only — the key, the address and the model id are never printed.
+    console.log(chalk.bold('\n🔑 Model Gateway'));
+    try {
+        const configured = describePlatformCredentials(await readEngineCredentials());
+        const mark = (set: boolean) => set ? chalk.green('✓ set') : chalk.yellow('not set');
+        console.log(`Store: ${chalk.blue(engineCredentialsFile())}`);
+        console.log(`MODEL_API_KEY: ${mark(configured.apiKey)}`);
+        console.log(`MODEL_API_BASE_URL: ${mark(configured.baseUrl)}`);
+        console.log(`MODEL_ID: ${mark(configured.modelId)}`);
+    } catch (error) {
+        console.log(chalk.red('❌ Error reading the model gateway store'));
+    }
 
     // Daemon spawn diagnostics
     console.log(chalk.bold('\n🔧 Daemon Spawn Diagnostics'));

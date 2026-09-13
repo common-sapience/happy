@@ -42,6 +42,10 @@ import {
   writePermissionConfirmationEnabled,
 } from '@/modules/permission/permissionSwitch';
 import {
+  describePlatformCredentials,
+  readEngineCredentials,
+} from '@/modules/credentials/engineCredentials';
+import {
   DREAM_AGENT_PROFILE,
   DREAM_PROMPT,
   MemoryConsolidationRunner,
@@ -749,10 +753,15 @@ export async function startDaemon(): Promise<void> {
     const permissionConfirmationEnabled = await readPermissionConfirmationEnabled();
     logger.debug(`[DAEMON RUN] Permission confirmation ${permissionConfirmationEnabled ? 'enabled' : 'disabled'}`);
 
+    // HOST-09 / DESK-12: which model gateway fields this computer holds, as booleans, so the
+    // account page can render the state from the machine list alone. Values stay on the host.
+    const platformCredentials = describePlatformCredentials(await readEngineCredentials());
+    logger.debug(`[DAEMON RUN] Model gateway configured: ${JSON.stringify(platformCredentials)}`);
+
     // Get or create machine
     const machine = await api.getOrCreateMachine({
       machineId,
-      metadata: { ...initialMachineMetadata, permissionConfirmationEnabled },
+      metadata: { ...initialMachineMetadata, permissionConfirmationEnabled, platformCredentials },
       daemonState: initialDaemonState
     });
     logger.debug(`[DAEMON RUN] Machine registered: ${machine.id}`);

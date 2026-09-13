@@ -124,6 +124,17 @@ export const MachineMetadataSchema = z.object({
    * file on the host stays the authority; this is a copy the daemon keeps current.
    */
   permissionConfirmationEnabled: z.boolean().optional(),
+  /**
+   * HOST-09 / DESK-12: which model gateway fields this computer holds, as
+   * booleans and never as values. The credential store on the host is the
+   * authority; this is a copy the daemon keeps current so the account page can
+   * say what is configured without ever asking for a secret.
+   */
+  platformCredentials: z.object({
+    apiKey: z.boolean(),
+    baseUrl: z.boolean(),
+    modelId: z.boolean(),
+  }).optional(),
 })
 
 export type MachineMetadata = z.infer<typeof MachineMetadataSchema>

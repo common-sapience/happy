@@ -15,6 +15,11 @@ import { RpcHandlerManager } from './rpc/RpcHandlerManager';
 import { detectCLIAvailability, CLIAvailability } from '@/utils/detectCLI';
 import { shouldReconnect } from '@/utils/lidState';
 import { readPermissionConfirmationEnabled } from '@/modules/permission/permissionSwitch';
+import {
+    describePlatformCredentials,
+    readEngineCredentials,
+    type PlatformCredentialState,
+} from '@/modules/credentials/engineCredentials';
 
 interface ServerToDaemonEvents {
     update: (data: Update) => void;
@@ -483,6 +488,15 @@ export class ApiMachineClient {
             .catch((err) => {
                 logger.debug('[API MACHINE] Failed to publish the permission confirmation switch:', err);
             });
+
+        // HOST-09 / DESK-12: the credential store on this host is the gateway's authority, and it
+        // is written by a desktop handoff running in its own process. The heartbeat is how the
+        // daemon notices that write and republishes the booleans a control end renders from.
+        readEngineCredentials()
+            .then((credentials) => this.publishPlatformCredentials(describePlatformCredentials(credentials)))
+            .catch((err) => {
+                logger.debug('[API MACHINE] Failed to publish the model gateway state:', err);
+            });
     }
 
     /**
@@ -505,6 +519,33 @@ export class ApiMachineClient {
             }));
         } catch (err) {
             logger.debug('[API MACHINE] Failed to publish the permission confirmation switch:', err);
+        }
+    }
+
+    /**
+     * Keep the published copy of the model gateway state in step with this host (HOST-09,
+     * DESK-12). Booleans only: the key, the address and the model id never leave the computer.
+     * Additive like every other metadata write, and a relay that refuses it is retried by the
+     * next heartbeat rather than failing the caller.
+     */
+    private async publishPlatformCredentials(state: PlatformCredentialState): Promise<void> {
+        const published = this.machine.metadata?.platformCredentials;
+        if (published
+            && published.apiKey === state.apiKey
+            && published.baseUrl === state.baseUrl
+            && published.modelId === state.modelId) {
+            return;
+        }
+        if (!this.socket?.connected) {
+            return;
+        }
+        try {
+            await this.updateMachineMetadata((metadata) => ({
+                ...(metadata || {} as any),
+                platformCredentials: state,
+            }));
+        } catch (err) {
+            logger.debug('[API MACHINE] Failed to publish the model gateway state:', err);
         }
     }
 

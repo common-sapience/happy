@@ -17,9 +17,10 @@ import { getRelayEndpoint } from './serverConfig';
  * account is an approval the relay carries, never a key and never a file.
  */
 
-type ShellInvoke = (command: string, args: Record<string, unknown>) => Promise<unknown>;
+export type ShellInvoke = (command: string, args: Record<string, unknown>) => Promise<unknown>;
 
-function shellInvoke(): ShellInvoke | null {
+/** The one way into the desktop shell; without one there is no daemon to reach, which is the web build. */
+export function shellInvoke(): ShellInvoke | null {
     if (!isTauri()) {
         return null;
     }

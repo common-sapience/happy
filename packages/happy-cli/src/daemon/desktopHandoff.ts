@@ -24,6 +24,13 @@ import { normalizeRelayAddress } from '@/utils/relayEndpoint';
 
 export const SET_RELAY_SUBCOMMAND = 'set-relay';
 export const LOGIN_REQUEST_SUBCOMMAND = 'login-request';
+/**
+ * Reads its request as JSON on stdin, never from argv: the platform API key is one
+ * of the fields, and an argument is visible in any process list on the machine.
+ * Naming no field is a legitimate request — it reports the state and changes
+ * nothing, which is how the account page reads the state before editing it.
+ */
+export const SET_PLATFORM_CREDENTIALS_SUBCOMMAND = 'set-platform-credentials';
 
 /**
  * The shell mints a token, passes it here, and the reply echoes it back. The

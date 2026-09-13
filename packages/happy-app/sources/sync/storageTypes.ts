@@ -465,6 +465,14 @@ export const MachineMetadataSchema = z.object({
     // host owns the value; this copy is what a control end reads so the switch renders without
     // having to reach the computer first.
     permissionConfirmationEnabled: z.boolean().optional(),
+    // HOST-09, DESK-12: which model gateway fields the computer holds, as the daemon last
+    // published them. Booleans only — the key, the gateway address and the model id stay on the
+    // computer, so this is the whole answer any control end gets about them.
+    platformCredentials: z.object({
+        apiKey: z.boolean(),
+        baseUrl: z.boolean(),
+        modelId: z.boolean(),
+    }).optional(),
     // Daemon status fields
     daemonLastKnownStatus: z.enum(['running', 'shutting-down']).optional(),
     daemonLastKnownPid: z.number().optional(),

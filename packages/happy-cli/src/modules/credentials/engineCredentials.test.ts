@@ -4,12 +4,16 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  MODEL_ID_ENV_VAR,
   PLATFORM_API_KEY_ENV_VAR,
+  PLATFORM_BASE_URL_ENV_VAR,
   buildConnectorMcpServers,
   buildEngineCredentialEnv,
   describeInjectedCredentials,
+  describePlatformCredentials,
   engineCredentialsFile,
   readEngineCredentials,
+  updateEngineCredentials,
 } from './engineCredentials';
 
 const mockConfiguration = vi.hoisted(() => ({ happyHomeDir: '' }));
@@ -45,17 +49,31 @@ describe('HOST-09 / HOST-11 engine credential store', () => {
     await expect(readEngineCredentials()).resolves.toEqual({});
   });
 
-  it('HOST-09: injects the platform API key into the engine environment', async () => {
-    writeStore({ platformApiKey: 'platform-secret' });
+  it('HOST-09: injects the whole model gateway into the engine environment', async () => {
+    writeStore({
+      platformApiKey: 'platform-secret',
+      platformBaseUrl: 'https://gateway.example/api/v1',
+      modelId: 'vendor/model-1',
+    });
 
     const credentials = await readEngineCredentials();
 
     expect(buildEngineCredentialEnv(credentials)).toEqual({
       [PLATFORM_API_KEY_ENV_VAR]: 'platform-secret',
+      [PLATFORM_BASE_URL_ENV_VAR]: 'https://gateway.example/api/v1',
+      [MODEL_ID_ENV_VAR]: 'vendor/model-1',
     });
   });
 
-  it('HOST-09: injects nothing when no key is stored', async () => {
+  it('HOST-09: injects only the gateway fields this host holds', async () => {
+    writeStore({ platformApiKey: 'platform-secret' });
+
+    expect(buildEngineCredentialEnv(await readEngineCredentials())).toEqual({
+      [PLATFORM_API_KEY_ENV_VAR]: 'platform-secret',
+    });
+  });
+
+  it('HOST-09: injects nothing when nothing is stored', async () => {
     writeStore({});
 
     expect(buildEngineCredentialEnv(await readEngineCredentials())).toEqual({});
@@ -107,7 +125,35 @@ describe('HOST-09 / HOST-11 engine credential store', () => {
 
     const described = describeInjectedCredentials(await readEngineCredentials());
 
-    expect(described).toEqual({ platformApiKey: true, connectors: ['gmail'] });
+    expect(described).toEqual({ apiKey: true, baseUrl: false, modelId: false, connectors: ['gmail'] });
     expect(JSON.stringify(described)).not.toContain('secret');
+  });
+
+  it('DESK-12: writes a changed store back at 0600', async () => {
+    await updateEngineCredentials((current) => ({ ...current, platformApiKey: 'written-secret' }));
+
+    expect(statSync(engineCredentialsFile()).mode & 0o777).toBe(0o600);
+    expect(await readEngineCredentials()).toEqual({ platformApiKey: 'written-secret' });
+  });
+
+  it('DESK-12: a gateway write keeps the connectors this host authorized', async () => {
+    writeStore({ connectors: { gmail: { command: 'gmail-mcp' } } });
+
+    await updateEngineCredentials((current) => ({ ...current, modelId: 'vendor/model-1' }));
+
+    expect(await readEngineCredentials()).toEqual({
+      modelId: 'vendor/model-1',
+      connectors: { gmail: { command: 'gmail-mcp' } },
+    });
+  });
+
+  it('DESK-12: reports the configured fields as booleans, never as values', async () => {
+    writeStore({ platformApiKey: 'platform-secret', modelId: 'vendor/model-1' });
+
+    const state = describePlatformCredentials(await readEngineCredentials());
+
+    expect(state).toEqual({ apiKey: true, baseUrl: false, modelId: true });
+    expect(JSON.stringify(state)).not.toContain('secret');
+    expect(JSON.stringify(state)).not.toContain('vendor');
   });
 });

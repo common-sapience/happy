@@ -30,8 +30,8 @@ import { ensureDaemonRunning } from './daemon/ensureDaemonRunning'
 import { sanitizeSessionEnvironment } from './daemon/sessionEnvironment'
 import { AGENT_PROFILE_FLAG } from './daemon/engineLaunch'
 import { ONLY_IF_AUTHENTICATED_FLAG, relayRefusalMessage, shouldDeferDaemonStart } from './daemon/autostart'
-import { LOGIN_REQUEST_SUBCOMMAND, SET_RELAY_SUBCOMMAND } from './daemon/desktopHandoff'
-import { runLoginRequest, runSetRelay } from './daemon/desktopHandoffCommands'
+import { LOGIN_REQUEST_SUBCOMMAND, SET_PLATFORM_CREDENTIALS_SUBCOMMAND, SET_RELAY_SUBCOMMAND } from './daemon/desktopHandoff'
+import { runLoginRequest, runSetPlatformCredentials, runSetRelay } from './daemon/desktopHandoffCommands'
 import { configuration } from './configuration'
 
 /**
@@ -107,6 +107,9 @@ ${chalk.bold('Usage:')}
   happy daemon ${LOGIN_REQUEST_SUBCOMMAND}
                           Publish a login request for a controller to approve
                             (run by the desktop shell, not by hand)
+  happy daemon ${SET_PLATFORM_CREDENTIALS_SUBCOMMAND}
+                          Record the model gateway this computer reaches, read as
+                            JSON on stdin (run by the desktop shell, not by hand)
   happy doctor            System diagnostics & troubleshooting
 
 ${chalk.bold('Session options:')}
@@ -281,6 +284,9 @@ Conversation history is preserved on the server, but in-flight tool calls are in
     } else if (daemonSubcommand === LOGIN_REQUEST_SUBCOMMAND) {
       await runLoginRequest()
       process.exit(process.exitCode ?? 0)
+    } else if (daemonSubcommand === SET_PLATFORM_CREDENTIALS_SUBCOMMAND) {
+      await runSetPlatformCredentials(process.stdin)
+      process.exit(process.exitCode ?? 0)
     } else if (daemonSubcommand === 'stop') {
       await stopDaemon()
       process.exit(0)
@@ -321,6 +327,8 @@ ${chalk.bold('Usage:')}
   happy daemon list               List active sessions
   happy daemon ${SET_RELAY_SUBCOMMAND} <url>      Record the relay this computer connects to
   happy daemon ${LOGIN_REQUEST_SUBCOMMAND}       Publish a login request for a controller to approve
+  happy daemon ${SET_PLATFORM_CREDENTIALS_SUBCOMMAND}
+                                  Record the model gateway, read as JSON on stdin
 
   If you want to kill all happy related processes run
   ${chalk.cyan('happy doctor clean')}
