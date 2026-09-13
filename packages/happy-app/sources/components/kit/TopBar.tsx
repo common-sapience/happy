@@ -7,18 +7,23 @@ import { KitSurface } from './KitSurface';
 
 const stylesheet = StyleSheet.create((theme) => ({
     bar: {
+        width: '100%',
+        alignItems: 'center',
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: theme.colors.glass.divider,
+    },
+    content: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: theme.margins.md,
         paddingHorizontal: theme.margins.lg,
+        width: '100%',
+        maxWidth: layout.headerMaxWidth,
         minHeight: theme.minTouchTarget + theme.margins.sm,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: theme.colors.glass.divider,
     },
     titles: {
         flex: 1,
         minWidth: 0,
-        maxWidth: layout.headerMaxWidth,
     },
     title: {
         ...Typography.default('semiBold'),
@@ -40,10 +45,14 @@ const stylesheet = StyleSheet.create((theme) => ({
 }));
 
 export type TopBarProps = {
-    title: string;
+    title?: string;
     subtitle?: string;
+    /** For a screen whose title is a control rather than a word. */
+    titleNode?: React.ReactNode;
     leading?: React.ReactNode;
     trailing?: React.ReactNode;
+    /** The bar's own height, when the chrome around it fixes one. */
+    contentStyle?: StyleProp<ViewStyle>;
     style?: StyleProp<ViewStyle>;
 };
 
@@ -52,17 +61,29 @@ export type TopBarProps = {
  * layer: no shadow, a hairline, and nothing in it competes with the one primary
  * action of the screen underneath.
  */
-export const TopBar = React.memo(function TopBar({ title, subtitle, leading, trailing, style }: TopBarProps) {
+export const TopBar = React.memo(function TopBar({
+    title,
+    subtitle,
+    titleNode,
+    leading,
+    trailing,
+    contentStyle,
+    style,
+}: TopBarProps) {
     const styles = stylesheet;
 
     return (
         <KitSurface surface="chrome" style={[styles.bar, style]}>
-            {leading ? <View style={styles.side}>{leading}</View> : null}
-            <View style={styles.titles}>
-                <Text numberOfLines={1} accessibilityRole="header" style={styles.title}>{title}</Text>
-                {subtitle ? <Text numberOfLines={1} style={styles.subtitle}>{subtitle}</Text> : null}
+            <View style={[styles.content, contentStyle]}>
+                {leading ? <View style={styles.side}>{leading}</View> : null}
+                <View style={styles.titles}>
+                    {titleNode ?? (title ? (
+                        <Text numberOfLines={1} accessibilityRole="header" style={styles.title}>{title}</Text>
+                    ) : null)}
+                    {subtitle ? <Text numberOfLines={1} style={styles.subtitle}>{subtitle}</Text> : null}
+                </View>
+                {trailing ? <View style={styles.side}>{trailing}</View> : null}
             </View>
-            {trailing ? <View style={styles.side}>{trailing}</View> : null}
         </KitSurface>
     );
 });

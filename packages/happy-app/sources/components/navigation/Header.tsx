@@ -9,6 +9,7 @@ import { useHeaderHeight, useIsTablet } from '@/utils/responsive';
 import { Typography } from '@/constants/Typography';
 import { StyleSheet } from 'react-native-unistyles';
 import { MobileGlassSurface } from '../MobileGlass';
+import { TopBar } from '../kit/TopBar';
 import {
     MobileHeaderScrim,
     MOBILE_HOME_SCRIM_OVERLAY_OPACITY,
@@ -23,7 +24,8 @@ import {
 } from './headerMetrics';
 
 interface HeaderProps {
-    title?: React.ReactNode;
+    /** A plain title is typeset by the bar itself; a node is a screen's own control. */
+    title?: React.ReactNode | string;
     subtitle?: string;
     headerLeft?: (() => React.ReactNode) | null;
     headerLeftGlass?: boolean;
@@ -83,8 +85,8 @@ export const Header = React.memo((props: HeaderProps) => {
     // controls sit on it. The phone's scrim and title pill stay phone-only.
     const desktopGlassChrome = isDesktop;
     const isAndroidHeader = isNativePhone && Platform.OS === 'android';
-    const headerLeftUsesGlass = headerLeftGlass && (glassControlsEnabled || desktopGlassChrome);
-    const headerRightUsesGlass = headerRightGlass && (glassControlsEnabled || desktopGlassChrome);
+    const headerLeftUsesGlass = headerLeftGlass && glassControlsEnabled;
+    const headerRightUsesGlass = headerRightGlass && glassControlsEnabled;
     const contentHeight = glassControlsEnabled ? Math.max(headerHeight, MOBILE_GLASS_HEADER_HEIGHT) : headerHeight;
     const centerTitle = (titleAlignment ?? (isNativePhone ? mobileTitleAlignment : 'start')) === 'center';
     const homeBackdrop = headerBackdropVariant === 'home';
@@ -153,29 +155,44 @@ export const Header = React.memo((props: HeaderProps) => {
         (glassControlsEnabled || desktopGlassChrome) && styles.containerTransparent,
     ];
 
-    const subtitleStyle = [
-        styles.subtitle,
-        isDesktop && styles.desktopSubtitle,
-        headerSubtitleStyle,
-    ];
+    const subtitleStyle = [styles.subtitle, headerSubtitleStyle];
+    const titleIsText = typeof title === 'string';
     const titleContent = (
         <>
-            {title}
+            {titleIsText ? (
+                <Text
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                    style={[styles.navigationTitle, { textAlign: centerTitle ? 'center' : 'left' }, headerTitleStyle]}
+                >
+                    {title}
+                </Text>
+            ) : title}
             {subtitle && <Text style={subtitleStyle} numberOfLines={1}>{subtitle}</Text>}
         </>
     );
 
+    // Desktop is the shipping platform, and there the header is exactly one
+    // TopBar: the kit owns the bar's material, hairline, height and typography,
+    // and this component only supplies what navigation hands it. The phone path
+    // below keeps its own chrome until mobile is picked back up (D-11).
+    if (desktopGlassChrome) {
+        return (
+            <View style={containerStyle}>
+                <TopBar
+                    title={titleIsText ? title : undefined}
+                    titleNode={titleIsText ? undefined : title}
+                    subtitle={subtitle}
+                    leading={headerLeft ? headerLeft() : undefined}
+                    trailing={headerRight ? headerRight() : undefined}
+                    contentStyle={{ height: contentHeight }}
+                />
+            </View>
+        );
+    }
+
     return (
         <View style={containerStyle}>
-            {desktopGlassChrome && (
-                <MobileGlassSurface
-                    pointerEvents="none"
-                    nativeEffect
-                    material="static"
-                    intensity={76}
-                    style={styles.desktopChromeSurface}
-                />
-            )}
             {glassControlsEnabled && backdropMounted && (
                 <Animated.View
                     pointerEvents="none"
@@ -196,7 +213,6 @@ export const Header = React.memo((props: HeaderProps) => {
             <View style={styles.contentWrapper}>
                 <View style={[
                     styles.content,
-                    isDesktop && styles.desktopContent,
                     centerTitle && styles.centeredContent,
                     { height: contentHeight },
                 ]}>
@@ -223,7 +239,6 @@ export const Header = React.memo((props: HeaderProps) => {
 
                     <View style={[
                         styles.centerContainer,
-                        isDesktop && styles.desktopCenterContainer,
                         centerTitle && styles.centeredTitleContainer,
                     ]}>
                         {glassControlsEnabled && mobileTitleSurface === 'glass' ? (
@@ -347,45 +362,13 @@ const NavigationHeaderComponent: React.FC<NavigationHeaderComponentProps> = Reac
     const shouldHideBackButton = isTablet;
     const titleAlign = options.headerTitleAlign ?? (Platform.OS === 'ios' ? 'center' : 'left');
 
-    // Extract title - handle both string and function types
-    let title: React.ReactNode | null = null;
-    if (options.headerTitle) {
-        if (typeof options.headerTitle === 'string') {
-            title = (
-                <Text
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                    style={[
-                        stylesheet.navigationTitle,
-                        { textAlign: titleAlign },
-                        options.headerTintColor ? { color: options.headerTintColor } : null,
-                        Typography.default('semiBold'),
-                        options.headerTitleStyle
-                    ]}
-                >
-                    {options.headerTitle}
-                </Text>
-            );
-        } else if (typeof options.headerTitle === 'function') {
-            // Handle function type headerTitle
-            title = options.headerTitle({ children: route.name, tintColor: options.headerTintColor });
-        }
+    let title: React.ReactNode | string | null = null;
+    if (typeof options.headerTitle === 'string') {
+        title = options.headerTitle;
+    } else if (typeof options.headerTitle === 'function') {
+        title = options.headerTitle({ children: route.name, tintColor: options.headerTintColor });
     } else if (typeof options.title === 'string') {
-        title = (
-            <Text
-                numberOfLines={1}
-                ellipsizeMode="tail"
-                style={[
-                    stylesheet.navigationTitle,
-                    { textAlign: titleAlign },
-                    options.headerTintColor ? { color: options.headerTintColor } : null,
-                    Typography.default('semiBold'),
-                    options.headerTitleStyle
-                ]}
-            >
-                {options.title}
-            </Text>
-        );
+        title = options.title;
     }
 
     // Determine header left content
@@ -406,7 +389,7 @@ const NavigationHeaderComponent: React.FC<NavigationHeaderComponentProps> = Reac
 
     return (
         <Header
-            title={title}
+            title={title ?? undefined}
             subtitle={extendedOptions.headerSubtitle}
             headerLeft={headerLeftContent}
             headerRight={options.headerRight ?
@@ -458,15 +441,6 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
     containerAndroidScrolled: {
         backgroundColor: theme.colors.surfaceHigh,
     },
-    // Desktop title bar material. It fills the header and only draws its bottom
-    // edge, so the bar separates from content without boxing it in.
-    desktopChromeSurface: {
-        ...StyleSheet.absoluteFillObject,
-        borderTopWidth: 0,
-        borderLeftWidth: 0,
-        borderRightWidth: 0,
-        borderBottomColor: theme.colors.glass.divider,
-    },
     // Backdrops are material layers behind floating controls. The Home variant
     // stays stable while content scrolls; other headers may still opt into a
     // stronger underlap state.
@@ -494,10 +468,6 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
     centeredContent: {
         justifyContent: 'space-between',
     },
-    desktopContent: {
-        gap: 0,
-        paddingHorizontal: Platform.select({ ios: 8, default: 16 }),
-    },
     leftContainer: {
         flexGrow: 0,
         flexShrink: 0,
@@ -522,13 +492,6 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 0,
-    },
-    desktopCenterContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: Platform.OS === 'ios' ? 'center' : 'flex-start',
-        paddingHorizontal: 12,
-        minWidth: undefined,
     },
     mobileTitlePill: {
         maxWidth: '100%',
@@ -635,11 +598,6 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
         marginTop: Platform.OS === 'web' ? 2 : 1,
         color: theme.colors.header.tint,
         ...Typography.default('regular'),
-    },
-    desktopSubtitle: {
-        fontSize: theme.typography.caption.fontSize,
-        textAlign: Platform.OS === 'ios' ? 'center' : 'left',
-        marginTop: 2,
     },
     shadow: {
         shadowColor: theme.colors.shadow.color,

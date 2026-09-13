@@ -428,14 +428,6 @@ export const ca: TranslationStructure = {
     },
 
     components: {
-        emptyMainScreen: {
-            // Used by EmptyMainScreen component
-            readyToCode: 'Llest per programar?',
-            installCli: 'Instal·la el Happy CLI',
-            runIt: 'Executa\'l',
-            scanQrCode: 'Escaneja el codi QR',
-            openCamera: 'Obre la càmera',
-        },
         agentGoalBar: {
             currentGoal: 'Objectiu actual',
             accessibilityLabel: ({ goal }: { goal: string }) => `Objectiu actual: ${goal}`,

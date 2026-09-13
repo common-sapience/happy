@@ -444,14 +444,6 @@ export const pl: TranslationStructure = {
     },
 
     components: {
-        emptyMainScreen: {
-            // Used by EmptyMainScreen component
-            readyToCode: 'Gotowy do kodowania?',
-            installCli: 'Zainstaluj Happy CLI',
-            runIt: 'Uruchom je',
-            scanQrCode: 'Zeskanuj kod QR',
-            openCamera: 'Otwórz kamerę',
-        },
         agentGoalBar: {
             currentGoal: 'Bieżący cel',
             accessibilityLabel: ({ goal }: { goal: string }) => `Bieżący cel: ${goal}`,

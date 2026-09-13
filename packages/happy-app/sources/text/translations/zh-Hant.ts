@@ -428,14 +428,6 @@ export const zhHant: TranslationStructure = {
     },
 
     components: {
-        emptyMainScreen: {
-            // Used by EmptyMainScreen component
-            readyToCode: '準備開始寫程式？',
-            installCli: '安裝 Happy CLI',
-            runIt: '執行它',
-            scanQrCode: '掃描 QR Code',
-            openCamera: '開啟相機',
-        },
         agentGoalBar: {
             currentGoal: '目前目標',
             accessibilityLabel: ({ goal }: { goal: string }) => `目前目標：${goal}`,

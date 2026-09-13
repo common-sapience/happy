@@ -44,6 +44,7 @@ vi.mock('expo-image', async () => {
 vi.mock('react-native-unistyles', () => ({
     StyleSheet: {
         create: (factory: any) => typeof factory === 'function' ? factory({
+            borderRadius: { md: 8 },
             colors: {
                 groupped: { background: 'background' },
                 header: { tint: 'tint' },
@@ -100,72 +101,44 @@ afterEach(() => {
     socketStatus.status = 'disconnected';
 });
 
-function renderHomeHeaderTitle(component: React.ReactElement) {
+function renderHeader(component: React.ReactElement) {
     let renderer: ReturnType<typeof create>;
     act(() => {
         renderer = create(component);
     });
-
-    const header = renderer!.root.findByType('Header' as any);
-    let titleRenderer: ReturnType<typeof create>;
-    act(() => {
-        titleRenderer = create(header.props.title);
-    });
-    return titleRenderer!;
+    return renderer!.root.findByType('Header' as any);
 }
 
 describe('HomeHeaderNotAuth', () => {
     it('uses the standard plain mobile title instead of the glass title pill', () => {
-        let renderer: ReturnType<typeof create>;
-        act(() => {
-            renderer = create(React.createElement(HomeHeaderNotAuth));
-        });
-
-        const header = renderer!.root.findByType('Header' as any);
+        const header = renderHeader(React.createElement(HomeHeaderNotAuth));
         expect(header.props.mobileTitleSurface).toBe('plain');
         expect(header.props.mobileTitleAlignment).toBe('center');
     });
 });
 
 describe('HomeHeader', () => {
-    it('uses a centred, non-interactive plain title on mobile', () => {
-        let renderer: ReturnType<typeof create>;
-        act(() => {
-            renderer = create(React.createElement(HomeHeader));
-        });
-
-        const header = renderer!.root.findByType('Header' as any);
+    it('names the one list the product has, in words the bar typesets itself', () => {
+        const header = renderHeader(React.createElement(HomeHeader));
+        expect(header.props.title).toBe('sidebar.agentsTitle');
         expect(header.props.mobileTitleSurface).toBe('plain');
         expect(header.props.mobileTitleAlignment).toBe('center');
     });
 });
 
 describe('home header connection status', () => {
-    it('omits the connected status line without leaving subtitle spacing', () => {
+    it('says nothing about a healthy socket', () => {
         socketStatus.status = 'connected';
-
-        const title = renderHomeHeaderTitle(React.createElement(HomeHeader));
-
-        expect(title.root.findAllByType('View' as any)).toHaveLength(1);
-        expect(title.root.findAllByType('Text' as any)).toHaveLength(1);
+        expect(renderHeader(React.createElement(HomeHeader)).props.subtitle).toBeUndefined();
     });
 
-    it.each(['connecting', 'disconnected', 'error'] as const)('shows the %s status line', (status) => {
+    it.each(['connecting', 'disconnected', 'error'] as const)('reports the %s socket', (status) => {
         socketStatus.status = status;
-
-        const title = renderHomeHeaderTitle(React.createElement(HomeHeader));
-
-        expect(title.root.findAllByType('View' as any)).toHaveLength(2);
-        expect(title.root.findAllByType('Text' as any)).toHaveLength(2);
+        expect(renderHeader(React.createElement(HomeHeader)).props.subtitle).toBe(`status.${status}`);
     });
 
-    it('preserves a custom subtitle when the socket is connected', () => {
+    it('lets a custom server own the secondary line', () => {
         socketStatus.status = 'connected';
-
-        const title = renderHomeHeaderTitle(React.createElement(HomeHeaderNotAuth));
-        const texts = title.root.findAllByType('Text' as any);
-
-        expect(texts).toHaveLength(2);
-        expect(texts[1].props.children).toBe('192.168.0.108:3005');
+        expect(renderHeader(React.createElement(HomeHeaderNotAuth)).props.subtitle).toBe('192.168.0.108:3005');
     });
 });

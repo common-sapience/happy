@@ -78,22 +78,23 @@ export const PermissionFooter = React.memo(function PermissionFooter({
     toolInput,
 }: PermissionFooterProps) {
     const styles = stylesheet;
-    const [answering, setAnswering] = React.useState(false);
+    // A ref, not state: two taps in the same frame would both read a state
+    // flag as false and answer the request twice.
+    const answering = React.useRef(false);
     const isPending = permission.status === 'pending';
 
     const answer = React.useCallback(async (send: () => Promise<unknown>) => {
-        if (!isPending || answering) {
+        if (!isPending || answering.current) {
             return;
         }
-        setAnswering(true);
+        answering.current = true;
         try {
             await send();
         } catch (error) {
             console.error('Failed to answer a permission request', error);
-        } finally {
-            setAnswering(false);
+            answering.current = false;
         }
-    }, [answering, isPending]);
+    }, [isPending]);
 
     const handleAllowOnce = React.useCallback(() => answer(async () => {
         await sessionAllow(sessionId, permission.id);

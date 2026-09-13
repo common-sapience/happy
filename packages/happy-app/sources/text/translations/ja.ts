@@ -429,14 +429,6 @@ export const ja: TranslationStructure = {
     },
 
     components: {
-        emptyMainScreen: {
-            // Used by EmptyMainScreen component
-            readyToCode: 'コーディングを始めますか？',
-            installCli: 'Happy CLIをインストール',
-            runIt: '実行する',
-            scanQrCode: 'QRコードをスキャン',
-            openCamera: 'カメラを開く',
-        },
         agentGoalBar: {
             currentGoal: '現在の目標',
             accessibilityLabel: ({ goal }: { goal: string }) => `現在の目標: ${goal}`,

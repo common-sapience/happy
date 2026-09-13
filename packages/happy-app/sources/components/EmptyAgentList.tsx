@@ -9,33 +9,50 @@ import { t } from '@/text';
 /**
  * The agent list with nothing in it (DESK-11): one line saying why, and the one
  * action that changes it. Which action depends on whether there is a computer to
- * run on at all — offering "new agent" with no reachable computer would only
- * fail later (HA-02).
+ * run on at all — offering "new agent" with no reachable computer would only fail
+ * later (HA-02). The same component serves every surface that can show an empty
+ * list, so the list has one empty state rather than one per layout.
  */
-export function EmptySessionsTablet() {
+export function EmptyAgentList({ hasArchivedAgents, onShowArchived }: {
+    hasArchivedAgents?: boolean;
+    onShowArchived?: () => void;
+}) {
     const router = useRouter();
     const machines = useAllMachines({ includeOffline: true });
     const machineChoices = React.useMemo(() => collectMachineChoices(machines), [machines]);
     const hasOnlineMachines = machineChoices.some((machine) => machine.online);
-    const hasOfflineMachines = machineChoices.length > 0 && !hasOnlineMachines;
     const troubleshoot = useOfflineMachineTroubleshooting(machineChoices);
+
+    const archiveAction = hasArchivedAgents && onShowArchived
+        ? <SecondaryButton title={t('sidebar.showArchived')} onPress={onShowArchived} size="compact" />
+        : null;
 
     if (hasOnlineMachines) {
         return (
             <EmptyState
                 title={t('harness.noAgentsTitle')}
                 description={t('harness.noAgentsDescription')}
-                action={<NewAgentButton title={t('sidebar.newAgent')} onPress={() => router.navigate('/new')} />}
+                action={(
+                    <>
+                        <NewAgentButton title={t('sidebar.newAgent')} onPress={() => router.navigate('/new')} />
+                        {archiveAction}
+                    </>
+                )}
             />
         );
     }
 
-    if (hasOfflineMachines) {
+    if (machineChoices.length > 0) {
         return (
             <EmptyState
                 title={t('harness.computerUnreachableTitle')}
                 description={t('harness.computerUnreachableDescription')}
-                action={<SecondaryButton title={t('harness.troubleshoot')} onPress={troubleshoot} />}
+                action={(
+                    <>
+                        <SecondaryButton title={t('harness.troubleshoot')} onPress={troubleshoot} />
+                        {archiveAction}
+                    </>
+                )}
             />
         );
     }
@@ -44,6 +61,7 @@ export function EmptySessionsTablet() {
         <EmptyState
             title={t('harness.noComputersTitle')}
             description={t('harness.noComputersDescription')}
+            action={archiveAction}
         />
     );
 }

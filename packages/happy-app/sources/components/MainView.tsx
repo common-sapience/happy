@@ -13,7 +13,7 @@ import { NativeSettingsMenu, type NativeSettingsMenuGroup } from './NativeSettin
 import { useVisibleSessionListViewData } from '@/hooks/useVisibleSessionListViewData';
 import { useIsTablet } from '@/utils/responsive';
 import { useRouter } from 'expo-router';
-import { EmptySessionsTablet } from './EmptySessionsTablet';
+import { EmptyAgentList } from './EmptyAgentList';
 import { SessionsList } from './SessionsList';
 import { TabBar, TabType } from './TabBar';
 import { HomeDock, MOBILE_HOME_DOCK_CONTENT_INSET } from './HomeDock';
@@ -21,7 +21,6 @@ import { SettingsViewWrapper } from './SettingsViewWrapper';
 import { SessionsListWrapper } from './SessionsListWrapper';
 import { Header } from './navigation/Header';
 import { HeaderLogo } from './HeaderLogo';
-import { StatusDot } from './StatusDot';
 import { Ionicons } from '@expo/vector-icons';
 import { Typography } from '@/constants/Typography';
 import { t } from '@/text';
@@ -106,28 +105,6 @@ const styles = StyleSheet.create((theme) => ({
         flexBasis: 0,
         flexGrow: 1,
     },
-    titleContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: Platform.OS === 'web' ? 'flex-start' : 'center',
-    },
-    titleText: {
-        fontSize: Platform.OS === 'web' ? 17 : 16,
-        color: theme.colors.header.tint,
-        fontWeight: '600',
-        ...Typography.default('semiBold'),
-    },
-    statusContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: -2,
-    },
-    statusText: {
-        fontSize: Platform.OS === 'web' ? 12 : 11,
-        fontWeight: '500',
-        lineHeight: 16,
-        ...Typography.default(),
-    },
     headerButton: {
         width: 32,
         height: 32,
@@ -164,68 +141,25 @@ const TAB_TITLES = {
 // Active tabs
 type ActiveTabType = TabType;
 
-// Header title component with connection status
-const HeaderTitle = React.memo(({ activeTab }: { activeTab: ActiveTabType }) => {
-    const { theme } = useUnistyles();
+/**
+ * The bar's secondary line: only an unhealthy socket has anything to say.
+ */
+function useConnectionSubtitle(): string | undefined {
     const socketStatus = useSocketStatus();
-
-    const connectionStatus = React.useMemo(() => {
-        const { status } = socketStatus;
-        switch (status) {
-            case 'connected':
-                return {
-                    color: theme.colors.status.connected,
-                    isPulsing: false,
-                    text: t('status.connected'),
-                };
-            case 'connecting':
-                return {
-                    color: theme.colors.status.connecting,
-                    isPulsing: true,
-                    text: t('status.connecting'),
-                };
-            case 'disconnected':
-                return {
-                    color: theme.colors.status.disconnected,
-                    isPulsing: false,
-                    text: t('status.disconnected'),
-                };
-            case 'error':
-                return {
-                    color: theme.colors.status.error,
-                    isPulsing: false,
-                    text: t('status.error'),
-                };
-            default:
-                return {
-                    color: theme.colors.status.default,
-                    isPulsing: false,
-                    text: '',
-                };
-        }
-    }, [socketStatus, theme]);
-
-    return (
-        <View style={styles.titleContainer}>
-            <Text style={styles.titleText}>
-                {t(TAB_TITLES[activeTab])}
-            </Text>
-            {shouldShowHomeConnectionStatus(socketStatus.status) && connectionStatus.text && (
-                <View style={styles.statusContainer}>
-                    <StatusDot
-                        color={connectionStatus.color}
-                        isPulsing={connectionStatus.isPulsing}
-                        size={6}
-                        style={{ marginRight: 4 }}
-                    />
-                    <Text style={[styles.statusText, { color: connectionStatus.color }]}>
-                        {connectionStatus.text}
-                    </Text>
-                </View>
-            )}
-        </View>
-    );
-});
+    if (!shouldShowHomeConnectionStatus(socketStatus.status)) {
+        return undefined;
+    }
+    switch (socketStatus.status) {
+        case 'connecting':
+            return t('status.connecting');
+        case 'disconnected':
+            return t('status.disconnected');
+        case 'error':
+            return t('status.error');
+        default:
+            return undefined;
+    }
+}
 
 // Header right button - varies by tab
 const HeaderRight = React.memo(({ activeTab }: { activeTab: ActiveTabType }) => {
@@ -322,6 +256,7 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
     // NOTE: Zen tab removed - the feature never got to a useful state
     const [activeTab, setActiveTab] = React.useState<ActiveTabType>('sessions');
     const [homePrompt, setHomePrompt] = React.useState('');
+    const connectionSubtitle = useConnectionSubtitle();
     const showHeaderRight = activeTab !== 'settings' || isUsingCustomServer();
     const topChromeInset = Platform.OS === 'web'
         ? 0
@@ -381,7 +316,7 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
             return (
                 <View style={styles.sidebarContentContainer}>
                     <View style={styles.emptyStateContainer}>
-                        <EmptySessionsTablet />
+                        <EmptyAgentList />
                     </View>
                 </View>
             );
@@ -407,7 +342,8 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
     const phoneHeader = (
         <View style={[styles.phoneHeader, Platform.OS !== 'web' && styles.phoneHeaderOverlay]}>
             <Header
-                title={<HeaderTitle activeTab={activeTab} />}
+                title={t(TAB_TITLES[activeTab])}
+                subtitle={connectionSubtitle}
                 headerRight={showHeaderRight ? () => (
                     <HeaderRight activeTab={activeTab} />
                 ) : undefined}
