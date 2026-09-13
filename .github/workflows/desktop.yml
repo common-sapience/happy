@@ -8,7 +8,7 @@ on:
       engine_ref:
         description: Engine fork ref to build the engine sidecar from
         required: false
-        default: harness/m2
+        default: main
       server_url:
         description: Relay URL baked into the package (empty ships a package that asks on first launch)
         required: false
@@ -27,8 +27,13 @@ jobs:
         include:
           - os: ubuntu-22.04
             label: linux-x86_64
-          - os: macos-latest
+          # Both macOS architectures build natively on their own runner: the
+          # engine sidecar is a single-file Bun build, which only ever produces
+          # a binary for the machine it runs on (T-23).
+          - os: macos-15
             label: macos-aarch64
+          - os: macos-15-intel
+            label: macos-x86_64
           - os: windows-latest
             label: windows-x86_64
     steps:
@@ -39,7 +44,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: common-sapience/opencode
-          ref: ${{ inputs.engine_ref || 'harness/m2' }}
+          ref: ${{ inputs.engine_ref || 'main' }}
           path: engine
 
       - name: Install Linux build dependencies
@@ -71,6 +76,63 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
 
+      # T-22. Signing is conditional on the identity existing in this
+      # repository's Actions secrets: with it the package is signed (and
+      # notarized on macOS), without it the build still produces a package and
+      # says so, and the archive is named `-unsigned`. Nothing here fails a
+      # build for a missing certificate.
+      - name: Configure macOS code signing
+        id: signing_macos
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APPLE_CERTIFICATE}" ] || [ -z "${APPLE_CERTIFICATE_PASSWORD}" ] || [ -z "${APPLE_SIGNING_IDENTITY}" ]; then
+            echo "::warning::Unsigned macOS package: set the repository secrets APPLE_CERTIFICATE (base64 of the Developer ID .p12), APPLE_CERTIFICATE_PASSWORD and APPLE_SIGNING_IDENTITY to sign it. Users must right-click-open or run 'xattr -d com.apple.quarantine' on first launch."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "${APPLE_ID}" ] || [ -z "${APPLE_PASSWORD}" ] || [ -z "${APPLE_TEAM_ID}" ]; then
+            echo "::warning::Signed but not notarized: set APPLE_ID, APPLE_PASSWORD (an app-specific password) and APPLE_TEAM_ID to notarize. Gatekeeper still warns without notarization."
+          fi
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Configure Windows code signing
+        id: signing_windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not $env:WINDOWS_CERTIFICATE) {
+            Write-Output "::warning::Unsigned Windows package: set the repository secrets WINDOWS_CERTIFICATE (base64 of the code signing .pfx) and WINDOWS_CERTIFICATE_PASSWORD to sign it. SmartScreen warns on first launch without a signature."
+            "signed=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            exit 0
+          }
+          $pfx = Join-Path $env:RUNNER_TEMP 'code-signing.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          $password = if ($env:WINDOWS_CERTIFICATE_PASSWORD) {
+            ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          } else {
+            New-Object System.Security.SecureString
+          }
+          $certificate = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $password
+          Remove-Item $pfx -Force
+          # Tauri signs with signtool when the bundle config names a thumbprint,
+          # so the identity is handed over by patching the config for this build
+          # only rather than committing a thumbprint no other machine has.
+          node -e "const fs=require('fs');const p='packages/happy-app/src-tauri/tauri.conf.json';const c=JSON.parse(fs.readFileSync(p,'utf8'));c.bundle.windows={...(c.bundle.windows||{}),certificateThumbprint:process.argv[1],digestAlgorithm:'sha256',timestampUrl:'http://timestamp.digicert.com'};fs.writeFileSync(p,JSON.stringify(c,null,2)+'\n');" $certificate.Thumbprint
+          "signed=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
@@ -78,21 +140,29 @@ jobs:
         working-directory: packages/happy-app
         run: node scripts/stage-sidecars.mjs --engine-repo ../../engine
 
-      # Unsigned on every platform: no certificates are configured here. macOS
-      # needs right-click-open or `xattr -d com.apple.quarantine <app>` on first
-      # launch, Windows shows a SmartScreen warning.
+      # Only the web app is built with a relay address (T-30): the Rust shell
+      # compiles none, because the app resolves the address and hands it to the
+      # daemon (HOST-14). An empty input ships the package that asks on first
+      # launch (RULE-12, DESK-08).
       - name: Build desktop package
         uses: tauri-apps/tauri-action@e834788a94591d81e3ae0bd9ec06366f5afb8994 # v0.5.23
         env:
           EXPO_PUBLIC_HAPPY_SERVER_URL: ${{ inputs.server_url }}
-          HAPPY_SERVER_URL: ${{ inputs.server_url }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: packages/happy-app
 
       - name: Upload packages
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: happy-desktop-${{ matrix.label }}
+          # Both halves of the suffix are non-empty on purpose: an expression
+          # that yields '' falls through to the right-hand branch.
+          name: happy-desktop-${{ matrix.label }}-${{ (steps.signing_macos.outputs.signed == 'true' || steps.signing_windows.outputs.signed == 'true') && 'signed' || 'unsigned' }}
           if-no-files-found: error
           path: |
             packages/happy-app/src-tauri/target/release/bundle/deb/*.deb
