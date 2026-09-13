@@ -1252,7 +1252,13 @@ function convertReducerMessageToMessage(reducerMsg: ReducerMessage, state: Reduc
             localId: null,
             createdAt: reducerMsg.createdAt,
             kind: 'tool-call',
-            tool: { ...reducerMsg.tool },
+            // The permission is copied, not shared: the reducer answers a request by
+            // mutating its own copy in place, and a view holding the same object
+            // would never see that the request had been answered.
+            tool: {
+                ...reducerMsg.tool,
+                ...(reducerMsg.tool.permission ? { permission: { ...reducerMsg.tool.permission } } : {}),
+            },
             children: childMessages,
             meta: reducerMsg.meta
         };

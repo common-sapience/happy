@@ -8,16 +8,25 @@ import { layout } from '../layout';
 import type { ActivityTone } from './kitTranscriptRow';
 
 const stylesheet = StyleSheet.create((theme) => ({
+    centering: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+    },
+    // flexBasis 0 with minWidth 0 is what lets a long command or path be clipped
+    // by the column rather than widening it.
     column: {
-        width: '100%',
+        flexGrow: 1,
+        flexBasis: 0,
+        minWidth: 0,
         maxWidth: layout.maxWidth,
-        alignSelf: 'center',
+        overflow: 'hidden',
         paddingHorizontal: theme.margins.lg,
     },
     row: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: theme.margins.sm,
+        minWidth: 0,
         minHeight: theme.minTouchTarget - theme.margins.md,
         paddingVertical: theme.margins.xs,
     },
@@ -78,7 +87,11 @@ export const TranscriptColumn = React.memo(function TranscriptColumn(props: {
     children: React.ReactNode;
     style?: StyleProp<ViewStyle>;
 }) {
-    return <View style={[stylesheet.column, props.style]}>{props.children}</View>;
+    return (
+        <View style={stylesheet.centering}>
+            <View style={[stylesheet.column, props.style]}>{props.children}</View>
+        </View>
+    );
 });
 
 export type ActivityRowProps = {
@@ -150,7 +163,7 @@ export const ActivityRow = React.memo(function ActivityRow({
     );
 
     return (
-        <View style={[styles.column, style]}>
+        <TranscriptColumn style={style}>
             {openable ? (
                 <Pressable
                     accessibilityRole="button"
@@ -172,6 +185,6 @@ export const ActivityRow = React.memo(function ActivityRow({
                     <Text selectable style={styles.raw}>{detail}</Text>
                 </AnimatedCollapsible>
             ) : null}
-        </View>
+        </TranscriptColumn>
     );
 });

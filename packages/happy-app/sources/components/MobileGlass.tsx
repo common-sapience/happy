@@ -397,7 +397,9 @@ export function MobileGlassBackdrop({ enabled = true }: { enabled?: boolean }) {
     }
 
     return (
-        <View pointerEvents="none" style={RNStyleSheet.absoluteFill}>
+        // Clipped: the two glows below are drawn outside their own edges on purpose,
+        // and without this they extend the page and make it scroll sideways.
+        <View pointerEvents="none" style={[RNStyleSheet.absoluteFill, styles.backdropClip]}>
             <LinearGradient
                 colors={theme.colors.glass.backdrop}
                 locations={[0, 0.52, 1]}
@@ -430,6 +432,9 @@ const styles = RNStyleSheet.create({
     staticMaterialClip: {
         ...RNStyleSheet.absoluteFillObject,
         borderRadius: 999,
+        overflow: 'hidden',
+    },
+    backdropClip: {
         overflow: 'hidden',
     },
     glow: {

@@ -48,11 +48,41 @@ const firstString = (input: Record<string, unknown>, keys: readonly string[]): s
 
 const PATH_KEYS = ['file_path', 'filePath', 'path', 'notebook_path'] as const;
 
+/**
+ * Keys are the engine's tool names and the ACP kinds they arrive under, since a
+ * request reaches the control end over ACP and carries the kind rather than the
+ * name. Both spellings of one action share a template.
+ */
 const TEMPLATES: Record<string, Template> = {
+    execute: {
+        categoryKey: 'runCommand',
+        scopeKey: 'computer',
+        target: (input) => firstString(input, ['command', 'cmd']),
+    },
+    search: {
+        categoryKey: 'searchFiles',
+        scopeKey: 'folder',
+        target: (input) => firstString(input, ['pattern', 'query', ...PATH_KEYS]),
+    },
+    fetch: {
+        categoryKey: 'fetchWeb',
+        scopeKey: 'web',
+        target: (input) => firstString(input, ['url']),
+    },
+    think: {
+        categoryKey: 'startHelper',
+        scopeKey: 'computer',
+        target: (input) => firstString(input, ['description', 'prompt']),
+    },
+    patch: {
+        categoryKey: 'changeFile',
+        scopeKey: 'folder',
+        target: (input) => firstString(input, PATH_KEYS),
+    },
     bash: {
         categoryKey: 'runCommand',
         scopeKey: 'computer',
-        target: (input) => firstString(input, ['command']),
+        target: (input) => firstString(input, ['command', 'cmd']),
     },
     read: {
         categoryKey: 'readFile',

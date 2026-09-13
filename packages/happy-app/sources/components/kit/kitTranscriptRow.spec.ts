@@ -131,6 +131,13 @@ describe('DESK-20 activity targets', () => {
         expect(resolveActivityTarget(tool({ name: 'execute', input: {} }))).toBeNull();
         expect(resolveActivityTarget(tool({ name: 'execute', input: null }))).toBeNull();
     });
+
+    it('never names the directory a command ran in as the command', () => {
+        expect(resolveActivityTarget(tool({
+            name: 'execute',
+            input: { cwd: '/work/project', locations: [{ path: '/work/project' }] },
+        }))).toBeNull();
+    });
 });
 
 describe('DESK-20 activity tone and raw call', () => {

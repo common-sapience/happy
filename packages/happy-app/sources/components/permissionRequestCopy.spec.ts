@@ -18,6 +18,19 @@ describe('DESK-03 permission card copy', () => {
         }
     });
 
+    // DESK-01/DESK-20: a request arrives over ACP under its protocol kind, and the
+    // card has to read the same whichever spelling the engine used.
+    it('reads the engine protocol kinds as the same actions', () => {
+        expect(resolvePermissionRequestCopy({ toolName: 'execute', toolInput: { command: 'make check' } }))
+            .toMatchObject({ categoryKey: 'runCommand', target: 'make check' });
+        expect(resolvePermissionRequestCopy({ toolName: 'search', toolInput: { pattern: 'TODO' } }))
+            .toMatchObject({ categoryKey: 'searchFiles', target: 'TODO' });
+        expect(resolvePermissionRequestCopy({ toolName: 'fetch', toolInput: { url: 'https://example.com' } }))
+            .toMatchObject({ categoryKey: 'fetchWeb', scopeKey: 'web' });
+        expect(resolvePermissionRequestCopy({ toolName: 'think', toolInput: { description: 'Look into the failure' } }))
+            .toMatchObject({ categoryKey: 'startHelper', target: 'Look into the failure' });
+    });
+
     it('falls back to the raw call for an action no template covers', () => {
         const copy = resolvePermissionRequestCopy({ toolName: 'mcp_server_wipe', toolInput: { scope: 'all' } });
         expect(copy.categoryKey).toBe('useTool');

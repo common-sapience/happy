@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { AgentMessage } from '../core';
 import { defaultTransport } from '../transport';
-import { startToolCall, type HandlerContext } from './sessionUpdateHandlers';
+import { emitToolCallArguments, startToolCall, type HandlerContext } from './sessionUpdateHandlers';
 
 function context(emitted: AgentMessage[]): HandlerContext {
     return {
@@ -63,5 +63,36 @@ describe('ACP tool call arguments', () => {
         for (const timeout of ctx.toolCallTimeouts.values()) {
             clearTimeout(timeout);
         }
+    });
+});
+
+describe('ACP tool call arguments arriving late', () => {
+    it('re-emits the call once the engine parses its arguments', () => {
+        const emitted: AgentMessage[] = [];
+        const ctx = context(emitted);
+        startToolCall('call-3', 'execute', { rawInput: {} }, ctx, 'tool_call');
+        emitted.length = 0;
+
+        emitToolCallArguments('call-3', 'execute', {
+            title: 'ls -la',
+            rawInput: { command: 'ls -la' },
+        }, ctx);
+
+        expect(toolCall(emitted)).toMatchObject({
+            callId: 'call-3',
+            toolName: 'execute',
+            title: 'ls -la',
+            args: { command: 'ls -la' },
+        });
+        for (const timeout of ctx.toolCallTimeouts.values()) {
+            clearTimeout(timeout);
+        }
+    });
+
+    it('says nothing when the update adds no arguments', () => {
+        const emitted: AgentMessage[] = [];
+        const ctx = context(emitted);
+        emitToolCallArguments('call-4', 'read', { title: 'notes.md' }, ctx);
+        expect(emitted).toHaveLength(0);
     });
 });

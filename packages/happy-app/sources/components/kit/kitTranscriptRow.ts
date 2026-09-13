@@ -141,13 +141,14 @@ export function resolveActivityTarget(tool: Pick<ToolCall, 'name' | 'title' | 'i
     const input = tool.input;
 
     if (verb === 'ran') {
+        // A command and nothing else. The engine also reports the directory it
+        // runs in, and naming that as the target would read as if the agent had
+        // run the folder.
         const command = stringifyToolCommand(
             (input as { command?: unknown; cmd?: unknown } | null)?.command
             ?? (input as { cmd?: unknown } | null)?.cmd,
         );
-        if (command) {
-            return firstLine(command);
-        }
+        return command ? firstLine(command) : null;
     }
 
     for (const key of TARGET_PATH_KEYS) {
@@ -159,7 +160,7 @@ export function resolveActivityTarget(tool: Pick<ToolCall, 'name' | 'title' | 'i
 
     const locationPath = readLocationPath(input);
     if (locationPath) {
-        return verb === 'ran' ? locationPath : fileName(locationPath);
+        return fileName(locationPath);
     }
 
     for (const key of TARGET_TEXT_KEYS) {

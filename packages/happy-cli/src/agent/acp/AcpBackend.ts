@@ -116,6 +116,8 @@ type ExtendedRequestPermissionRequest = RequestPermissionRequest & {
     id?: string;
     kind?: string;
     toolName?: string;
+    title?: string;
+    rawInput?: Record<string, unknown>;
     input?: Record<string, unknown>;
     arguments?: Record<string, unknown>;
     content?: Record<string, unknown>;
@@ -584,7 +586,9 @@ export class AcpBackend implements AgentBackend {
           // Extract input/arguments from various possible locations FIRST (before checking toolName)
           let input: Record<string, unknown> = {};
           if (toolCall) {
-            input = toolCall.input || toolCall.arguments || toolCall.content || {};
+            // rawInput is where ACP carries the call's own arguments; the card is
+            // written from them, so it comes first.
+            input = toolCall.rawInput || toolCall.input || toolCall.arguments || toolCall.content || {};
           } else {
             // If no toolCall, try to extract from params directly
             input = extendedParams.input || extendedParams.arguments || extendedParams.content || {};
