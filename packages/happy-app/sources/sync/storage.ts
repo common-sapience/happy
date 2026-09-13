@@ -380,8 +380,13 @@ export const storage = create<StorageState>()((set, get) => {
             const activeSessions: Session[] = [];
             const inactiveSessions: Session[] = [];
 
-            // Process all sessions from merged set
+            // Process all sessions from merged set. The host's own sessions are left out here too,
+            // so every consumer of this list — the dock, a machine's recent agents, the new-agent
+            // screen — is spared them without having to know they exist.
             Object.values(mergedSessions).forEach(session => {
+                if (isInternalSession(session)) {
+                    return;
+                }
                 if (activeSet.has(session.id)) {
                     activeSessions.push(session);
                 } else {
@@ -479,6 +484,7 @@ export const storage = create<StorageState>()((set, get) => {
             sessions.forEach(session => {
                 const oldSession = state.sessions[session.id];
                 if (!oldSession) return;
+                if (isInternalSession(oldSession)) return;
                 const wasActive = oldSession.thinking === true
                     || (oldSession.agentState?.requests && Object.keys(oldSession.agentState.requests).length > 0);
                 const newSession = mergedSessions[session.id];
