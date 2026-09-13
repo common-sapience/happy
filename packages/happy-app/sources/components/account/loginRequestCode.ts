@@ -9,9 +9,9 @@
  * and nothing else. A code that does not parse here is refused before any account secret is
  * encrypted against it.
  */
-export const LOGIN_REQUEST_URL_PREFIX = 'happy:///account?';
+import { isOneTimeLoginKey } from '@/auth/terminalLoginUrl';
 
-const KEY_PATTERN = /^[A-Za-z0-9_-]{32,128}$/;
+export const LOGIN_REQUEST_URL_PREFIX = 'happy:///account?';
 
 /** The approval URL for a pasted code, or null when the code is not one. */
 export function normalizeLoginRequestCode(input: string): string | null {
@@ -28,7 +28,7 @@ export function normalizeLoginRequestCode(input: string): string | null {
     }
 
     const key = withoutPrefix.replace(/=+$/, '');
-    if (!KEY_PATTERN.test(key)) return null;
+    if (!isOneTimeLoginKey(key)) return null;
 
     return `${LOGIN_REQUEST_URL_PREFIX}${key}`;
 }

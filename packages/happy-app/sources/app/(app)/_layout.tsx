@@ -8,6 +8,7 @@ import { isRunningOnMac } from '@/utils/platform';
 import { useUnistyles } from 'react-native-unistyles';
 import { t } from '@/text';
 import { MobileGlassBackdrop } from '@/components/MobileGlass';
+import { useDesktopDaemonHandoff } from '@/hooks/useDesktopDaemonHandoff';
 
 export const unstable_settings = {
     initialRouteName: 'index',
@@ -19,6 +20,7 @@ export default function RootLayout() {
     const shouldUseCustomHeader = Platform.OS === 'android' || isRunningOnMac() || Platform.OS === 'web';
     const isDesktop = Platform.OS === 'web' || isRunningOnMac();
     const { theme } = useUnistyles();
+    useDesktopDaemonHandoff();
 
     return (
         <View

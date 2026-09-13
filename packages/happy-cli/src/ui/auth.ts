@@ -5,7 +5,7 @@ import tweetnacl from 'tweetnacl';
 import axios from 'axios';
 import { displayQRCode } from "./qrcode";
 import { delay } from "@/utils/time";
-import { writeCredentialsLegacy, readCredentials, updateSettings, Credentials, writeCredentialsDataKey } from "@/persistence";
+import { readCredentials, updateSettings, Credentials, writeCredentials } from "@/persistence";
 import { generateWebAuthUrl } from "@/api/webAuth";
 import { openBrowser } from "@/utils/browser";
 import { AuthSelector, AuthMethod } from "./ink/AuthSelector";
@@ -13,6 +13,7 @@ import { render } from 'ink';
 import React from 'react';
 import { randomUUID } from 'node:crypto';
 import { logger } from './logger';
+import { credentialsFromSealedResponse } from "@/utils/authorizedLogin";
 
 export async function doAuth(): Promise<Credentials | null> {
     console.clear();
@@ -173,50 +174,19 @@ async function waitForAuthentication(keypair: tweetnacl.BoxKeyPair): Promise<Cre
                     }
                 });
                 if (response.data.state === 'authorized') {
-                    let token = response.data.token as string;
-                    let r = decodeBase64(response.data.response);
-                    let decrypted = decryptWithEphemeralKey(r, keypair.secretKey);
-                    if (decrypted) {
-                        if (decrypted.length === 32) {
-                            const credentials = {
-                                secret: decrypted,
-                                token: token
-                            }
-                            await writeCredentialsLegacy(credentials);
-                            console.log('\n\n✓ Authentication successful\n');
-                            return {
-                                encryption: {
-                                    type: 'legacy',
-                                    secret: decrypted
-                                },
-                                token: token
-                            };
-                        } else {
-                            if (decrypted[0] === 0) {
-                                const credentials = {
-                                    publicKey: decrypted.slice(1, 33),
-                                    machineKey: randomBytes(32),
-                                    token: token
-                                }
-                                await writeCredentialsDataKey(credentials);
-                                console.log('\n\n✓ Authentication successful\n');
-                                return {
-                                    encryption: {
-                                        type: 'dataKey',
-                                        publicKey: credentials.publicKey,
-                                        machineKey: credentials.machineKey
-                                    },
-                                    token: token
-                                };
-                            } else {
-                                console.log('\n\nFailed to decrypt response. Please try again.');
-                                return null;
-                            }
-                        }
-                    } else {
+                    const credentials = credentialsFromSealedResponse({
+                        sealed: decodeBase64(response.data.response),
+                        token: response.data.token as string,
+                        ephemeralSecretKey: keypair.secretKey,
+                        machineKey: new Uint8Array(randomBytes(32))
+                    });
+                    if (!credentials) {
                         console.log('\n\nFailed to decrypt response. Please try again.');
                         return null;
                     }
+                    await writeCredentials(credentials);
+                    console.log('\n\n✓ Authentication successful\n');
+                    return credentials;
                 }
             } catch (error) {
                 console.log('\n\nFailed to check authentication status. Please try again.');
@@ -235,21 +205,6 @@ async function waitForAuthentication(keypair: tweetnacl.BoxKeyPair): Promise<Cre
 
     return null;
 }
-
-export function decryptWithEphemeralKey(encryptedBundle: Uint8Array, recipientSecretKey: Uint8Array): Uint8Array | null {
-    // Extract components from bundle: ephemeral public key (32 bytes) + nonce (24 bytes) + encrypted data
-    const ephemeralPublicKey = encryptedBundle.slice(0, 32);
-    const nonce = encryptedBundle.slice(32, 32 + tweetnacl.box.nonceLength);
-    const encrypted = encryptedBundle.slice(32 + tweetnacl.box.nonceLength);
-
-    const decrypted = tweetnacl.box.open(encrypted, nonce, ephemeralPublicKey, recipientSecretKey);
-    if (!decrypted) {
-        return null;
-    }
-
-    return decrypted;
-}
-
 
 /**
  * Ensure authentication and machine setup

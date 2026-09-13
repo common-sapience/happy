@@ -10,6 +10,7 @@ import { Modal } from '@/modal';
 import { t } from '@/text';
 import { checkRelayAddress, type RelayAddressProblem } from '@/sync/relayEndpoint';
 import { getRelayEndpoint, setServerUrl } from '@/sync/serverConfig';
+import { tellDaemonTheRelayAddress } from '@/sync/daemonHandoffShell';
 
 /**
  * The one place a relay address is entered. There is no built-in relay, so this
@@ -149,6 +150,9 @@ export const RelayAddressEntry = React.memo(({ variant, onChanged }: RelayAddres
         setServerUrl(checked.url);
         setAddress(checked.url);
         setConfiguredUrl(checked.url);
+        // The daemon on this computer reads its own settings, so it has to be told
+        // as well, or the app would connect here and the daemon nowhere (DESK-21).
+        await tellDaemonTheRelayAddress();
         onChanged?.();
     };
 
