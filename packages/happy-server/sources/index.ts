@@ -2,12 +2,10 @@ import "reflect-metadata";
 
 import { db } from "./storage/db";
 import { initEncrypt } from "./modules/encrypt";
-import { initGithub } from "./modules/github";
 import { loadFiles } from "./storage/files";
 import { auth } from "./app/auth/auth";
 import { activityCache } from "./app/presence/sessionCache";
 import { startApi, StartApiOptions } from "./app/api/api";
-import { startDatabaseMetricsUpdater } from "./app/monitoring/metrics2";
 import { startTimeout } from "./app/presence/timeout";
 import { onShutdown } from "./utils/shutdown";
 
@@ -33,7 +31,6 @@ export async function startServer(opts: StartServerOptions): Promise<{ port: num
     });
 
     await initEncrypt();
-    await initGithub();
     await loadFiles();
     await auth.init();
 
@@ -43,7 +40,6 @@ export async function startServer(opts: StartServerOptions): Promise<{ port: num
         staticDir: opts.staticDir,
         injectHtmlConfig: opts.injectHtmlConfig,
     });
-    startDatabaseMetricsUpdater();
     startTimeout();
 
     return { port, host };

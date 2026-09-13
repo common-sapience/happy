@@ -3,7 +3,7 @@
 
 generator client {
     provider        = "prisma-client-js"
-    previewFeatures = ["metrics", "relationJoins", "driverAdapters"]
+    previewFeatures = ["relationJoins", "driverAdapters"]
 }
 
 generator json {
@@ -20,16 +20,13 @@ datasource db {
 //
 
 model Account {
-    id              String      @id @default(cuid())
-    publicKey       String      @unique
-    seq             Int         @default(0)
-    feedSeq         BigInt      @default(0)
-    createdAt       DateTime    @default(now())
-    updatedAt       DateTime    @updatedAt
+    id              String   @id @default(cuid())
+    publicKey       String   @unique
+    seq             Int      @default(0)
+    createdAt       DateTime @default(now())
+    updatedAt       DateTime @updatedAt
     settings        String?
-    settingsVersion Int         @default(0)
-    githubUserId    String?     @unique
-    githubUser      GithubUser? @relation(fields: [githubUserId], references: [id])
+    settingsVersion Int      @default(0)
 
     // Profile
     firstName String?
@@ -42,18 +39,9 @@ model Account {
     AccountPushToken    AccountPushToken[]
     TerminalAuthRequest TerminalAuthRequest[]
     AccountAuthRequest  AccountAuthRequest[]
-    UsageReport         UsageReport[]
     Machine             Machine[]
     Project             Project[]
-    UploadedFile        UploadedFile[]
-    ServiceAccountToken ServiceAccountToken[]
-    RelationshipsFrom   UserRelationship[]    @relation("RelationshipsFrom")
-    RelationshipsTo     UserRelationship[]    @relation("RelationshipsTo")
-    Artifact            Artifact[]
-    AccessKey           AccessKey[]
-    UserFeedItem        UserFeedItem[]
-    UserKVStore         UserKVStore[]
-    VoiceConversation   VoiceConversation[]
+    ServiceConnection   ServiceConnection[]
 }
 
 model TerminalAuthRequest {
@@ -106,12 +94,13 @@ model Session {
     dataEncryptionKey Bytes?
     seq               Int              @default(0)
     active            Boolean          @default(true)
+    /// Plaintext list marker for the archive state owned by the host (RL-07). Derived from the
+    /// machine's encrypted metadata write; never written by a control client or by the relay.
+    archived          Boolean          @default(false)
     lastActiveAt      DateTime         @default(now())
     createdAt         DateTime         @default(now())
     updatedAt         DateTime         @updatedAt
     messages          SessionMessage[]
-    usageReports      UsageReport[]
-    accessKeys        AccessKey[]
 
     @@unique([accountId, tag])
     @@index([accountId, updatedAt(sort: Desc)])
@@ -158,28 +147,6 @@ model SessionMessage {
 }
 
 //
-// Github
-//
-
-model GithubUser {
-    id        String    @id
-    /// [GitHubProfile]
-    profile   Json
-    token     Bytes?
-    createdAt DateTime  @default(now())
-    updatedAt DateTime  @updatedAt
-    Account   Account[]
-}
-
-model GithubOrganization {
-    id        String   @id
-    /// [GitHubOrg]
-    profile   Json
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-}
-
-//
 // Utility
 //
 
@@ -206,27 +173,6 @@ model SimpleCache {
 }
 
 //
-// Usage Reporting
-//
-
-model UsageReport {
-    id        String   @id @default(cuid())
-    key       String
-    accountId String
-    account   Account  @relation(fields: [accountId], references: [id])
-    sessionId String?
-    session   Session? @relation(fields: [sessionId], references: [id])
-    /// [UsageReportData]
-    data      Json
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    @@unique([accountId, sessionId, key])
-    @@index([accountId])
-    @@index([sessionId])
-}
-
-//
 // Machines
 //
 
@@ -244,164 +190,27 @@ model Machine {
     lastActiveAt       DateTime    @default(now())
     createdAt          DateTime    @default(now())
     updatedAt          DateTime    @updatedAt
-    accessKeys         AccessKey[]
+    serviceConnections ServiceConnection[]
 
     @@unique([accountId, id])
     @@index([accountId])
 }
 
-model UploadedFile {
-    id        String   @id @default(cuid())
-    accountId String
-    account   Account  @relation(fields: [accountId], references: [id])
-    path      String
-    width     Int?
-    height    Int?
-    thumbhash String?
-    reuseKey  String?
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    @@unique([accountId, path])
-    @@index([accountId])
-}
-
-model ServiceAccountToken {
-    id         String    @id @default(cuid())
-    accountId  String
-    account    Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
-    vendor     String
-    token      Bytes // Encrypted token
-    metadata   Json? // Optional vendor metadata
-    lastUsedAt DateTime?
-    createdAt  DateTime  @default(now())
-    updatedAt  DateTime  @updatedAt
-
-    @@unique([accountId, vendor])
-    @@index([accountId])
-}
-
-//
-// Artifacts
-//
-
-model Artifact {
-    id                String   @id // UUID provided by client
-    accountId         String
-    account           Account  @relation(fields: [accountId], references: [id])
-    header            Bytes // Encrypted header (can contain JSON)
-    headerVersion     Int      @default(0)
-    body              Bytes // Encrypted body
-    bodyVersion       Int      @default(0)
-    dataEncryptionKey Bytes // Encryption key for this artifact
-    seq               Int      @default(0)
-    createdAt         DateTime @default(now())
-    updatedAt         DateTime @updatedAt
-
-    @@index([accountId])
-    @@index([accountId, updatedAt(sort: Desc)])
-}
-
-//
-// Access Keys
-//
-
-model AccessKey {
-    id          String   @id @default(cuid())
-    accountId   String
-    account     Account  @relation(fields: [accountId], references: [id])
-    machineId   String
-    machine     Machine  @relation(fields: [accountId, machineId], references: [accountId, id])
-    sessionId   String
-    session     Session  @relation(fields: [sessionId], references: [id])
-    data        String // Encrypted data
-    dataVersion Int      @default(0)
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
-
-    @@unique([accountId, machineId, sessionId])
-    @@index([accountId])
-    @@index([sessionId])
-    @@index([machineId])
-}
-
-//
-// Social Network - Relationships
-//
-
-enum RelationshipStatus {
-    none
-    requested
-    pending
-    friend
-    rejected
-}
-
-model UserRelationship {
-    fromUserId     String
-    fromUser       Account            @relation("RelationshipsFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
-    toUserId       String
-    toUser         Account            @relation("RelationshipsTo", fields: [toUserId], references: [id], onDelete: Cascade)
-    status         RelationshipStatus @default(pending)
-    createdAt      DateTime           @default(now())
-    updatedAt      DateTime           @updatedAt
-    acceptedAt     DateTime?
-    lastNotifiedAt DateTime?
-
-    @@id([fromUserId, toUserId])
-    @@index([toUserId, status])
-    @@index([fromUserId, status])
-}
-
-//
-// Feed
-//
-
-model UserFeedItem {
-    id        String   @id @default(cuid())
-    userId    String
-    user      Account  @relation(fields: [userId], references: [id], onDelete: Cascade)
-    counter   BigInt
-    repeatKey String?
-    /// [FeedBody]
-    body      Json
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    @@unique([userId, counter])
-    @@unique([userId, repeatKey])
-    @@index([userId, counter(sort: Desc)])
-}
-
-//
-// Key-Value Storage
-//
-
-model UserKVStore {
+/// Connector record (DEV-08): which machine of which account is connected to which external
+/// service. Credentials stay on the machine that authorized them (P-09) — this table has no
+/// column that can hold one.
+model ServiceConnection {
     id        String   @id @default(cuid())
     accountId String
     account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
-    key       String   // Unencrypted for indexing
-    value     Bytes?   // Encrypted value, null when "deleted"
-    version   Int      @default(0)
+    machineId String
+    machine   Machine  @relation(fields: [accountId, machineId], references: [accountId, id], onDelete: Cascade)
+    vendor    String
+    status    String
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    @@unique([accountId, key])
+    @@unique([accountId, machineId, vendor])
     @@index([accountId])
-}
-
-//
-// Voice Conversations — tracks ElevenLabs conversations per user for rate limiting
-//
-
-model VoiceConversation {
-    id                         String   @id @default(cuid())
-    accountId                  String
-    account                    Account  @relation(fields: [accountId], references: [id])
-    elevenLabsConversationId   String   @unique
-    durationSecs               Int?     // Filled in lazily from ElevenLabs API
-    createdAt                  DateTime @default(now())
-
-    @@index([accountId, createdAt(sort: Desc)])
+    @@index([accountId, machineId])
 }

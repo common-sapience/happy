@@ -1,22 +1,9 @@
-import { GitHubProfile as GitHubProfileType, GitHubOrg as GitHubOrgType } from "../app/api/types";
 import { ImageRef as ImageRefType } from "./files";
 import type { SessionMessageContent as WireSessionMessageContent } from "@slopus/happy-wire";
 declare global {
     namespace PrismaJson {
         // Session message content types
         type SessionMessageContent = WireSessionMessageContent;
-
-        // Usage report data structure
-        type UsageReportData = {
-            tokens: {
-                total: number;
-                [key: string]: number;
-            };
-            cost: {
-                total: number;
-                [key: string]: number;
-            };
-        };
 
         // Update content types
         type UpdateBody = {
@@ -63,7 +50,6 @@ declare global {
                 value: string | null;
                 version: number;
             } | null | undefined;
-            github?: GitHubProfileType | null | undefined;
         } | {
             t: 'new-machine';
             machineId: string;
@@ -100,8 +86,6 @@ declare global {
             activeAt?: number;
         };
 
-        type GitHubProfile = GitHubProfileType;
-        type GitHubOrg = GitHubOrgType;
         type ImageRef = ImageRefType;
     }
 }

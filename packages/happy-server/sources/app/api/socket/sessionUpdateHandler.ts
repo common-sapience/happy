@@ -1,4 +1,3 @@
-import { getMetricsLabelsFromSocket, sessionAliveEventsCounter, websocketEventsCounter } from "@/app/monitoring/metrics2";
 import { activityCache } from "@/app/presence/sessionCache";
 import { buildNewMessageUpdate, buildSessionActivityEphemeral, buildUpdateSessionUpdate, ClientConnection, eventRouter } from "@/app/events/eventRouter";
 import { db } from "@/storage/db";
@@ -9,10 +8,16 @@ import { randomKeyNaked } from "@/utils/randomKeyNaked";
 import { Socket } from "socket.io";
 
 export function sessionUpdateHandler(userId: string, socket: Socket, connection: ClientConnection) {
-    const labels = getMetricsLabelsFromSocket(socket);
+    // RL-07: the archive state belongs to the host. It travels inside the encrypted session
+    // metadata; the plaintext `archived` column is only the relay's list marker and may be
+    // written by nothing but this handler, and only for a host connection. A control client is
+    // user-scoped, so its `archived` is dropped instead of trusted — the relay never flips the
+    // marker on its own either (the upstream /archive route is gone).
+    const isHostConnection = connection.connectionType === 'session-scoped' || connection.connectionType === 'machine-scoped';
+
     socket.on('update-metadata', async (data: any, callback: (response: any) => void) => {
         try {
-            const { sid, metadata, expectedVersion } = data;
+            const { sid, metadata, expectedVersion, archived } = data;
 
             // Validate input
             if (!sid || typeof metadata !== 'string' || typeof expectedVersion !== 'number') {
@@ -20,6 +25,14 @@ export function sessionUpdateHandler(userId: string, socket: Socket, connection:
                     callback({ result: 'error' });
                 }
                 return;
+            }
+            if (typeof archived !== 'undefined' && typeof archived !== 'boolean') {
+                callback({ result: 'error' });
+                return;
+            }
+            const archivedMarker = typeof archived === 'boolean' && isHostConnection ? archived : undefined;
+            if (typeof archived === 'boolean' && !isHostConnection) {
+                log({ module: 'websocket', level: 'warn' }, `Ignored archived marker from a non-host connection: session=${sid}`);
             }
 
             // Resolve session
@@ -41,7 +54,8 @@ export function sessionUpdateHandler(userId: string, socket: Socket, connection:
                 where: { id: sid, metadataVersion: expectedVersion },
                 data: {
                     metadata: metadata,
-                    metadataVersion: expectedVersion + 1
+                    metadataVersion: expectedVersion + 1,
+                    ...(archivedMarker === undefined ? {} : { archived: archivedMarker })
                 }
             });
             if (count === 0) {
@@ -143,10 +157,6 @@ export function sessionUpdateHandler(userId: string, socket: Socket, connection:
         thinking?: boolean;
     }) => {
         try {
-            // Track metrics
-            websocketEventsCounter.inc({ event_type: 'session-alive', ...labels });
-            sessionAliveEventsCounter.inc();
-
             // Basic validation
             if (!data || typeof data.time !== 'number' || !data.sid) {
                 return;
@@ -187,7 +197,6 @@ export function sessionUpdateHandler(userId: string, socket: Socket, connection:
     socket.on('message', async (data: any) => {
         await receiveMessageLock.inLock(async () => {
             try {
-                websocketEventsCounter.inc({ event_type: 'message', ...labels });
                 const { sid, message, localId } = data;
 
                 log({ module: 'websocket' }, `Received message from socket ${socket.id}: sessionId=${sid}, messageLength=${message.length} bytes, connectionType=${connection.connectionType}, connectionSessionId=${connection.connectionType === 'session-scoped' ? connection.sessionId : 'N/A'}`);

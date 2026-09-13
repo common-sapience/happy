@@ -136,6 +136,41 @@ Only two env vars are required for standalone (both already in `.env.dev`):
 - Applications have the most complexity; other parts should assist by reducing complexity
 - When using prompts, write them to "_prompts.ts" file relative to the application
 
+## Fork boundaries (common-sapience)
+
+This fork is the relay of a product whose requirements live in the harness repository. Two
+decisions are easy to undo by accident, so they are written down here.
+
+### The archive state belongs to the host (RL-07)
+`Session.active` is liveness only — heartbeats, `session-end` and the presence sweep write it.
+The archive state of an agent belongs to the host: it travels inside the encrypted session
+metadata, and `Session.archived` is only the relay's plaintext copy for list queries.
+
+- The single writer of `archived` is the `update-metadata` socket event, and only from a
+  session-scoped or machine-scoped connection. A control client's `archived` is dropped.
+- Upstream's `POST /v1/sessions/:sessionId/archive` is deleted. It flipped `active` on the
+  relay's own authority, which both overloaded the liveness flag and let the marker drift from
+  the state the clients derive from the metadata. A control client archives by asking the host
+  over the existing RPC path; the host then writes the metadata, and the marker follows.
+- With the host offline nothing changes the marker, and the client sees the offline state
+  instead of a silently archived agent (RL-04).
+
+### A connector is a record, never a credential (DEV-08, P-09)
+`ServiceConnection` holds `{vendor, machineId, status}` and has no column that could hold a
+credential. The credential stays on the machine that authorized it.
+
+- `POST /v1/connect/:vendor/register` rejects a body with any extra field, so a client that
+  still sends a token gets a 400 rather than having it quietly dropped.
+- The credential-returning routes (`GET /v1/connect/:vendor/token`, `GET /v1/connect/tokens`)
+  and the `ServiceAccountToken` table are gone, with a migration that drops the table.
+
+### What the pruning pass removed
+Social/friends, the feed, the key-value store, artifacts, access keys, voice, the GitHub
+identity and webhook, the usage report table with `POST /v1/usage/query` (metering belongs to
+the platform, RULE-03), the Prometheus metrics and the hosted log summary. `GET /health` is the
+only monitoring surface left. Self-host (PGlite) and hosted (external Postgres, the Redis
+streams adapter, S3) both stay.
+
 ## Database
 
 ### Prisma Usage
@@ -144,10 +179,6 @@ Only two env vars are required for standalone (both already in `.env.dev`):
 - Do not update schema without absolute necessity
 - For complex fields, use "Json" type
 - NEVER DO MIGRATION YOURSELF. Only run pnpm generate when new types needed
-
-### Current Schema Status
-The project has pending Prisma migrations that need to be applied:
-- Migration: `20250715012822_add_metadata_version_agent_state`
 
 ## Events
 
