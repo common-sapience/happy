@@ -129,17 +129,15 @@ function BubbleColorPreview({ color }: { color: UserMessageBubbleColor }) {
     const styles = stylesheet;
     const palette = resolveUserMessageBubbleColor(color, theme.dark);
     const glassPalette = resolveUserMessageBubbleGlassColor(color, theme.dark);
-    const glassEnabled = Platform.OS !== 'web';
 
     return (
         <MobileGlassSurface
-            enabled={glassEnabled}
-            tintColor={glassEnabled ? glassPalette.tint : undefined}
+            tintColor={glassPalette.tint}
             style={[
                 styles.bubblePreview,
                 {
-                    backgroundColor: glassEnabled ? glassPalette.background : palette.background,
-                    borderColor: glassEnabled ? glassPalette.border : palette.border,
+                    backgroundColor: glassPalette.background,
+                    borderColor: glassPalette.border,
                 },
             ]}
         >

@@ -406,11 +406,11 @@ export default React.memo(function FileScreen() {
         <View style={styles.container}>
 
             {/* File path header */}
-            <MobileGlassSurface enabled={Platform.OS !== 'web'} intensity={62} style={{
+            <MobileGlassSurface intensity={62} style={{
                 padding: 16,
-                borderBottomWidth: Platform.select({ web: 1, default: 0.5 }),
-                borderBottomColor: Platform.select({ web: theme.colors.divider, default: theme.colors.glass.border }),
-                backgroundColor: Platform.select({ web: theme.colors.surfaceHigh, android: theme.colors.glass.backgroundStrong, default: 'transparent' }),
+                borderBottomWidth: 0.5,
+                borderBottomColor: theme.colors.glass.border,
+                backgroundColor: Platform.select({ android: theme.colors.glass.backgroundStrong, default: 'transparent' }),
                 flexDirection: 'row',
                 alignItems: 'center'
             }}>
@@ -430,13 +430,13 @@ export default React.memo(function FileScreen() {
 
             {/* Toggle buttons for File/Diff view */}
             {diffContent && (
-                <MobileGlassSurface enabled={Platform.OS !== 'web'} intensity={56} style={{
+                <MobileGlassSurface intensity={56} style={{
                     flexDirection: 'row',
                     paddingHorizontal: 16,
                     paddingVertical: 12,
-                    borderBottomWidth: Platform.select({ web: 1, default: 0.5 }),
-                    borderBottomColor: Platform.select({ web: theme.colors.divider, default: theme.colors.glass.border }),
-                    backgroundColor: Platform.select({ web: theme.colors.surface, android: theme.colors.glass.backgroundStrong, default: 'transparent' })
+                    borderBottomWidth: 0.5,
+                    borderBottomColor: theme.colors.glass.border,
+                    backgroundColor: Platform.select({ android: theme.colors.glass.backgroundStrong, default: 'transparent' })
                 }}>
                     <Pressable
                         onPress={() => setDisplayMode('diff')}

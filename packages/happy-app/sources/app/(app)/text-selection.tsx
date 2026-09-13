@@ -88,7 +88,7 @@ export default function TextSelectionScreen() {
 
     return (
         <View style={styles.container}>
-            <MobileGlassSurface enabled={Platform.OS !== 'web'} intensity={58} style={styles.textGlass}>
+            <MobileGlassSurface intensity={58} style={styles.textGlass}>
             <ScrollView 
                 style={styles.textContainer} 
                 showsVerticalScrollIndicator={true}
@@ -131,11 +131,11 @@ const styles = StyleSheet.create((theme) => ({
     },
     textGlass: {
         flex: 1,
-        margin: Platform.select({ web: 0, default: 16 }),
-        borderRadius: Platform.select({ web: 0, default: 22 }),
+        margin: 16,
+        borderRadius: 22,
         overflow: 'hidden',
-        backgroundColor: Platform.select({ web: theme.colors.surface, android: theme.colors.glass.backgroundStrong, default: 'transparent' }),
-        borderWidth: Platform.select({ web: 0, default: StyleSheet.hairlineWidth }),
+        backgroundColor: Platform.select({ android: theme.colors.glass.backgroundStrong, default: 'transparent' }),
+        borderWidth: StyleSheet.hairlineWidth,
         borderColor: theme.colors.glass.border,
     },
     scrollContent: {

@@ -187,7 +187,6 @@ export default React.memo(function FilesScreen() {
                 borderBottomColor: theme.colors.divider
             }}>
                 <MobileGlassSurface
-                    enabled={Platform.OS !== 'web'}
                     interactive
                     intensity={70}
                     style={styles.searchGlass}
@@ -252,7 +251,6 @@ export default React.memo(function FilesScreen() {
 
             {/* Git Status List */}
             <MobileGlassSurface
-                enabled={Platform.OS !== 'web'}
                 intensity={56}
                 style={styles.fileListGlass}
             >
@@ -457,18 +455,18 @@ const styles = StyleSheet.create((theme) => ({
     searchGlass: {
         borderRadius: 16,
         overflow: 'hidden',
-        borderWidth: Platform.select({ web: 0, default: StyleSheet.hairlineWidth }),
+        borderWidth: StyleSheet.hairlineWidth,
         borderColor: theme.colors.glass.border,
-        backgroundColor: Platform.select({ web: 'transparent', android: theme.colors.glass.backgroundStrong, default: 'transparent' }),
+        backgroundColor: Platform.select({ android: theme.colors.glass.backgroundStrong, default: 'transparent' }),
     },
     fileListGlass: {
         flex: 1,
-        marginHorizontal: Platform.select({ web: 0, default: 12 }),
-        marginBottom: Platform.select({ web: 0, default: 12 }),
-        borderRadius: Platform.select({ web: 0, default: 22 }),
+        marginHorizontal: 12,
+        marginBottom: 12,
+        borderRadius: 22,
         overflow: 'hidden',
-        backgroundColor: Platform.select({ web: theme.colors.surface, android: theme.colors.glass.background, default: 'transparent' }),
-        borderWidth: Platform.select({ web: 0, default: StyleSheet.hairlineWidth }),
+        backgroundColor: Platform.select({ android: theme.colors.glass.background, default: 'transparent' }),
+        borderWidth: StyleSheet.hairlineWidth,
         borderColor: theme.colors.glass.border,
     }
 }));

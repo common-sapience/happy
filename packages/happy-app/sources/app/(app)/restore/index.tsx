@@ -180,7 +180,7 @@ export default function Restore() {
                     </Pressable>
                 )}
                 {!authReady && (
-                    <MobileGlassSurface enabled={Platform.OS !== 'web'} intensity={68} style={{ width: 200, height: 200, backgroundColor: Platform.select({ web: theme.colors.surface, android: theme.colors.glass.backgroundStrong, default: 'transparent' }), alignItems: 'center', justifyContent: 'center', borderRadius: Platform.select({ web: 0, default: 24 }), overflow: 'hidden', borderWidth: Platform.OS === 'web' ? 0 : 0.5, borderColor: theme.colors.glass.border }}>
+                    <MobileGlassSurface intensity={68} style={{ width: 200, height: 200, backgroundColor: Platform.select({ android: theme.colors.glass.backgroundStrong, default: 'transparent' }), alignItems: 'center', justifyContent: 'center', borderRadius: 24, overflow: 'hidden', borderWidth: 0.5, borderColor: theme.colors.glass.border }}>
                         <ActivityIndicator size="small" color={theme.colors.text} />
                     </MobileGlassSurface>
                 )}
