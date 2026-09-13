@@ -28,6 +28,7 @@ import { detectCLIAvailability } from '@/utils/detectCLI';
 import { encodeBase64, decodeBase64, decrypt } from '@/api/encryption';
 import { applyArchiveState } from '@/api/sessionArchiveMarker';
 import {
+  buildHostSessionEnvironment,
   buildSessionChildEnvironment,
   sanitizeSessionEnvironment,
   wrapTmuxCommandWithSessionEnvironmentSanitizer,
@@ -39,7 +40,6 @@ import { ensureMemoryDirectory } from '@/modules/memory/memoryDirectory';
 import {
   DREAM_AGENT_PROFILE,
   DREAM_PROMPT,
-  INITIAL_PROMPT_ENV_VAR,
   MemoryConsolidationRunner,
 } from '@/modules/memory/memoryConsolidation';
 
@@ -328,13 +328,11 @@ export async function startDaemon(): Promise<void> {
       try {
         let extraEnv: Record<string, string> = {
           ...sanitizeSessionEnvironment(options.environmentVariables ?? {}),
+          // Session-scoped keys come from the host's own spawn options, applied after the
+          // sanitizer above stripped them out of whatever the caller passed. A remote caller can
+          // ask for a session, never for the instruction it runs.
+          ...buildHostSessionEnvironment(options),
         };
-        if (options.parentSessionId) {
-          extraEnv.HAPPY_FORKED_FROM_SESSION_ID = options.parentSessionId;
-        }
-        if (options.isSideChat) {
-          extraEnv.HAPPY_SIDE_CHAT = '1';
-        }
         logger.debug(`[DAEMON RUN] Environment variable keys (before expansion) (${Object.keys(extraEnv).length}): ${Object.keys(extraEnv).join(', ')}`);
 
         // Expand ${VAR} references from the sanitized daemon environment.
@@ -600,7 +598,7 @@ export async function startDaemon(): Promise<void> {
           agent: ENGINE_AGENT_NAME,
           agentProfile: DREAM_AGENT_PROFILE,
           approvedNewDirectoryCreation: true,
-          environmentVariables: { [INITIAL_PROMPT_ENV_VAR]: DREAM_PROMPT },
+          initialPrompt: DREAM_PROMPT,
         });
         if (result.type !== 'success') {
           throw new Error(

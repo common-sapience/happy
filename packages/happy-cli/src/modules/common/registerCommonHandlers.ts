@@ -143,6 +143,14 @@ export interface SpawnSessionOptions {
      * sidebar panel. See the app-side `useSideChatSession` lookup.
      */
     isSideChat?: boolean;
+    /**
+     * The one prompt a background session runs on its own, set only by the host
+     * itself (ENG-19's memory consolidation pass). It reaches the session as a
+     * session-scoped environment variable, which is exactly what a caller may not
+     * put in `environmentVariables`, so it is its own option and the
+     * `spawn-happy-session` RPC never maps anything onto it.
+     */
+    initialPrompt?: string;
 }
 
 export type SpawnSessionResult =

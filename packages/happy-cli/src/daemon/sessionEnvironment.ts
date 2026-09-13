@@ -51,6 +51,33 @@ export function buildSessionChildEnvironment(
 }
 
 /**
+ * Session-scoped values the host itself decides for the session it is starting.
+ *
+ * These keys are exactly the ones `sanitizeSessionEnvironment` strips out of
+ * whatever a caller passed, so they can only be set from the host's own spawn
+ * options and only after that sanitizing. Keeping the translation here is what
+ * stops one of them from being smuggled in through caller-supplied environment,
+ * and from being forgotten on a new spawn path.
+ */
+export function buildHostSessionEnvironment(options: {
+    parentSessionId?: string;
+    isSideChat?: boolean;
+    initialPrompt?: string;
+}): Record<string, string> {
+    const env: Record<string, string> = {};
+    if (options.parentSessionId) {
+        env.HAPPY_FORKED_FROM_SESSION_ID = options.parentSessionId;
+    }
+    if (options.isSideChat) {
+        env.HAPPY_SIDE_CHAT = '1';
+    }
+    if (options.initialPrompt) {
+        env.HAPPY_INITIAL_PROMPT = options.initialPrompt;
+    }
+    return env;
+}
+
+/**
  * tmux windows inherit their server environment, including keys omitted from
  * `new-window -e`. These are the keys the shell must explicitly unset before
  * starting a child, unless this launch intentionally supplies a replacement.
