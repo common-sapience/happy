@@ -61,7 +61,7 @@ function runCli(...args: string[]): { stdout: string; stderr: string; exitCode: 
 }
 
 function runCliWithoutRelay(...args: string[]): { stdout: string; stderr: string; exitCode: number } {
-    const env = { ...process.env, HAPPY_HOME_DIR: '/tmp/nonexistent-happy-acceptance' };
+    const env: NodeJS.ProcessEnv = { ...process.env, HAPPY_HOME_DIR: '/tmp/nonexistent-happy-acceptance' };
     delete env.HAPPY_SERVER_URL;
     try {
         const stdout = execFileSync(process.execPath, ['--no-warnings', '--no-deprecation', binPath, ...args], {
