@@ -10,7 +10,7 @@ on:
         required: false
         default: harness/m2
       server_url:
-        description: Relay URL baked into the package (empty keeps the default)
+        description: Relay URL baked into the package (empty ships a package that asks on first launch)
         required: false
         default: ''
 
