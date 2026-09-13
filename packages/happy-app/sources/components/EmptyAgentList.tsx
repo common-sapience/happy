@@ -11,11 +11,15 @@ import { t } from '@/text';
  * action that changes it. Which action depends on whether there is a computer to
  * run on at all — offering "new agent" with no reachable computer would only fail
  * later (HA-02). The same component serves every surface that can show an empty
- * list, so the list has one empty state rather than one per layout.
+ * list, so the list has one empty state rather than one per layout, and it drops
+ * its own button where the chrome around it already shows one — the product has
+ * exactly one creation entry on screen at a time.
  */
-export function EmptyAgentList({ hasArchivedAgents, onShowArchived }: {
+export function EmptyAgentList({ hasArchivedAgents, onShowArchived, showCreateAction = true }: {
     hasArchivedAgents?: boolean;
     onShowArchived?: () => void;
+    /** False where the surrounding chrome already carries the creation control. */
+    showCreateAction?: boolean;
 }) {
     const router = useRouter();
     const machines = useAllMachines({ includeOffline: true });
@@ -34,7 +38,9 @@ export function EmptyAgentList({ hasArchivedAgents, onShowArchived }: {
                 description={t('harness.noAgentsDescription')}
                 action={(
                     <>
-                        <NewAgentButton title={t('sidebar.newAgent')} onPress={() => router.navigate('/new')} />
+                        {showCreateAction && (
+                            <NewAgentButton title={t('sidebar.newAgent')} onPress={() => router.navigate('/new')} />
+                        )}
                         {archiveAction}
                     </>
                 )}

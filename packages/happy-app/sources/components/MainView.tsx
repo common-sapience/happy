@@ -98,7 +98,6 @@ const styles = StyleSheet.create((theme) => ({
         flexBasis: 0,
         flexGrow: 1,
         flexDirection: 'column',
-        backgroundColor: theme.colors.groupped.background,
     },
     emptyStateContentContainer: {
         flex: 1,
@@ -316,7 +315,7 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
             return (
                 <View style={styles.sidebarContentContainer}>
                     <View style={styles.emptyStateContainer}>
-                        <EmptyAgentList />
+                        <EmptyAgentList showCreateAction={false} />
                     </View>
                 </View>
             );
