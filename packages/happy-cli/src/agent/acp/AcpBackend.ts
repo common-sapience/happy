@@ -204,6 +204,13 @@ export interface AcpBackendOptions {
   /** Optional callback to check if prompt has change_title instruction */
   hasChangeTitleInstruction?: (prompt: string) => boolean;
 
+  /**
+   * Engine agent profile this session runs under (HOST-12). It is named in the newSession call
+   * itself, so the session is bound to the profile before it can take a single prompt; the engine
+   * rejects a name it does not have rather than quietly falling back to its default profile.
+   */
+  agentProfile?: string;
+
   /** Log raw session updates to console */
   verbose?: boolean;
 }
@@ -738,6 +745,10 @@ export class AcpBackend implements AgentBackend {
         return maybeErr.code === 'ENOENT' || maybeErr.code === 'EACCES' || maybeErr.code === 'EPIPE';
       };
 
+      // A profile the engine does not have will not appear on a retry: the engine answers an
+      // unknown `_meta.mode` with JSON-RPC invalid params, and that is a hard failure (HOST-12).
+      const isRejectedRequest = (error: Error): boolean => (error as { code?: unknown }).code === -32602;
+
       const initializeResponse = await withRetry(
         async () => {
           let timeoutHandle: NodeJS.Timeout | null = null;
@@ -794,6 +805,7 @@ export class AcpBackend implements AgentBackend {
       const newSessionRequest: NewSessionRequest = {
         cwd: this.options.cwd,
         mcpServers: mcpServers as unknown as NewSessionRequest['mcpServers'],
+        ...(this.options.agentProfile ? { _meta: { mode: this.options.agentProfile } } : {}),
       };
 
       logger.debug(`[AcpBackend] Creating new session...`);
@@ -829,7 +841,7 @@ export class AcpBackend implements AgentBackend {
           maxAttempts: RETRY_CONFIG.maxAttempts,
           baseDelayMs: RETRY_CONFIG.baseDelayMs,
           maxDelayMs: RETRY_CONFIG.maxDelayMs,
-          shouldRetry: (error) => !isNonRetryableStartupError(error),
+          shouldRetry: (error) => !isNonRetryableStartupError(error) && !isRejectedRequest(error),
         }
       );
       this.acpSessionId = sessionResponse.sessionId;

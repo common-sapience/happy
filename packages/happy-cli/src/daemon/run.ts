@@ -26,6 +26,7 @@ import { getTmuxUtilities, isTmuxAvailable, parseTmuxSessionIdentifier, formatTm
 import { expandEnvironmentVariables } from '@/utils/expandEnvVars';
 import { detectCLIAvailability } from '@/utils/detectCLI';
 import { encodeBase64, decodeBase64, decrypt } from '@/api/encryption';
+import { applyArchiveState } from '@/api/sessionArchiveMarker';
 import {
   buildSessionChildEnvironment,
   sanitizeSessionEnvironment,
@@ -714,10 +715,52 @@ export async function startDaemon(): Promise<void> {
     // Create realtime machine session
     const apiMachine = api.machineSyncClient(machine);
 
+    /**
+     * RL-07: archive or restore a session this machine owns. The host is the authority, so the
+     * control end only asks; the archive state is written into the session metadata and the
+     * relay's plaintext list marker is derived from that same write.
+     *
+     * The engine's own `time.archived` is not touched here: the daemon reaches the engine only
+     * through the session process's ACP pipe, which is gone for exactly the sessions a user
+     * archives. ENG-20's engine-side flag follows whenever the host gains a standing engine
+     * handle (T-13); until then the metadata copy is what every control end reads.
+     */
+    const archiveSession = async (sessionId: string, archived: boolean): Promise<void> => {
+      const tracked = findTrackedSessionById(sessionId);
+      if (!tracked?.encryption || !tracked.happySessionMetadataFromLocalWebhook) {
+        throw new Error(`Session ${sessionId} is not known to this machine`);
+      }
+
+      const settled = await apiMachine.updateSessionMetadata(
+        {
+          sessionId,
+          encryptionKey: tracked.encryption.encryptionKey,
+          encryptionVariant: tracked.encryption.encryptionVariant,
+          metadata: tracked.happySessionMetadataFromLocalWebhook,
+          metadataVersion: tracked.encryption.metadataVersion
+        },
+        (metadata) => applyArchiveState(metadata, archived, 'host')
+      );
+
+      tracked.happySessionMetadataFromLocalWebhook = settled.metadata;
+      tracked.encryption.metadataVersion = settled.metadataVersion;
+      persistSession(sessionId, {
+        encryptionKey: encodeBase64(tracked.encryption.encryptionKey),
+        encryptionVariant: tracked.encryption.encryptionVariant,
+        seq: tracked.encryption.seq,
+        metadataVersion: settled.metadataVersion,
+        agentStateVersion: tracked.encryption.agentStateVersion,
+        metadata: settled.metadata,
+        savedAt: Date.now()
+      });
+      logger.debug(`[DAEMON RUN] Session ${sessionId} archive state set to ${archived}`);
+    };
+
     // Set RPC handlers
     apiMachine.setRPCHandlers({
       spawnSession,
       stopSession,
+      archiveSession,
       requestShutdown: () => requestShutdown('happy-app')
     });
 

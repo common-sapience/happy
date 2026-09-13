@@ -566,6 +566,7 @@ export async function runAcp(opts: {
     mcpServers,
     permissionHandler: permissionConfirmationEnabled ? permissionHandler : undefined,
     transportHandler: new DefaultTransport(opts.agentName),
+    agentProfile: opts.agentProfile,
     verbose,
   });
 
@@ -912,13 +913,11 @@ export async function runAcp(opts: {
   });
 
   try {
+    // The profile travels in the newSession call itself (HOST-12), so the session is bound to it
+    // before the first prompt; an unknown profile fails startSession instead of running unprofiled.
     const started = await backend.startSession();
     acpSessionId = started.sessionId;
     if (opts.agentProfile) {
-      const applied = await backend.setSessionMode(opts.agentProfile);
-      if (!applied) {
-        throw new Error(`Engine rejected agent profile '${opts.agentProfile}'`);
-      }
       logAcp('muted', `Agent profile applied: ${opts.agentProfile}`);
     }
     if (verbose) {

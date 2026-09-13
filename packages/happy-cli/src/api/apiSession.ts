@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events'
 import { io, Socket } from 'socket.io-client'
 import { AgentState, ClientToServerEvents, FileEventMessage, FileEventMessageSchema, Metadata, ServerToClientEvents, Session, Update, UserMessage, UserMessageSchema } from './types'
 import { decodeBase64, decryptBlob, decrypt, encodeBase64, encrypt, encryptBlob } from './encryption';
+import { isMetadataArchived } from './sessionArchiveMarker';
 import { backoff, delay } from '@/utils/time';
 import { configuration } from '@/configuration';
 import { randomUUID } from 'node:crypto';
@@ -753,7 +754,12 @@ export class ApiSessionClient extends EventEmitter {
         this.metadataLock.inLock(async () => {
             await backoff(async () => {
                 let updated = handler(this.metadata!); // Weird state if metadata is null - should never happen but here we are
-                const answer = await this.socket.emitWithAck('update-metadata', { sid: this.sessionId, expectedVersion: this.metadataVersion, metadata: encodeBase64(encrypt(this.encryptionKey, this.encryptionVariant, updated)) });
+                const answer = await this.socket.emitWithAck('update-metadata', {
+                    sid: this.sessionId,
+                    expectedVersion: this.metadataVersion,
+                    metadata: encodeBase64(encrypt(this.encryptionKey, this.encryptionVariant, updated)),
+                    archived: isMetadataArchived(updated)
+                });
                 if (answer.result === 'success') {
                     this.metadata = decrypt(this.encryptionKey, this.encryptionVariant, decodeBase64(answer.metadata));
                     this.metadataVersion = answer.version;

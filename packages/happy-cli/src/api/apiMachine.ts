@@ -6,7 +6,8 @@
 import { io, Socket } from 'socket.io-client';
 import { logger } from '@/ui/logger';
 import { configuration } from '@/configuration';
-import { MachineMetadata, DaemonState, Machine, Update, UpdateMachineBody } from './types';
+import { MachineMetadata, DaemonState, Machine, Metadata, Update, UpdateMachineBody } from './types';
+import { isMetadataArchived } from './sessionArchiveMarker';
 import { registerCommonHandlers, SpawnSessionOptions, SpawnSessionResult } from '../modules/common/registerCommonHandlers';
 import { encodeBase64, decodeBase64, encrypt, decrypt } from './encryption';
 import { backoff } from '@/utils/time';
@@ -62,6 +63,28 @@ interface DaemonToServerEvents {
         daemonState: string
     }) => void) => void;
 
+    /**
+     * RL-07: the daemon writes a session's archive state for the whole machine — the session's own
+     * process may be long gone by the time a control end asks. The plaintext `archived` marker goes
+     * out in the same call as the ciphertext, and the relay accepts it only from a host connection.
+     */
+    'update-metadata': (data: {
+        sid: string;
+        expectedVersion: number;
+        metadata: string; // Encrypted Metadata
+        archived: boolean;
+    }, cb: (answer: {
+        result: 'error'
+    } | {
+        result: 'version-mismatch'
+        version: number,
+        metadata: string
+    } | {
+        result: 'success',
+        version: number,
+        metadata: string
+    }) => void) => void;
+
     'rpc-register': (data: { method: string }) => void;
     'rpc-unregister': (data: { method: string }) => void;
     'rpc-call': (data: { method: string, params: any }, callback: (response: {
@@ -74,8 +97,22 @@ interface DaemonToServerEvents {
 type MachineRpcHandlers = {
     spawnSession: (options: SpawnSessionOptions) => Promise<SpawnSessionResult>;
     stopSession: (sessionId: string) => boolean;
+    /** RL-07: archive or restore a session of this machine on the host's authority. */
+    archiveSession: (sessionId: string, archived: boolean) => Promise<void>;
     requestShutdown: () => void;
 }
+
+/** What the daemon knows about a session whose metadata it is about to rewrite. */
+export interface SessionMetadataTarget {
+    sessionId: string;
+    encryptionKey: Uint8Array;
+    encryptionVariant: 'legacy' | 'dataKey';
+    metadata: Metadata;
+    metadataVersion: number;
+}
+
+/** A bounded retry: an RPC caller waits on this, so it must fail rather than retry forever. */
+const SESSION_METADATA_WRITE_ATTEMPTS = 3;
 
 export class ApiMachineClient {
     private socket!: Socket<ServerToDaemonEvents, DaemonToServerEvents>;
@@ -104,6 +141,7 @@ export class ApiMachineClient {
     setRPCHandlers({
         spawnSession,
         stopSession,
+        archiveSession,
         requestShutdown
     }: MachineRpcHandlers) {
         // Register spawn session handler
@@ -148,6 +186,23 @@ export class ApiMachineClient {
             return { message: 'Session stopped' };
         });
 
+        // Register archive session handler (RL-07). The control end asks, the host decides: the
+        // daemon rewrites the session metadata and the relay's list marker follows that write.
+        this.rpcHandlerManager.registerHandler('archive-session', async (params: any) => {
+            const { sessionId, archived } = params || {};
+
+            if (!sessionId || typeof sessionId !== 'string') {
+                throw new Error('Session ID is required');
+            }
+            if (typeof archived !== 'boolean') {
+                throw new Error('archived must be a boolean');
+            }
+
+            await archiveSession(sessionId, archived);
+            logger.debug(`[API MACHINE] Session ${sessionId} archived=${archived}`);
+            return { sessionId, archived };
+        });
+
         // Register stop daemon handler
         this.rpcHandlerManager.registerHandler('stop-daemon', () => {
             logger.debug('[API MACHINE] Received stop-daemon RPC request');
@@ -160,6 +215,47 @@ export class ApiMachineClient {
 
             return { message: 'Daemon stop request acknowledged, starting shutdown sequence...' };
         });
+    }
+
+    /**
+     * Rewrite a session's metadata from the daemon, carrying the plaintext archive marker the
+     * relay keeps for list queries (RL-07). The session's own process is not involved: a session
+     * a control end wants archived has usually already exited.
+     *
+     * Returns the metadata and version the relay settled on, so the caller can keep its copy.
+     */
+    async updateSessionMetadata(
+        target: SessionMetadataTarget,
+        handler: (metadata: Metadata) => Metadata
+    ): Promise<{ metadata: Metadata, metadataVersion: number }> {
+        let metadata = target.metadata;
+        let metadataVersion = target.metadataVersion;
+
+        for (let attempt = 1; attempt <= SESSION_METADATA_WRITE_ATTEMPTS; attempt++) {
+            const updated = handler(metadata);
+            const answer = await this.socket.emitWithAck('update-metadata', {
+                sid: target.sessionId,
+                expectedVersion: metadataVersion,
+                metadata: encodeBase64(encrypt(target.encryptionKey, target.encryptionVariant, updated)),
+                archived: isMetadataArchived(updated)
+            });
+
+            if (answer.result === 'success') {
+                return {
+                    metadata: decrypt(target.encryptionKey, target.encryptionVariant, decodeBase64(answer.metadata)),
+                    metadataVersion: answer.version
+                };
+            }
+            if (answer.result !== 'version-mismatch') {
+                throw new Error(`Relay rejected the metadata write for session ${target.sessionId}`);
+            }
+
+            // Another writer got there first; rebase on its copy and try again.
+            metadata = decrypt(target.encryptionKey, target.encryptionVariant, decodeBase64(answer.metadata));
+            metadataVersion = answer.version;
+        }
+
+        throw new Error(`Metadata for session ${target.sessionId} kept changing under the write`);
     }
 
     /**

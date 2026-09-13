@@ -225,6 +225,7 @@ describe('HOST-10 / HOST-12 machine spawn RPC', () => {
         client.setRPCHandlers({
             spawnSession,
             stopSession: vi.fn(() => true),
+            archiveSession: vi.fn(async () => {}),
             requestShutdown: vi.fn()
         });
         return registeredHandlers.get('spawn-happy-session')!;
@@ -233,7 +234,7 @@ describe('HOST-10 / HOST-12 machine spawn RPC', () => {
     it('HOST-10: registers no other-agent RPC', () => {
         registerHandlers();
 
-        expect([...registeredHandlers.keys()].sort()).toEqual(['spawn-happy-session', 'stop-daemon', 'stop-session']);
+        expect([...registeredHandlers.keys()].sort()).toEqual(['archive-session', 'spawn-happy-session', 'stop-daemon', 'stop-session']);
     });
 
     it('HOST-12: forwards the requested agent profile to the daemon', async () => {
@@ -252,5 +253,141 @@ describe('HOST-10 / HOST-12 machine spawn RPC', () => {
         const spawn = registerHandlers();
 
         await expect(spawn({ agent: 'opencode' })).rejects.toThrow('Directory is required');
+    });
+});
+
+describe('RL-07 archive RPC and the plaintext marker', () => {
+    const archiveSession = vi.fn(async () => {});
+
+    const registerHandlers = () => {
+        registeredHandlers.clear();
+        archiveSession.mockClear();
+        const client = new ApiMachineClient('fake-token', makeMachine());
+        client.setRPCHandlers({
+            spawnSession: vi.fn(async () => ({ type: 'success' as const, sessionId: 'session-1' })),
+            stopSession: vi.fn(() => true),
+            archiveSession,
+            requestShutdown: vi.fn()
+        });
+        return registeredHandlers.get('archive-session')!;
+    };
+
+    it('asks the host to archive the named session', async () => {
+        const archive = registerHandlers();
+
+        await expect(archive({ sessionId: 'session-1', archived: true })).resolves.toEqual({
+            sessionId: 'session-1',
+            archived: true
+        });
+        expect(archiveSession).toHaveBeenCalledWith('session-1', true);
+    });
+
+    it('asks the host to restore an archived session', async () => {
+        const archive = registerHandlers();
+
+        await archive({ sessionId: 'session-1', archived: false });
+
+        expect(archiveSession).toHaveBeenCalledWith('session-1', false);
+    });
+
+    it('rejects a request that names no session or no state', async () => {
+        const archive = registerHandlers();
+
+        await expect(archive({ archived: true })).rejects.toThrow('Session ID is required');
+        await expect(archive({ sessionId: 'session-1' })).rejects.toThrow('archived must be a boolean');
+        await expect(archive({ sessionId: 'session-1', archived: 'yes' })).rejects.toThrow('archived must be a boolean');
+        expect(archiveSession).not.toHaveBeenCalled();
+    });
+});
+
+describe('RL-07 the daemon writes the archive marker with the metadata', () => {
+    let mockSocket: any;
+
+    const connectedClient = (ack: any) => {
+        mockSocket = {
+            connected: true,
+            connect: vi.fn(),
+            on: vi.fn(),
+            emit: vi.fn(),
+            emitWithAck: vi.fn(async () => ack),
+            close: vi.fn(),
+            io: { on: vi.fn() }
+        };
+        mockIo.mockReturnValue(mockSocket);
+        const client = new ApiMachineClient('fake-token', makeMachine());
+        client.connect();
+        return client;
+    };
+
+    const target = {
+        sessionId: 'session-1',
+        encryptionKey: new Uint8Array(32),
+        encryptionVariant: 'legacy' as const,
+        metadata: { path: '/work', host: 'localhost' } as any,
+        metadataVersion: 3
+    };
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockShouldReconnect.mockReturnValue(true);
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('sends the plaintext archived marker in the same call as the ciphertext', async () => {
+        const { encrypt, encodeBase64 } = await import('./encryption');
+        const settled = { path: '/work', host: 'localhost', lifecycleState: 'archived' };
+        const client = connectedClient({
+            result: 'success',
+            version: 4,
+            metadata: encodeBase64(encrypt(target.encryptionKey, 'legacy', settled))
+        });
+
+        const result = await client.updateSessionMetadata(target, (metadata) => ({
+            ...metadata,
+            lifecycleState: 'archived'
+        }));
+
+        expect(mockSocket.emitWithAck).toHaveBeenCalledWith('update-metadata', expect.objectContaining({
+            sid: 'session-1',
+            expectedVersion: 3,
+            archived: true
+        }));
+        expect(result.metadataVersion).toBe(4);
+        expect(result.metadata.lifecycleState).toBe('archived');
+
+        client.shutdown();
+    });
+
+    it('sends archived false when the host puts a session back in the active list', async () => {
+        const { encrypt, encodeBase64 } = await import('./encryption');
+        const settled = { path: '/work', host: 'localhost', lifecycleState: 'running' };
+        const client = connectedClient({
+            result: 'success',
+            version: 4,
+            metadata: encodeBase64(encrypt(target.encryptionKey, 'legacy', settled))
+        });
+
+        await client.updateSessionMetadata(target, (metadata) => ({
+            ...metadata,
+            lifecycleState: 'running'
+        }));
+
+        expect(mockSocket.emitWithAck).toHaveBeenCalledWith('update-metadata', expect.objectContaining({
+            archived: false
+        }));
+
+        client.shutdown();
+    });
+
+    it('fails the write the relay rejected instead of reporting success', async () => {
+        const client = connectedClient({ result: 'error' });
+
+        await expect(client.updateSessionMetadata(target, (metadata) => metadata))
+            .rejects.toThrow('Relay rejected the metadata write for session session-1');
+
+        client.shutdown();
     });
 });

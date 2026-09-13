@@ -52,7 +52,12 @@ export interface ClientToServerEvents {
     mode?: 'local' | 'remote';
   }) => void
   'session-end': (data: { sid: string, time: number }) => void,
-  'update-metadata': (data: { sid: string, expectedVersion: number, metadata: string }, cb: (answer: {
+  /**
+   * RL-07: the archive state belongs to the host. It travels inside the encrypted metadata; the
+   * plaintext `archived` marker rides along in the same write so the relay's list copy can only
+   * ever be derived from a host write, never flipped by a control end or by the relay itself.
+   */
+  'update-metadata': (data: { sid: string, expectedVersion: number, metadata: string, archived?: boolean }, cb: (answer: {
     result: 'error'
   } | {
     result: 'version-mismatch'

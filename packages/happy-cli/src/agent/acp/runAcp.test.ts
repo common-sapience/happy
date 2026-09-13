@@ -34,6 +34,7 @@ const mocks = vi.hoisted(() => {
     setModeResult: true,
     setModelCalls: [] as string[],
     startSessionMessages: [] as any[],
+    startSessionError: null as Error | null,
     sendPromptError: null as Error | null,
     startSessionCalls: 0,
     cancelCalls: [] as string[],
@@ -154,6 +155,9 @@ vi.mock('./AcpBackend', () => ({
 
     async startSession() {
       mocks.backendState.startSessionCalls += 1;
+      if (mocks.backendState.startSessionError) {
+        throw mocks.backendState.startSessionError;
+      }
       for (const message of mocks.backendState.startSessionMessages) {
         for (const listener of mocks.backendState.listeners) {
           listener(message);
@@ -216,6 +220,7 @@ function resetRunAcpMocks(): void {
   mocks.backendState.setModeResult = true;
   mocks.backendState.setModelCalls = [];
   mocks.backendState.startSessionMessages = [];
+  mocks.backendState.startSessionError = null;
   mocks.backendState.sendPromptError = null;
   mocks.backendState.startSessionCalls = 0;
   mocks.backendState.cancelCalls = [];
@@ -730,24 +735,26 @@ describe('HOST-12 agent profile', () => {
     resetRunAcpMocks();
   });
 
-  it('selects the profile as the ACP session mode right after the session starts', async () => {
+  it('names the profile in the newSession call, so no prompt can land unprofiled', async () => {
     const runPromise = runEngine('research');
 
     await vi.waitFor(() => {
-      expect(mocks.backendState.setModeCalls).toEqual(['research']);
+      expect(mocks.backendState.startSessionCalls).toBe(1);
     });
 
     await mocks.getKillHandler()!();
     await runPromise;
 
-    expect(mocks.backendState.startSessionCalls).toBe(1);
+    expect(mocks.backendState.constructorArgs.agentProfile).toBe('research');
+    // The profile is bound at creation, so no follow-up mode switch is needed.
+    expect(mocks.backendState.setModeCalls).toEqual([]);
   });
 
   it('records the profile in session metadata so the relay copy carries it', async () => {
     const runPromise = runEngine('research');
 
     await vi.waitFor(() => {
-      expect(mocks.backendState.setModeCalls).toEqual(['research']);
+      expect(mocks.backendState.startSessionCalls).toBe(1);
     });
 
     await mocks.getKillHandler()!();
@@ -758,7 +765,7 @@ describe('HOST-12 agent profile', () => {
     }));
   });
 
-  it('selects no mode when the session runs on the default profile', async () => {
+  it('names no profile when the session runs on the engine default', async () => {
     const runPromise = runEngine();
 
     await vi.waitFor(() => {
@@ -768,13 +775,14 @@ describe('HOST-12 agent profile', () => {
     await mocks.getKillHandler()!();
     await runPromise;
 
+    expect(mocks.backendState.constructorArgs.agentProfile).toBeUndefined();
     expect(mocks.backendState.setModeCalls).toEqual([]);
   });
 
   it('fails the session when the engine rejects the profile', async () => {
-    mocks.backendState.setModeResult = false;
+    mocks.backendState.startSessionError = new Error('mode not found: missing-profile');
 
-    await expect(runEngine('missing-profile')).rejects.toThrow("Engine rejected agent profile 'missing-profile'");
+    await expect(runEngine('missing-profile')).rejects.toThrow('mode not found: missing-profile');
   });
 });
 
