@@ -1098,6 +1098,8 @@ export const pl: TranslationStructure = {
         extraInstructions: 'Dodatkowe wskazówki',
         extraInstructionsPlaceholder: 'To, o czym agent ma zawsze pamiętać',
         noAgentsTitle: 'Brak agentów',
+        searchAgents: "Szukaj agentów",
+        clearSearch: "Wyczyść wyszukiwanie",
         noAgentsDescription: "Uruchom go na podłączonym komputerze.",
         noComputersTitle: "Brak podłączonych komputerów",
         noComputersDescription: "Zainstaluj aplikację na komputerze, na którym agent ma pracować.",

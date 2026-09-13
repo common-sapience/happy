@@ -1,8 +1,10 @@
 import * as React from 'react';
 import { SessionListViewItem, useSessionListViewData, useSetting } from '@/sync/storage';
+import { matchesAgentSearch, useAgentListSearch } from '@/components/agentListSearch';
 
 /**
- * Applies the persistent archive-visibility preference to the agent list.
+ * Applies the archive-visibility preference and the sidebar's search field to the
+ * agent list. Both narrow the same list, so they narrow it in one place.
  *
  * The rule is `session.archived`, never `!session.active`: an agent whose socket
  * merely dropped is still work you can pick back up, while one the user retired
@@ -16,34 +18,45 @@ import { SessionListViewItem, useSessionListViewData, useSetting } from '@/sync/
 export function useVisibleSessionListViewData(): SessionListViewItem[] | null {
     const data = useSessionListViewData();
     const hideArchivedSessions = useSetting('hideInactiveSessions');
+    const query = useAgentListSearch((state) => state.query);
 
-    return React.useMemo(() => {
-        if (!data) {
-            return data;
-        }
-        if (!hideArchivedSessions) {
-            return data;
-        }
+    return React.useMemo(
+        () => filterAgentListViewData(data, { hideArchivedSessions, query }),
+        [data, hideArchivedSessions, query],
+    );
+}
 
-        // A date heading is held back until a row underneath it survives the
-        // filter, so hiding the archive never leaves a heading with nothing
-        // under it.
-        const result: SessionListViewItem[] = [];
-        let pendingHeader: SessionListViewItem | null = null;
-        for (const item of data) {
-            if (item.type === 'header') {
-                pendingHeader = item;
-                continue;
-            }
-            if (item.session.archived) continue;
-            if (pendingHeader) {
-                result.push(pendingHeader);
-                pendingHeader = null;
-            }
-            result.push(item);
+/**
+ * A date heading is held back until a row underneath it survives the filters, so
+ * narrowing the list never leaves a heading with nothing under it.
+ */
+export function filterAgentListViewData(
+    data: SessionListViewItem[] | null,
+    { hideArchivedSessions, query }: { hideArchivedSessions: boolean; query: string },
+): SessionListViewItem[] | null {
+    if (!data) {
+        return data;
+    }
+    if (!hideArchivedSessions && query.trim().length === 0) {
+        return data;
+    }
+
+    const result: SessionListViewItem[] = [];
+    let pendingHeader: SessionListViewItem | null = null;
+    for (const item of data) {
+        if (item.type === 'header') {
+            pendingHeader = item;
+            continue;
         }
-        return result;
-    }, [data, hideArchivedSessions]);
+        if (hideArchivedSessions && item.session.archived) continue;
+        if (!matchesAgentSearch(item.session, query)) continue;
+        if (pendingHeader) {
+            result.push(pendingHeader);
+            pendingHeader = null;
+        }
+        result.push(item);
+    }
+    return result;
 }
 
 /**

@@ -1083,6 +1083,8 @@ export const en: TranslationStructure = {
         extraInstructions: 'Extra instructions',
         extraInstructionsPlaceholder: 'Anything this agent should always keep in mind',
         noAgentsTitle: 'No agents yet',
+        searchAgents: "Search agents",
+        clearSearch: "Clear the search",
         noAgentsDescription: "Start one on a computer you have connected.",
         noComputersTitle: "No computers connected",
         noComputersDescription: "Install the app on the computer you want your agents to work on.",

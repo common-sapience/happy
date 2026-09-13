@@ -4,6 +4,7 @@ import type { SessionListViewItem, SessionRowData } from '@/sync/storage';
 const mocks = vi.hoisted(() => ({
     data: null as SessionListViewItem[] | null,
     hideArchivedSessions: false,
+    query: '',
 }));
 
 // The hook only ever reads `React.useMemo`, and storage.ts pulls in React
@@ -22,6 +23,14 @@ vi.mock('@/sync/storage', () => ({
     },
 }));
 
+vi.mock('@/components/agentListSearch', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('@/components/agentListSearch')>();
+    return {
+        matchesAgentSearch: actual.matchesAgentSearch,
+        useAgentListSearch: (select: (state: { query: string }) => unknown) => select({ query: mocks.query }),
+    };
+});
+
 import { useHasArchivedSessions, useVisibleSessionListViewData } from './useVisibleSessionListViewData';
 
 function row(id: string, options: { archived?: boolean } = {}): SessionRowData {
@@ -30,6 +39,10 @@ function row(id: string, options: { archived?: boolean } = {}): SessionRowData {
         name: id,
         active: true,
         archived: options.archived ?? false,
+        projectName: null,
+        workspaceName: null,
+        path: null,
+        machineName: null,
     } as SessionRowData;
 }
 
@@ -57,6 +70,7 @@ describe('DESK-11 archive visibility', () => {
     beforeEach(() => {
         mocks.data = null;
         mocks.hideArchivedSessions = false;
+        mocks.query = '';
     });
 
     function mixedList(): SessionListViewItem[] {
@@ -97,6 +111,14 @@ describe('DESK-11 archive visibility', () => {
     it('reports nothing loaded as nothing to show', () => {
         expect(useVisibleSessionListViewData()).toBeNull();
         expect(useHasArchivedSessions()).toBe(false);
+    });
+
+    it('narrows the list to what the search field matches, headings included', () => {
+        mocks.data = mixedList();
+        mocks.query = 'live';
+
+        expect(ids(useVisibleSessionListViewData())).toEqual(['live']);
+        expect(titles(useVisibleSessionListViewData())).toEqual(['Today']);
     });
 
     it('offers the archive control only when something is archived', () => {

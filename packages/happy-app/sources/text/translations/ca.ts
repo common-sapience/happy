@@ -1067,6 +1067,8 @@ export const ca: TranslationStructure = {
         extraInstructions: 'Instruccions addicionals',
         extraInstructionsPlaceholder: 'Allò que aquest agent ha de recordar sempre',
         noAgentsTitle: 'Encara no hi ha agents',
+        searchAgents: "Cerca agents",
+        clearSearch: "Esborra la cerca",
         noAgentsDescription: "Inicia’n un en un ordinador que tinguis connectat.",
         noComputersTitle: "No hi ha ordinadors connectats",
         noComputersDescription: "Instal·la l’app a l’ordinador on vols que treballin els teus agents.",

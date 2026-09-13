@@ -1068,6 +1068,8 @@ export const zhHans: TranslationStructure = {
         extraInstructions: '追加说明',
         extraInstructionsPlaceholder: '这个 agent 需要一直记住的事',
         noAgentsTitle: '还没有 agent',
+        searchAgents: "搜索 agent",
+        clearSearch: "清空搜索",
         noAgentsDescription: "在一台已连接的电脑上新建一个。",
         noComputersTitle: "还没有连接电脑",
         noComputersDescription: "在要干活的那台电脑上装上这个应用。",

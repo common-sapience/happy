@@ -1099,6 +1099,8 @@ export const ru: TranslationStructure = {
         extraInstructions: 'Дополнительные указания',
         extraInstructionsPlaceholder: 'То, что агент должен помнить всегда',
         noAgentsTitle: 'Агентов пока нет',
+        searchAgents: "Поиск агентов",
+        clearSearch: "Очистить поиск",
         noAgentsDescription: "Запустите его на подключённом компьютере.",
         noComputersTitle: "Нет подключённых компьютеров",
         noComputersDescription: "Установите приложение на компьютер, где agent будет работать.",

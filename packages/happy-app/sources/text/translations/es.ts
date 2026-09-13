@@ -1069,6 +1069,8 @@ export const es: TranslationStructure = {
         extraInstructions: 'Instrucciones adicionales',
         extraInstructionsPlaceholder: 'Lo que este agente debe recordar siempre',
         noAgentsTitle: 'Aún no hay agentes',
+        searchAgents: "Buscar agents",
+        clearSearch: "Borrar la búsqueda",
         noAgentsDescription: "Inicia uno en un ordenador que tengas conectado.",
         noComputersTitle: "No hay ordenadores conectados",
         noComputersDescription: "Instala la app en el ordenador donde quieres que trabajen tus agents.",

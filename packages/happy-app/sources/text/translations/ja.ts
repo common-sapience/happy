@@ -1069,6 +1069,8 @@ export const ja: TranslationStructure = {
         extraInstructions: '追加の指示',
         extraInstructionsPlaceholder: 'このエージェントが常に覚えておくこと',
         noAgentsTitle: 'エージェントはまだありません',
+        searchAgents: "agent を検索",
+        clearSearch: "検索を消す",
         noAgentsDescription: "接続済みのコンピュータで 1 つ始めましょう。",
         noComputersTitle: "接続済みのコンピュータがありません",
         noComputersDescription: "agent を動かしたいコンピュータにこのアプリを入れてください。",

@@ -1067,6 +1067,8 @@ export const zhHant: TranslationStructure = {
         extraInstructions: '追加說明',
         extraInstructionsPlaceholder: '這個 agent 需要一直記住的事',
         noAgentsTitle: '還沒有 agent',
+        searchAgents: "搜尋 agent",
+        clearSearch: "清空搜尋",
         noAgentsDescription: "在一台已連線的電腦上新增一個。",
         noComputersTitle: "尚未連線任何電腦",
         noComputersDescription: "在要工作的那台電腦上安裝這個應用程式。",
