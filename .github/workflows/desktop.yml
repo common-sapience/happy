@@ -130,7 +130,7 @@ jobs:
           # Tauri signs with signtool when the bundle config names a thumbprint,
           # so the identity is handed over by patching the config for this build
           # only rather than committing a thumbprint no other machine has.
-          node -e "const fs=require('fs');const p='packages/happy-app/src-tauri/tauri.conf.json';const c=JSON.parse(fs.readFileSync(p,'utf8'));c.bundle.windows={...(c.bundle.windows||{}),certificateThumbprint:process.argv[1],digestAlgorithm:'sha256',timestampUrl:'http://timestamp.digicert.com'};fs.writeFileSync(p,JSON.stringify(c,null,2)+'\n');" $certificate.Thumbprint
+          node -e "const fs=require('fs');const p='packages/happy-app/src-tauri/tauri.conf.json';const c=JSON.parse(fs.readFileSync(p,'utf8'));c.bundle.windows={...(c.bundle.windows||{}),certificateThumbprint:process.argv[1],digestAlgorithm:'sha256',timestampUrl:'http://timestamp.digicert.com'};fs.writeFileSync(p,JSON.stringify(c,null,2)+'\n');" "$($certificate.Thumbprint)"
           "signed=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Install workspace dependencies
