@@ -83,7 +83,6 @@ export default function LanguageSettingsScreen() {
                         title={option.title}
                         subtitle={option.subtitle}
                         icon="language-outline"
-                        tone="accent"
                         onPress={() => handleLanguageChange(option.key)}
                         trailing={
                             currentSelection === option.key ? (
