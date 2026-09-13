@@ -1,5 +1,10 @@
 import { z } from 'zod'
-import type { Update, UpdateMachineBody } from '@slopus/happy-wire';
+import type {
+  CompletedPermissionRequest,
+  PermissionRequest,
+  Update,
+  UpdateMachineBody,
+} from '@slopus/happy-wire';
 
 export {
   SessionMessageContentSchema,
@@ -327,35 +332,17 @@ export type Metadata = {
   internal?: boolean
 };
 
+/**
+ * The session state the host writes and the control end reads. Permission
+ * requests ride in it, keyed by the tool call id their step's events carry, so
+ * one step reads as one row (`permissionProtocol.ts` in the wire package).
+ */
 export type AgentState = {
   controlledByUser?: boolean | null | undefined
   requests?: {
-    [id: string]: {
-      tool: string,
-      arguments: any,
-      createdAt: number,
-      // Raw provider tool-use id when the request id is scoped (e.g. claude
-      // subagent ids are `agentID:toolUseID`); the app joins the permission
-      // card to its tool call through this.
-      toolUseId?: string
-    }
+    [toolCallId: string]: PermissionRequest
   }
   completedRequests?: {
-    [id: string]: {
-      tool: string,
-      arguments: any,
-      createdAt: number,
-      completedAt: number,
-      status: 'canceled' | 'denied' | 'approved',
-      reason?: string,
-      mode?: PermissionMode,
-      decision?: 'approved' | 'approved_for_session' | 'denied' | 'abort',
-      // Historical field name from the RPC payload; the app reads
-      // `allowedTools`. Both are written until every app build folds the
-      // old key.
-      allowTools?: string[],
-      allowedTools?: string[],
-      toolUseId?: string
-    }
+    [toolCallId: string]: CompletedPermissionRequest
   }
 }

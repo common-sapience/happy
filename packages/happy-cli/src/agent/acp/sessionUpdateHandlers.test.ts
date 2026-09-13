@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { AgentMessage } from '../core';
 import { defaultTransport } from '../transport';
-import { emitToolCallArguments, startToolCall, type HandlerContext } from './sessionUpdateHandlers';
+import {
+    completeToolCall,
+    emitToolCallArguments,
+    failToolCall,
+    startToolCall,
+    type HandlerContext,
+} from './sessionUpdateHandlers';
 
 function context(emitted: AgentMessage[]): HandlerContext {
     return {
@@ -17,6 +23,14 @@ function context(emitted: AgentMessage[]): HandlerContext {
         clearIdleTimeout: vi.fn(),
         setIdleTimeout: vi.fn(),
     };
+}
+
+function toolResult(emitted: AgentMessage[]): Extract<AgentMessage, { type: 'tool-result' }> {
+    const message = emitted.find((candidate) => candidate.type === 'tool-result');
+    if (!message || message.type !== 'tool-result') {
+        throw new Error('no tool result was emitted');
+    }
+    return message;
 }
 
 function toolCall(emitted: AgentMessage[]): Extract<AgentMessage, { type: 'tool-call' }> {
@@ -94,5 +108,39 @@ describe('ACP tool call arguments arriving late', () => {
         const ctx = context(emitted);
         emitToolCallArguments('call-4', 'read', { title: 'notes.md' }, ctx);
         expect(emitted).toHaveLength(0);
+    });
+});
+
+// T-26: a step that failed has to reach the control end as failed, so the
+// result the engine gave is flagged rather than read back out of its shape.
+describe('ACP tool call outcome', () => {
+    it('flags a failed call and keeps the error detail the engine gave', () => {
+        const emitted: AgentMessage[] = [];
+        const ctx = context(emitted);
+        failToolCall('call-5', 'failed', 'execute', { error: { message: 'ENOENT' } }, ctx);
+
+        const message = toolResult(emitted);
+        expect(message.callId).toBe('call-5');
+        expect(message.isError).toBe(true);
+        expect(message.result).toEqual({ error: 'ENOENT', status: 'failed' });
+    });
+
+    it('flags a cancelled call as failed too', () => {
+        const emitted: AgentMessage[] = [];
+        const ctx = context(emitted);
+        failToolCall('call-6', 'cancelled', 'execute', undefined, ctx);
+
+        expect(toolResult(emitted).isError).toBe(true);
+    });
+
+    it('leaves a completed call unflagged', () => {
+        const emitted: AgentMessage[] = [];
+        const ctx = context(emitted);
+        completeToolCall('call-7', 'read', 'file contents', ctx);
+
+        const message = toolResult(emitted);
+        expect(message.callId).toBe('call-7');
+        expect(message.isError).toBeUndefined();
+        expect(message.result).toBe('file contents');
     });
 });

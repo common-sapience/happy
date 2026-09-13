@@ -3,7 +3,8 @@ import { join } from 'node:path';
 import { ApiClient } from '@/api/api';
 import type { ApiSessionClient } from '@/api/apiSession';
 import type { AgentMessage } from '@/agent/core';
-import { AcpBackend, type AcpPermissionHandler } from './AcpBackend';
+import { AcpBackend } from './AcpBackend';
+import { GenericAcpPermissionHandler } from './acpPermissionHandler';
 import { DefaultTransport } from '@/agent/transport';
 import { AcpSessionManager } from './AcpSessionManager';
 import type { SessionEnvelope } from '@slopus/happy-wire';
@@ -33,7 +34,6 @@ import {
 import { readBrowserSettings } from '@/modules/browser/browserSettings';
 import { buildEngineProcessEnv } from './engineEnvironment';
 import { projectPath } from '@/projectPath';
-import { BasePermissionHandler, type PermissionResult } from '@/utils/BasePermissionHandler';
 import { connectionState } from '@/utils/serverConnectionErrors';
 import {
   extractConfigOptionsFromPayload,
@@ -416,32 +416,6 @@ function resolveRequestedLegacyModelCode(models: SessionModelState, requested: s
   }
 
   return null;
-}
-
-class GenericAcpPermissionHandler extends BasePermissionHandler implements AcpPermissionHandler {
-  private readonly logPrefix: string;
-
-  constructor(session: ApiSessionClient, agentName: string) {
-    super(session);
-    this.logPrefix = `[${agentName}]`;
-  }
-
-  protected getLogPrefix(): string {
-    return this.logPrefix;
-  }
-
-  async handleToolCall(toolCallId: string, toolName: string, input: unknown): Promise<PermissionResult> {
-    return new Promise<PermissionResult>((resolve, reject) => {
-      this.pendingRequests.set(toolCallId, {
-        resolve,
-        reject,
-        toolName,
-        input,
-      });
-      this.addPendingRequestToState(toolCallId, toolName, input);
-      logger.debug(`${this.logPrefix} Permission request sent for tool: ${toolName} (${toolCallId})`);
-    });
-  }
 }
 
 type PendingTurn = {

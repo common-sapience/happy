@@ -643,6 +643,10 @@ export class AcpBackend implements AgentBackend {
               },
             });
 
+            // An answer is not an end: the step ends when the engine reports the
+            // call finished, under this same id. Ending it here would freeze the
+            // step as done at the moment it was allowed, and a later failure
+            // would never reach the reader.
             try {
               const result = await this.options.permissionHandler.handleToolCall(
                 toolCallId,
@@ -672,15 +676,6 @@ export class AcpBackend implements AgentBackend {
                   // Fallback to first option if no specific match
                   optionId = options[0].optionId || 'proceed_once';
                 }
-                
-                // Emit tool-result with permissionId so UI can close the timer
-                // This is needed because tool_call_update comes with a different ID
-                this.emit({
-                  type: 'tool-result',
-                  toolName,
-                  result: { status: 'approved', decision: result.decision },
-                  callId: permissionId,
-                });
               } else {
                 // Denied or aborted - find cancel option
                 const cancelOption = options.find((opt: any) => 
@@ -689,14 +684,6 @@ export class AcpBackend implements AgentBackend {
                 if (cancelOption) {
                   optionId = cancelOption.optionId || 'cancel';
                 }
-                
-                // Emit tool-result for denied/aborted
-                this.emit({
-                  type: 'tool-result',
-                  toolName,
-                  result: { status: 'denied', decision: result.decision },
-                  callId: permissionId,
-                });
               }
               
               return { outcome: { outcome: 'selected', optionId } };

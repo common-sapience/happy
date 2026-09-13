@@ -768,6 +768,14 @@ export function reducer(state: ReducerState, messages: NormalizedMessage[], agen
                         if (message?.tool) {
                             message.realID = msg.id;
                             message.tool.callId = c.id;
+                            // A row first drawn from the permission request holds the
+                            // tool's own name. The tool event carries the engine's
+                            // category instead, which is what the activity line is
+                            // written from (DESK-01), so it wins — unless the event
+                            // has no name of its own to give.
+                            if (c.name && c.name !== 'unknown') {
+                                message.tool.name = c.name;
+                            }
                             message.tool.input = mergeToolInputs(message.tool.input, c.input);
                             message.tool.description = c.description;
                             if (c.title !== undefined) {
