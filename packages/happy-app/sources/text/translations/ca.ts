@@ -420,6 +420,10 @@ export const ca: TranslationStructure = {
         forgetTitle: 'Oblidar aquest relé',
         forgetBody: 'L’app tornarà a demanar una adreça i es mantindrà sense sessió fins que n’hi doneu una.',
         footer: 'Els agents s’executen als teus ordinadors; el relé només passa missatges xifrats entre ells i aquesta app. Canviar-lo tanca la sessió.',
+        unreachableTitle: "No es pot arribar al relé",
+        unreachableBody: "L'adreça que s'ha donat a l'aplicació no respon. Comprova l'adreça o tanca la sessió d'aquest compte.",
+        rejectedTitle: "El relé ha rebutjat aquest compte",
+        rejectedBody: "Alguna cosa ha respost en aquesta adreça, però no per a aquest compte. Comprova l'adreça o tanca la sessió i torna a entrar.",
     },
 
     sessionInfo: {

@@ -32,6 +32,11 @@ import { Profile, profileParse } from './profile';
 import { loadPendingSettings, savePendingSettings } from './persistence';
 import { parseToken } from '@/utils/parseToken';
 import { getServerUrl } from './serverConfig';
+import {
+    RELAY_FIRST_LOAD_PATIENCE_MS,
+    classifyRelayFailure,
+    type RelayFailure,
+} from './relayReachability';
 import { config } from '@/config';
 import { log } from '@/log';
 import { gitStatusSync } from './gitStatusSync';
@@ -111,6 +116,8 @@ class Sync {
     private credentials!: AuthCredentials;
     public encryptionCache = new EncryptionCache();
     private sessionsSync: InvalidateSync;
+    /** What the last sessions fetch ran into, so a stalled first load can say which trouble it is. */
+    private relayTrouble: RelayFailure | null = null;
     private projectsSync: InvalidateSync;
     private messagesSync = new Map<string, InvalidateSync>();
     private messagePreloader = new SessionMessagePreloader((sessionId, signal) => this.preloadLatestPage(sessionId, signal));
@@ -155,7 +162,7 @@ class Sync {
     private lastRecalculationTime = 0;
 
     constructor() {
-        this.sessionsSync = new InvalidateSync(this.fetchSessions);
+        this.sessionsSync = new InvalidateSync(this.loadSessions);
         this.projectsSync = new InvalidateSync(this.fetchProjects);
         this.settingsSync = new InvalidateSync(this.syncSettings);
         this.profileSync = new InvalidateSync(this.fetchProfile);
@@ -270,15 +277,43 @@ class Sync {
         // Mark UI ready as soon as sessions load. Machines sync may hang
         // when encryption keys are unavailable (e.g. V1 auth fallback) —
         // let it resolve in the background instead of blocking the UI.
-        this.sessionsSync.awaitQueue().then(() => {
+        //
+        // The retry behind sessionsSync never gives up, so a stored address whose
+        // relay is gone — or a stored token the relay will not serve — used to
+        // leave the agent list spinning with nothing saying why. The wait is
+        // bounded instead, and what the relay did is reported so the list can
+        // offer the way out (DESK-08, DESK-21).
+        const patience = setTimeout(() => {
+            if (storage.getState().isDataReady) {
+                return;
+            }
+            storage.getState().applyRelayStalled(this.relayTrouble ?? 'unreachable');
+        }, RELAY_FIRST_LOAD_PATIENCE_MS);
+        const settle = () => {
+            clearTimeout(patience);
+            storage.getState().applyRelayStalled(null);
             storage.getState().applyReady();
-        }).catch((error) => {
+        };
+        this.sessionsSync.awaitQueue().then(settle).catch((error) => {
             console.error('Failed to load sessions:', error);
             // Still mark ready so the UI doesn't stay on a blank screen forever
-            storage.getState().applyReady();
+            settle();
         });
     }
 
+    /**
+     * The sessions fetch, with what went wrong kept for the stalled first load to
+     * name. The error is rethrown untouched: the retry above owns what happens next.
+     */
+    private loadSessions = async () => {
+        try {
+            await this.fetchSessions();
+            this.relayTrouble = null;
+        } catch (error) {
+            this.relayTrouble = classifyRelayFailure(error);
+            throw error;
+        }
+    };
 
     onSessionVisible = (sessionId: string) => {
         this.historyPrefetchSessions.add(sessionId);

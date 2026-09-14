@@ -418,6 +418,10 @@ export const it: TranslationStructure = {
         forgetTitle: 'Dimenticare questo relay',
         forgetBody: 'L’app chiederà di nuovo un indirizzo e resterà disconnessa finché non glielo dai.',
         footer: 'Gli agenti girano sui tuoi computer; il relay passa solo messaggi cifrati tra loro e questa app. Cambiarlo ti disconnette.',
+        unreachableTitle: "Impossibile raggiungere il relay",
+        unreachableBody: "L'indirizzo dato all'app non risponde. Controlla l'indirizzo oppure esci da questo account.",
+        rejectedTitle: "Il relay ha rifiutato questo account",
+        rejectedBody: "Qualcosa ha risposto a quell'indirizzo, ma non per questo account. Controlla l'indirizzo oppure esci e accedi di nuovo.",
     },
 
     sessionInfo: {

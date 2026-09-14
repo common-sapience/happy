@@ -3,8 +3,10 @@ import { View, ActivityIndicator, NativeScrollEvent, NativeSyntheticEvent } from
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SessionsList } from './SessionsList';
 import { EmptyAgentList } from './EmptyAgentList';
+import { RelayStalledNotice } from './RelayStalledNotice';
 import { useHasArchivedSessions, useVisibleSessionListViewData } from '@/hooks/useVisibleSessionListViewData';
-import { useAllMachines, useSettingMutable } from '@/sync/storage';
+import { useAllMachines, useRelayStalledOn, useSettingMutable } from '@/sync/storage';
+import { resolveAgentListBoot } from '@/sync/relayReachability';
 import { collectMachineChoices } from '@/sync/machineChoices';
 
 const stylesheet = StyleSheet.create((theme) => ({
@@ -50,6 +52,8 @@ export const SessionsListWrapper = React.memo(({
 }) => {
     const { theme } = useUnistyles();
     const sessionListViewData = useVisibleSessionListViewData();
+    const relayStalledOn = useRelayStalledOn();
+    const boot = resolveAgentListBoot({ dataReady: sessionListViewData !== null, stalledOn: relayStalledOn });
     const hasArchivedSessions = useHasArchivedSessions();
     const machines = useAllMachines({ includeOffline: true });
     const machineChoices = React.useMemo(() => collectMachineChoices(machines), [machines]);
@@ -57,14 +61,24 @@ export const SessionsListWrapper = React.memo(({
     const [, setHideArchivedSessions] = useSettingMutable('hideInactiveSessions');
     const styles = stylesheet;
 
+    // The first load is bounded: past it the list says which relay trouble it ran
+    // into instead of spinning on with nothing to act on (DESK-08, DESK-21).
     if (sessionListViewData === null) {
         return (
             <View style={styles.container}>
-                <View style={[styles.loadingContainerWrapper, { paddingTop: topContentInset }]}>
-                    <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="small" color={theme.colors.textSecondary} />
+                {boot.state === 'stalled' ? (
+                    <View style={styles.emptyStateContainer}>
+                        <View style={[styles.emptyStateContentContainer, { paddingTop: topContentInset }]}>
+                            <RelayStalledNotice failure={boot.failure} />
+                        </View>
                     </View>
-                </View>
+                ) : (
+                    <View style={[styles.loadingContainerWrapper, { paddingTop: topContentInset }]}>
+                        <View style={styles.loadingContainer}>
+                            <ActivityIndicator size="small" color={theme.colors.textSecondary} />
+                        </View>
+                    </View>
+                )}
             </View>
         );
     }
