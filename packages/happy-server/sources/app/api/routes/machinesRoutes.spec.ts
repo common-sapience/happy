@@ -13,9 +13,11 @@ const {
     allocateUserSeqMock,
     emitUpdateSpy,
     emitEphemeralSpy,
+    disconnectMachineSpy,
 } = vi.hoisted(() => {
     const emitUpdateSpy = vi.fn();
     const emitEphemeralSpy = vi.fn();
+    const disconnectMachineSpy = vi.fn();
     const state = {
         existingMachine: null as any,
         created: [] as any[],
@@ -51,10 +53,19 @@ const {
         return row;
     });
 
-    const dbMock = { machine: { findFirst: machineFindFirst, create: machineCreate } };
+    const machineDelete = vi.fn(async (args: any) => ({ id: args.where.id }));
+    const dbMock = { machine: { findFirst: machineFindFirst, create: machineCreate, delete: machineDelete } };
     const allocateUserSeqMock = vi.fn(async () => ++state.seq);
 
-    return { state, dbMock, resetState, allocateUserSeqMock, emitUpdateSpy, emitEphemeralSpy };
+    return {
+        state,
+        dbMock,
+        resetState,
+        allocateUserSeqMock,
+        emitUpdateSpy,
+        emitEphemeralSpy,
+        disconnectMachineSpy,
+    };
 });
 
 // Keep the REAL event-builder functions (buildNewMachineUpdate etc.), but
@@ -62,11 +73,18 @@ const {
 // the create handler emits.
 vi.mock("@/app/events/eventRouter", async (importOriginal) => {
     const actual = await importOriginal<typeof import("@/app/events/eventRouter")>();
-    return { ...actual, eventRouter: { emitUpdate: emitUpdateSpy, emitEphemeral: emitEphemeralSpy } };
+    return {
+        ...actual,
+        eventRouter: {
+            emitUpdate: emitUpdateSpy,
+            emitEphemeral: emitEphemeralSpy,
+            disconnectMachine: disconnectMachineSpy,
+        },
+    };
 });
 vi.mock("@/storage/db", () => ({ db: dbMock }));
 vi.mock("@/storage/seq", () => ({ allocateUserSeq: allocateUserSeqMock }));
-vi.mock("@/storage/inTx", () => ({ inTx: async (fn: any) => fn({}), afterTx: (_tx: any, cb: () => void) => cb() }));
+vi.mock("@/storage/inTx", () => ({ inTx: async (fn: any) => fn(dbMock), afterTx: (_tx: any, cb: () => void) => cb() }));
 vi.mock("@/utils/log", () => ({ log: vi.fn(), warn: vi.fn(), error: vi.fn() }));
 
 import { machinesRoutes } from "./machinesRoutes";
@@ -175,5 +193,51 @@ describe("machinesRoutes — POST /v1/machines creation emits", () => {
         expect(newMachine).toBeDefined();
         expect(newMachine.payload.body.dataEncryptionKey).toBeNull();
         expect(ApiUpdateContainerSchema.safeParse(newMachine.payload).success).toBe(true);
+    });
+});
+
+/**
+ * DEV-04: removing a computer has to end its reach, not just its row. Its daemon holds a
+ * machine-scoped socket that is also the member of every RPC room it registered, so the delete
+ * disconnects that socket — after which a caller holding the machine id has nothing to be
+ * forwarded to.
+ */
+describe("DEV-04 — DELETE /v1/machines/:id cuts the removed computer off", () => {
+    let app: Fastify;
+    beforeEach(() => {
+        resetState();
+        emitUpdateSpy.mockClear();
+        emitEphemeralSpy.mockClear();
+        disconnectMachineSpy.mockClear();
+    });
+    afterEach(async () => { if (app) await app.close(); });
+
+    it("disconnects the removed computer's sockets and announces the removal", async () => {
+        state.existingMachine = { id: "machine-1", accountId: "user-1" };
+        app = await createApp();
+
+        const res = await app.inject({
+            method: "DELETE",
+            url: "/v1/machines/machine-1",
+            headers: { "x-user-id": "user-1" },
+        });
+
+        expect(res.statusCode).toBe(200);
+        expect(disconnectMachineSpy).toHaveBeenCalledWith("user-1", "machine-1");
+        expect(findEmit("delete-machine")).toBeDefined();
+    });
+
+    it("disconnects nothing when the computer is not on this account", async () => {
+        state.existingMachine = null;
+        app = await createApp();
+
+        const res = await app.inject({
+            method: "DELETE",
+            url: "/v1/machines/machine-1",
+            headers: { "x-user-id": "user-1" },
+        });
+
+        expect(res.statusCode).toBe(404);
+        expect(disconnectMachineSpy).not.toHaveBeenCalled();
     });
 });

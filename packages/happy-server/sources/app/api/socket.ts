@@ -7,6 +7,7 @@ import { Redis } from "ioredis";
 import { log } from "@/utils/log";
 import { auth } from "@/app/auth/auth";
 import { rpcHandler } from "./socket/rpcHandler";
+import { isMachineOnAccount } from "./socket/machineConnectionGuard";
 import { pingHandler } from "./socket/pingHandler";
 import { sessionUpdateHandler } from "./socket/sessionUpdateHandler";
 import { machineUpdateHandler } from "./socket/machineUpdateHandler";
@@ -84,6 +85,14 @@ export function startSocket(app: Fastify) {
         if (!verified) {
             log({ module: 'websocket' }, `Invalid token provided`);
             next(new Error('Invalid authentication token'));
+            return;
+        }
+
+        // DEV-04: a computer removed from the account keeps its token and keeps retrying, so the
+        // machine has to still be on the account for its daemon to be let back in.
+        if (clientType === 'machine-scoped' && !(await isMachineOnAccount(verified.userId, machineId!))) {
+            log({ module: 'websocket' }, `Machine-scoped client for a machine this account does not have`);
+            next(new Error('Machine not found'));
             return;
         }
 
