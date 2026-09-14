@@ -3,13 +3,15 @@
  *
  * A session's engine is started with the platform API key (HOST-09), the
  * permission baseline for the confirmation switch (PERM-08), the shared memory
- * directory (ENG-19), and the two browser switches when this host set them
- * (ENG-04). Composing them here rather than at the spawn site is what keeps the
+ * directory (ENG-19), the two browser switches when this host set them
+ * (ENG-04), and a freshly minted password for the engine's own loopback port
+ * (MOD-02). Composing them here rather than at the spawn site is what keeps the
  * set the same for every session the host starts.
  */
 
 import type { EngineCredentials } from '@/modules/credentials/engineCredentials';
 import { buildEngineCredentialEnv } from '@/modules/credentials/engineCredentials';
+import { buildEngineServerAuthEnv } from '@/modules/credentials/engineServerAuth';
 import { buildEnginePermissionEnv } from '@/modules/permission/permissionSwitch';
 import { buildMemoryEnv } from '@/modules/memory/memoryDirectory';
 import type { BrowserSettings } from '@/modules/browser/browserSettings';
@@ -29,5 +31,6 @@ export function buildEngineProcessEnv(inputs: EngineEnvironmentInputs): Record<s
     ...buildEnginePermissionEnv(inputs.permissionConfirmationEnabled),
     ...buildMemoryEnv(inputs.memoryDirectory),
     ...buildEngineBrowserEnv(inputs.browserSettings),
+    ...buildEngineServerAuthEnv(),
   };
 }
