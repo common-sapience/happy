@@ -7,8 +7,13 @@ import { activityCache } from "@/app/presence/sessionCache";
 import { auth } from "./app/auth/auth";
 import { initEncrypt } from "./modules/encrypt";
 import { loadFiles } from "./storage/files";
+import { requireMasterSecret } from "./modules/masterSecret";
 
 async function main() {
+
+    // RULE-01: token signing and encryption both rest on the master secret, so the container
+    // entry point refuses to start without a usable one rather than building them on an empty value.
+    requireMasterSecret();
 
     // Storage
     await db.$connect();
