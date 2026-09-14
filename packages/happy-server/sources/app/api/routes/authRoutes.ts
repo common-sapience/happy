@@ -5,6 +5,30 @@ import { db } from "@/storage/db";
 import { auth } from "@/app/auth/auth";
 import { log } from "@/utils/log";
 
+/**
+ * Deny by default (RULE-01, DEV-01): key material the relay cannot decode, or that is not the
+ * length its algorithm requires, is a refusal like any other failed login. Handing it to
+ * tweetnacl instead would throw and answer 500, which tells a forger it reached somewhere the
+ * relay did not expect.
+ */
+type KeyBytes = ReturnType<typeof privacyKit.decodeBase64>;
+
+function decodeBase64OrNull(value: string): KeyBytes | null {
+    try {
+        return privacyKit.decodeBase64(value);
+    } catch {
+        return null;
+    }
+}
+
+function decodeKeyMaterial(value: string, expectedLength: number): KeyBytes | null {
+    const decoded = decodeBase64OrNull(value);
+    if (!decoded || decoded.length !== expectedLength) {
+        return null;
+    }
+    return decoded;
+}
+
 export function authRoutes(app: Fastify) {
     app.post('/v1/auth', {
         schema: {
@@ -16,10 +40,13 @@ export function authRoutes(app: Fastify) {
         }
     }, async (request, reply) => {
         const tweetnacl = (await import("tweetnacl")).default;
-        const publicKey = privacyKit.decodeBase64(request.body.publicKey);
-        const challenge = privacyKit.decodeBase64(request.body.challenge);
-        const signature = privacyKit.decodeBase64(request.body.signature);
-        const isValid = tweetnacl.sign.detached.verify(challenge, signature, publicKey);
+        const publicKey = decodeKeyMaterial(request.body.publicKey, tweetnacl.sign.publicKeyLength);
+        const challenge = decodeBase64OrNull(request.body.challenge);
+        const signature = decodeKeyMaterial(request.body.signature, tweetnacl.sign.signatureLength);
+        const isValid = publicKey !== null
+            && challenge !== null
+            && signature !== null
+            && tweetnacl.sign.detached.verify(challenge, signature, publicKey);
         if (!isValid) {
             return reply.code(401).send({ error: 'Invalid signature' });
         }
@@ -59,9 +86,8 @@ export function authRoutes(app: Fastify) {
         }
     }, async (request, reply) => {
         const tweetnacl = (await import("tweetnacl")).default;
-        const publicKey = privacyKit.decodeBase64(request.body.publicKey);
-        const isValid = tweetnacl.box.publicKeyLength === publicKey.length;
-        if (!isValid) {
+        const publicKey = decodeKeyMaterial(request.body.publicKey, tweetnacl.box.publicKeyLength);
+        if (!publicKey) {
             return reply.code(401).send({ error: 'Invalid public key' });
         }
 
@@ -101,9 +127,8 @@ export function authRoutes(app: Fastify) {
         }
     }, async (request, reply) => {
         const tweetnacl = (await import("tweetnacl")).default;
-        const publicKey = privacyKit.decodeBase64(request.query.publicKey);
-        const isValid = tweetnacl.box.publicKeyLength === publicKey.length;
-        if (!isValid) {
+        const publicKey = decodeKeyMaterial(request.query.publicKey, tweetnacl.box.publicKeyLength);
+        if (!publicKey) {
             return reply.send({ status: 'not_found', supportsV2: false });
         }
 
@@ -135,10 +160,9 @@ export function authRoutes(app: Fastify) {
     }, async (request, reply) => {
         log({ module: 'auth-response' }, `Auth response endpoint hit - user: ${request.userId}, publicKey: ${request.body.publicKey.substring(0, 20)}...`);
         const tweetnacl = (await import("tweetnacl")).default;
-        const publicKey = privacyKit.decodeBase64(request.body.publicKey);
-        const isValid = tweetnacl.box.publicKeyLength === publicKey.length;
-        if (!isValid) {
-            log({ module: 'auth-response' }, `Invalid public key length: ${publicKey.length}`);
+        const publicKey = decodeKeyMaterial(request.body.publicKey, tweetnacl.box.publicKeyLength);
+        if (!publicKey) {
+            log({ module: 'auth-response' }, 'Invalid public key');
             return reply.code(401).send({ error: 'Invalid public key' });
         }
         const publicKeyHex = privacyKit.encodeHex(publicKey);
@@ -186,9 +210,8 @@ export function authRoutes(app: Fastify) {
         }
     }, async (request, reply) => {
         const tweetnacl = (await import("tweetnacl")).default;
-        const publicKey = privacyKit.decodeBase64(request.body.publicKey);
-        const isValid = tweetnacl.box.publicKeyLength === publicKey.length;
-        if (!isValid) {
+        const publicKey = decodeKeyMaterial(request.body.publicKey, tweetnacl.box.publicKeyLength);
+        if (!publicKey) {
             return reply.code(401).send({ error: 'Invalid public key' });
         }
 
@@ -221,9 +244,8 @@ export function authRoutes(app: Fastify) {
         }
     }, async (request, reply) => {
         const tweetnacl = (await import("tweetnacl")).default;
-        const publicKey = privacyKit.decodeBase64(request.body.publicKey);
-        const isValid = tweetnacl.box.publicKeyLength === publicKey.length;
-        if (!isValid) {
+        const publicKey = decodeKeyMaterial(request.body.publicKey, tweetnacl.box.publicKeyLength);
+        if (!publicKey) {
             return reply.code(401).send({ error: 'Invalid public key' });
         }
         const authRequest = await db.accountAuthRequest.findUnique({

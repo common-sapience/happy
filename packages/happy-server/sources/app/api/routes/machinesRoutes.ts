@@ -176,7 +176,8 @@ export function machinesRoutes(app: Fastify) {
     });
 
     // DELETE /v1/machines/:id - Remove a machine. Its connector records go with it (cascade);
-    // sessions spawned by this machine are preserved so history is not lost.
+    // sessions spawned by this machine are preserved so history is not lost. Its sockets are
+    // disconnected, which also takes its daemon out of every RPC room it registered (DEV-04).
     app.delete('/v1/machines/:id', {
         preHandler: app.authenticate,
         schema: {
@@ -201,6 +202,9 @@ export function machinesRoutes(app: Fastify) {
             });
 
             afterTx(tx, async () => {
+                // DEV-04: end its reach before announcing the removal, so no caller can still be
+                // forwarded to a computer the account has already been told is gone.
+                eventRouter.disconnectMachine(userId, id);
                 const updSeq = await allocateUserSeq(userId);
                 const updatePayload = buildDeleteMachineUpdate(id, updSeq, randomKeyNaked(12));
                 eventRouter.emitUpdate({

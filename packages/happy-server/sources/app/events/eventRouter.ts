@@ -210,6 +210,17 @@ class EventRouter {
         // Socket.IO automatically removes sockets from all rooms on disconnect
     }
 
+    /**
+     * DEV-04: a computer removed from the account must stop being reachable, not just stop being
+     * listed. Its daemon holds one machine-scoped socket, and that same socket is the member of
+     * every RPC room it registered, so disconnecting it takes it out of all of them at once and
+     * the router has nothing left to forward to. Broadcast-based, so it reaches the socket
+     * whichever replica holds it.
+     */
+    disconnectMachine(userId: string, machineId: string): void {
+        this.io.in(`user:${userId}:machine:${machineId}`).disconnectSockets(true);
+    }
+
     // === EVENT EMISSION METHODS ===
 
     emitUpdate(params: {

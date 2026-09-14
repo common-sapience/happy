@@ -20,6 +20,7 @@ crypto.subtle.importKey = function (format: any, keyData: any, algorithm: any, e
 import * as fs from "fs";
 import * as path from "path";
 import { createPGlite } from "./storage/pgliteLoader";
+import { requireMasterSecret } from "./modules/masterSecret";
 
 const dataDir = process.env.DATA_DIR || "./data";
 const pgliteDir = process.env.PGLITE_DIR || path.join(dataDir, "pglite");
@@ -113,10 +114,7 @@ async function serve() {
     process.env.DB_PROVIDER = process.env.DB_PROVIDER || "pglite";
     process.env.PGLITE_DIR = process.env.PGLITE_DIR || pgliteDir;
 
-    const masterSecret = process.env.HANDY_MASTER_SECRET;
-    if (!masterSecret) {
-        throw new Error("HANDY_MASTER_SECRET is required");
-    }
+    const masterSecret = requireMasterSecret();
 
     const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3005;
     const host = process.env.HOST || "0.0.0.0";

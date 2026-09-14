@@ -4,6 +4,7 @@ import { buildEngineProcessEnv } from './engineEnvironment';
 import { MEMORY_DIR_ENV_VAR } from '@/modules/memory/memoryDirectory';
 import { PLATFORM_API_KEY_ENV_VAR } from '@/modules/credentials/engineCredentials';
 import { ENGINE_PERMISSION_ENV_VAR } from '@/modules/permission/permissionSwitch';
+import { ENGINE_SERVER_PASSWORD_ENV_VAR } from '@/modules/credentials/engineServerAuth';
 import {
   BROWSER_AUTO_CONNECT_ENV_VAR,
   BROWSER_HEADLESS_ENV_VAR,
@@ -26,6 +27,7 @@ describe('ENG-19 / HOST-12 engine process environment', () => {
   it('names the memory directory for a session whose confirmation switch is on too', () => {
     expect(buildEngineProcessEnv({ ...baseInputs, permissionConfirmationEnabled: true })).toEqual({
       [MEMORY_DIR_ENV_VAR]: MEMORY_DIR,
+      [ENGINE_SERVER_PASSWORD_ENV_VAR]: expect.any(String),
     });
   });
 
@@ -39,6 +41,7 @@ describe('ENG-19 / HOST-12 engine process environment', () => {
       [PLATFORM_API_KEY_ENV_VAR]: 'platform-secret',
       [ENGINE_PERMISSION_ENV_VAR]: '{"*":"allow"}',
       [MEMORY_DIR_ENV_VAR]: MEMORY_DIR,
+      [ENGINE_SERVER_PASSWORD_ENV_VAR]: expect.any(String),
     });
   });
 
@@ -57,6 +60,14 @@ describe('ENG-19 / HOST-12 engine process environment', () => {
 
     expect(env[BROWSER_HEADLESS_ENV_VAR]).toBe('true');
     expect(env[BROWSER_AUTO_CONNECT_ENV_VAR]).toBe('true');
+  });
+
+  it('gives the engine process a credential for its own port, one per process (MOD-02)', () => {
+    const first = buildEngineProcessEnv(baseInputs)[ENGINE_SERVER_PASSWORD_ENV_VAR];
+    const second = buildEngineProcessEnv(baseInputs)[ENGINE_SERVER_PASSWORD_ENV_VAR];
+
+    expect(first).toMatch(/^[A-Za-z0-9_-]{43,}$/);
+    expect(second).not.toBe(first);
   });
 
   it('never names an engine config directory: the engine ships its own config', () => {
