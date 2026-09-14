@@ -201,15 +201,19 @@ export const FilesSidebar = React.memo<FilesSidebarProps>(({
 
     const [collapsed, setCollapsed] = React.useState<Set<string>>(() => new Set());
 
+    // 'unknown' until the folder has been probed once, so the Changes panel can
+    // tell "no changes yet" from "this folder is not a git repository".
+    const [gitRepoState, setGitRepoState] = React.useState<'unknown' | 'repo' | 'notRepo'>('unknown');
+
     React.useEffect(() => {
         let cancelled = false;
         const pathKey = storage.getState().getSessionPathKey(sessionId);
         if (!pathKey) return;
         (async () => {
             const result = await getGitStatusFiles(sessionId);
-            if (!cancelled && result) {
-                storage.getState().applyGitStatusFiles(pathKey, result);
-            }
+            if (cancelled) return;
+            storage.getState().applyGitStatusFiles(pathKey, result);
+            setGitRepoState(result ? 'repo' : 'notRepo');
         })();
         return () => { cancelled = true; };
     }, [sessionId, gitStatus?.lastUpdatedAt]);
@@ -380,10 +384,18 @@ export const FilesSidebar = React.memo<FilesSidebarProps>(({
                     {!hasFiles ? (
                         <View style={styles.emptyState}>
                             <View style={styles.emptyIconWrap}>
-                                <Octicons name="check" size={28} style={styles.emptyIcon} />
+                                <Octicons
+                                    name={gitRepoState === 'notRepo' ? 'git-branch' : 'check'}
+                                    size={28}
+                                    style={styles.emptyIcon}
+                                />
                             </View>
-                            <Text style={styles.emptyTitle}>{t('files.noChangesTitle')}</Text>
-                            <Text style={styles.emptySubtitle}>{t('files.noChangesSubtitle')}</Text>
+                            <Text style={styles.emptyTitle}>
+                                {gitRepoState === 'notRepo' ? t('files.notRepo') : t('files.noChangesTitle')}
+                            </Text>
+                            <Text style={styles.emptySubtitle}>
+                                {gitRepoState === 'notRepo' ? t('files.notUnderGit') : t('files.noChangesSubtitle')}
+                            </Text>
                         </View>
                     ) : (
                         <View style={styles.tree}>
@@ -517,6 +529,7 @@ const AllFilesTab = React.memo(function AllFilesTab({
     const { theme } = useUnistyles();
     const [searchQuery, setSearchQuery] = React.useState('');
     const [isLoading, setIsLoading] = React.useState(false);
+    const [listUnavailable, setListUnavailable] = React.useState(false);
 
     const projectFiles = useSessionProjectFiles(sessionId);
     const gitStatus = useSessionGitStatus(sessionId);
@@ -534,6 +547,7 @@ const AllFilesTab = React.memo(function AllFilesTab({
             const result = await getProjectFiles(sessionId);
             if (!cancelled) {
                 storage.getState().applyProjectFiles(pathKey, result);
+                setListUnavailable(result === null);
                 setIsLoading(false);
             }
         })();
@@ -584,11 +598,22 @@ const AllFilesTab = React.memo(function AllFilesTab({
                 ) : filteredTree.length === 0 ? (
                     <View style={styles.emptyState}>
                         <View style={styles.emptyIconWrap}>
-                            <Octicons name="file" size={28} color={theme.colors.textSecondary} />
+                            <Octicons
+                                name={!searchQuery && listUnavailable ? 'alert' : 'file'}
+                                size={28}
+                                color={theme.colors.textSecondary}
+                            />
                         </View>
                         <Text style={styles.emptyTitle}>
-                            {searchQuery ? t('files.noFilesFound') : t('files.noFilesInProject')}
+                            {searchQuery
+                                ? t('files.noFilesFound')
+                                : listUnavailable
+                                    ? t('files.listUnavailable')
+                                    : t('files.noFilesInProject')}
                         </Text>
+                        {!searchQuery && listUnavailable && (
+                            <Text style={styles.emptySubtitle}>{t('errors.tryAgain')}</Text>
+                        )}
                     </View>
                 ) : (
                     <View style={styles.tree}>

@@ -641,6 +641,7 @@ export const zhHant: TranslationStructure = {
         searching: '正在搜尋檔案...',
         noFilesFound: '未找到檔案',
         noFilesInProject: '專案中沒有檔案',
+        listUnavailable: '無法列出檔案',
         tryDifferentTerm: '嘗試不同的搜尋詞',
         searchResults: ({ count }: { count: number }) => `搜尋結果 (${count})`,
         projectRoot: '專案根目錄',

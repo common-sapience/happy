@@ -35,6 +35,10 @@ export default React.memo(function FilesScreen() {
     // Refs for shaking deleted file items
     const shakerRefs = React.useRef(new Map<string, ShakeInstance>());
 
+    // The folder answered, and it is not a git repository: the panel still lists
+    // its files, it just has no changes to show.
+    const notRepo = !isLoading && !gitStatusFiles;
+
     // Handle search and file loading
     React.useEffect(() => {
         const loadFiles = async () => {
@@ -52,8 +56,9 @@ export default React.memo(function FilesScreen() {
             }
         };
 
-        // Load files when searching or when repo is clean
-        const shouldShowAllFiles = searchQuery ||
+        // Load files when searching, when the repo is clean, or when the folder
+        // is not a repo at all and the plain listing is all there is to show.
+        const shouldShowAllFiles = searchQuery || notRepo ||
             (gitStatusFiles?.totalStaged === 0 && gitStatusFiles?.totalUnstaged === 0);
 
         if (shouldShowAllFiles && !isLoading) {
@@ -62,7 +67,7 @@ export default React.memo(function FilesScreen() {
             setSearchResults([]);
             setIsSearching(false);
         }
-    }, [searchQuery, gitStatusFiles, sessionId, isLoading]);
+    }, [searchQuery, gitStatusFiles, sessionId, isLoading, notRepo]);
 
     const handleFilePress = React.useCallback((file: GitFileStatus | FileItem) => {
         // Deleted files: shake and don't navigate
@@ -249,6 +254,38 @@ export default React.memo(function FilesScreen() {
                 </View>
             )}
 
+            {/* Folder without git: say so once, then list its files anyway */}
+            {notRepo && (
+                <View style={{
+                    padding: 16,
+                    borderBottomWidth: Platform.select({ web: 1, default: 0 }),
+                    borderBottomColor: theme.colors.divider
+                }}>
+                    <View style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        marginBottom: 8
+                    }}>
+                        <Octicons name="git-branch" size={16} color={theme.colors.textSecondary} style={{ marginRight: 6 }} />
+                        <Text style={{
+                            fontSize: 16,
+                            fontWeight: '600',
+                            color: theme.colors.text,
+                            ...Typography.default()
+                        }}>
+                            {t('files.notRepo')}
+                        </Text>
+                    </View>
+                    <Text style={{
+                        fontSize: 12,
+                        color: theme.colors.textSecondary,
+                        ...Typography.default()
+                    }}>
+                        {t('files.notUnderGit')}
+                    </Text>
+                </View>
+            )}
+
             {/* Git Status List */}
             <MobileGlassSurface
                 intensity={56}
@@ -264,35 +301,7 @@ export default React.memo(function FilesScreen() {
                     }}>
                         <ActivityIndicator size="small" color={theme.colors.textSecondary} />
                     </View>
-                ) : !gitStatusFiles ? (
-                    <View style={{
-                        flex: 1,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        paddingTop: 40,
-                        paddingHorizontal: 20
-                    }}>
-                        <Octicons name="git-branch" size={48} color={theme.colors.textSecondary} />
-                        <Text style={{
-                            fontSize: 16,
-                            color: theme.colors.textSecondary,
-                            textAlign: 'center',
-                            marginTop: 16,
-                            ...Typography.default()
-                        }}>
-                            {t('files.notRepo')}
-                        </Text>
-                        <Text style={{
-                            fontSize: 14,
-                            color: theme.colors.textSecondary,
-                            textAlign: 'center',
-                            marginTop: 8,
-                            ...Typography.default()
-                        }}>
-                            {t('files.notUnderGit')}
-                        </Text>
-                    </View>
-                ) : searchQuery || (gitStatusFiles.totalStaged === 0 && gitStatusFiles.totalUnstaged === 0) ? (
+                ) : !gitStatusFiles || searchQuery || (gitStatusFiles.totalStaged === 0 && gitStatusFiles.totalUnstaged === 0) ? (
                     // Show search results or all files when clean repo
                     isSearching ? (
                         <View style={{

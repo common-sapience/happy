@@ -641,6 +641,7 @@ export const es: TranslationStructure = {
         searching: 'Buscando archivos...',
         noFilesFound: 'No se encontraron archivos',
         noFilesInProject: 'No hay archivos en el proyecto',
+        listUnavailable: 'No se pudieron listar los archivos',
         tryDifferentTerm: 'Intente un término de búsqueda diferente',
         searchResults: ({ count }: { count: number }) => `Resultados de búsqueda (${count})`,
         projectRoot: 'Raíz del proyecto',
