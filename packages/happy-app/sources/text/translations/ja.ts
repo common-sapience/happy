@@ -809,11 +809,11 @@ export const ja: TranslationStructure = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: 'あなたのコンピューターを操作するエージェント',
+        title: 'あなたのコンピューターのためのエージェント',
         subtitle: 'エンドツーエンド暗号化され、アカウントはデバイスにのみ保存されます。',
+        restoreWithSecretKey: 'シークレットキーで復元',
         createAccount: 'アカウントを作成',
         linkOrRestoreAccount: 'アカウントをリンクまたは復元',
-        loginWithMobileApp: '別のコンピューターで',
     },
 
     review: {

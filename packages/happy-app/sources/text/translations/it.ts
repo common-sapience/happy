@@ -806,11 +806,11 @@ export const it: TranslationStructure = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: 'Un agente che usa il tuo computer',
+        title: 'Un agente per il tuo computer',
         subtitle: 'Crittografia end-to-end e account memorizzato solo sul tuo dispositivo.',
+        restoreWithSecretKey: 'Ripristina con chiave segreta',
         createAccount: 'Crea account',
         linkOrRestoreAccount: 'Collega o ripristina account',
-        loginWithMobileApp: 'Da un altro computer',
     },
 
     review: {
