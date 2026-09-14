@@ -421,6 +421,10 @@ export const zhHans: TranslationStructure = {
         forgetTitle: '忘记这个中继',
         forgetBody: '应用会再次询问地址，在你填写之前保持未登录。',
         footer: 'agent 运行在你的电脑上，中继只在电脑与本应用之间转发密文。更换中继会退出登录。',
+        unreachableTitle: "连不上中继",
+        unreachableBody: "应用当前使用的地址没有响应。请检查地址，或退出这个账户。",
+        rejectedTitle: "中继拒绝了这个账户",
+        rejectedBody: "那个地址有响应，但不接受这个账户。请检查地址，或退出后重新登录。",
     },
 
     sessionInfo: {

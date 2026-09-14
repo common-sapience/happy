@@ -419,6 +419,10 @@ export const pt: TranslationStructure = {
         forgetTitle: 'Esquecer este relé',
         forgetBody: 'O app pedirá um endereço outra vez e continuará desconectado até você informar um.',
         footer: 'Os agentes rodam nos seus computadores; o relé apenas repassa mensagens cifradas entre eles e este app. Trocá-lo encerra a sessão.',
+        unreachableTitle: "Não é possível alcançar o relay",
+        unreachableBody: "O endereço dado ao aplicativo não responde. Verifique o endereço ou saia desta conta.",
+        rejectedTitle: "O relay recusou esta conta",
+        rejectedBody: "Algo respondeu nesse endereço, mas não para esta conta. Verifique o endereço ou saia e entre novamente.",
     },
 
     sessionInfo: {

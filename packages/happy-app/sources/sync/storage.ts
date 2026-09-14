@@ -28,6 +28,7 @@ import { sync } from "./sync";
 import { isMutableActivity } from "@/components/kit/kitTranscriptRow";
 import { isSessionArchived } from './sessionArchived';
 import { buildAgentListEntries, isInternalSession } from './agentListView';
+import type { RelayFailure } from './relayReachability';
 import { indexSessionsById } from './sessionIdentity';
 import { t } from '@/text';
 import type { Project } from './projectTypes';
@@ -222,6 +223,8 @@ interface StorageState {
     socketLastConnectedAt: number | null;
     socketLastDisconnectedAt: number | null;
     isDataReady: boolean;
+    /** Named once the first load has waited past its bound; null while it is still in time or has arrived. */
+    relayStalledOn: RelayFailure | null;
     nativeUpdateStatus: { available: boolean; updateUrl?: string } | null;
     applySessions: (sessions: (Omit<Session, 'presence'> & { presence?: "online" | number })[]) => void;
     applyMachines: (machines: Machine[], replace?: boolean) => void;
@@ -230,6 +233,7 @@ interface StorageState {
     deleteMachine: (machineId: string) => void;
     applyLoaded: () => void;
     applyReady: () => void;
+    applyRelayStalled: (failure: RelayFailure | null) => void;
     applyMessages: (sessionId: string, messages: NormalizedMessage[], source?: 'sync' | 'preload') => { changed: string[], hasReadyEvent: boolean, enteredPlanMode: boolean };
     applyMessagesLoaded: (sessionId: string) => void;
     applyOlderMessagesPagination: (sessionId: string, info: { hasMore: boolean }) => void;
@@ -305,6 +309,7 @@ export const storage = create<StorageState>()((set, get) => {
         socketLastConnectedAt: null,
         socketLastDisconnectedAt: null,
         isDataReady: false,
+        relayStalledOn: null,
         nativeUpdateStatus: null,
         unreadSessionIds: new Set<string>(),
         currentViewingSessionId: null,
@@ -538,6 +543,10 @@ export const storage = create<StorageState>()((set, get) => {
         applyReady: () => set((state) => ({
             ...state,
             isDataReady: true
+        })),
+        applyRelayStalled: (failure: RelayFailure | null) => set((state) => ({
+            ...state,
+            relayStalledOn: failure
         })),
         applyMessages: (sessionId: string, messages: NormalizedMessage[], source = 'sync') => {
             let changed = new Set<string>();
@@ -1176,6 +1185,11 @@ export function useAllMachines(options?: { includeOffline?: boolean }): Machine[
 
 export function useMachine(machineId: string): Machine | null {
     return storage(useShallow((state) => state.machines[machineId] ?? null));
+}
+
+/** The relay trouble the first load ran into, once it has waited past its bound (DESK-08). */
+export function useRelayStalledOn(): RelayFailure | null {
+    return storage((state) => state.relayStalledOn);
 }
 
 export function useSessionListViewData(): SessionListViewItem[] | null {

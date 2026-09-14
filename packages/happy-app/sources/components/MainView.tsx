@@ -11,9 +11,12 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useSocketStatus } from '@/sync/storage';
 import { NativeSettingsMenu, type NativeSettingsMenuGroup } from './NativeSettingsMenu';
 import { useVisibleSessionListViewData } from '@/hooks/useVisibleSessionListViewData';
+import { useRelayStalledOn } from '@/sync/storage';
+import { resolveAgentListBoot } from '@/sync/relayReachability';
 import { useIsTablet } from '@/utils/responsive';
 import { useRouter } from 'expo-router';
 import { EmptyAgentList } from './EmptyAgentList';
+import { RelayStalledNotice } from './RelayStalledNotice';
 import { SessionsList } from './SessionsList';
 import { TabBar, TabType } from './TabBar';
 import { HomeDock, MOBILE_HOME_DOCK_CONTENT_INSET } from './HomeDock';
@@ -236,6 +239,8 @@ const HeaderRight = React.memo(({ activeTab }: { activeTab: ActiveTabType }) => 
 export const MainView = React.memo(({ variant }: MainViewProps) => {
     const { theme } = useUnistyles();
     const sessionListViewData = useVisibleSessionListViewData();
+    const relayStalledOn = useRelayStalledOn();
+    const boot = resolveAgentListBoot({ dataReady: sessionListViewData !== null, stalledOn: relayStalledOn });
     const isTablet = useIsTablet();
     const router = useRouter();
     const safeArea = useSafeAreaInsets();
@@ -293,13 +298,20 @@ export const MainView = React.memo(({ variant }: MainViewProps) => {
 
     // Sidebar variant
     if (variant === 'sidebar') {
-        // Loading state
+        // Loading state, and the bounded end of it: a first load that never comes
+        // back says which relay trouble it is rather than spinning on (DESK-08).
         if (sessionListViewData === null) {
             return (
                 <View style={styles.sidebarContentContainer}>
-                    <View style={styles.tabletLoadingContainer}>
-                        <ActivityIndicator size="small" color={theme.colors.textSecondary} />
-                    </View>
+                    {boot.state === 'stalled' ? (
+                        <View style={styles.emptyStateContainer}>
+                            <RelayStalledNotice failure={boot.failure} />
+                        </View>
+                    ) : (
+                        <View style={styles.tabletLoadingContainer}>
+                            <ActivityIndicator size="small" color={theme.colors.textSecondary} />
+                        </View>
+                    )}
                 </View>
             );
         }

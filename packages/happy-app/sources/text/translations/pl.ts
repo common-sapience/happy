@@ -437,6 +437,10 @@ export const pl: TranslationStructure = {
         forgetTitle: 'Zapomnieć ten przekaźnik',
         forgetBody: 'Aplikacja znów poprosi o adres i pozostanie wylogowana, dopóki go nie podasz.',
         footer: 'Agenci działają na twoich komputerach; przekaźnik tylko przekazuje zaszyfrowane wiadomości między nimi a aplikacją. Zmiana adresu wylogowuje.',
+        unreachableTitle: "Nie można połączyć się z przekaźnikiem",
+        unreachableBody: "Adres podany aplikacji nie odpowiada. Sprawdź adres albo wyloguj się z tego konta.",
+        rejectedTitle: "Przekaźnik odrzucił to konto",
+        rejectedBody: "Coś odpowiedziało pod tym adresem, ale nie dla tego konta. Sprawdź adres albo wyloguj się i zaloguj ponownie.",
     },
 
     sessionInfo: {

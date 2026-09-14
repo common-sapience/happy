@@ -420,6 +420,10 @@ export const zhHant: TranslationStructure = {
         forgetTitle: '忘記這個中繼',
         forgetBody: '應用會再次詢問位址，在你填寫之前維持未登入。',
         footer: 'agent 執行在你的電腦上，中繼只在電腦與本應用之間轉發密文。更換中繼會登出。',
+        unreachableTitle: "連不上中繼",
+        unreachableBody: "應用程式目前使用的位址沒有回應。請檢查位址，或登出這個帳戶。",
+        rejectedTitle: "中繼拒絕了這個帳戶",
+        rejectedBody: "那個位址有回應，但不接受這個帳戶。請檢查位址，或登出後重新登入。",
     },
 
     sessionInfo: {

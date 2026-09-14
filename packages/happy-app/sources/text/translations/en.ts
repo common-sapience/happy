@@ -434,6 +434,10 @@ export const en: TranslationStructure = {
         forgetTitle: 'Forget this relay',
         forgetBody: 'The app asks for an address again and stays logged out until you give it one.',
         footer: 'Agents run on your computers; the relay only passes encrypted messages between them and this app. Changing it signs you out.',
+        unreachableTitle: "Cannot reach the relay",
+        unreachableBody: "The address this app was given is not answering. Check the address, or sign out of this account.",
+        rejectedTitle: "The relay turned this account away",
+        rejectedBody: "Something answered at that address, but not for this account. Check the address, or sign out and sign in again.",
     },
 
     sessionInfo: {
