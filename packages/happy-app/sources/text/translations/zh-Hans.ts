@@ -809,11 +809,11 @@ export const zhHans: TranslationStructure = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: '能操作你电脑的 agent',
+        title: '你电脑的 agent',
         subtitle: '端到端加密，您的账户仅存储在您的设备上。',
+        restoreWithSecretKey: '通过密钥恢复',
         createAccount: '创建账户',
         linkOrRestoreAccount: '链接或恢复账户',
-        loginWithMobileApp: '用另一台电脑登录',
     },
 
     review: {

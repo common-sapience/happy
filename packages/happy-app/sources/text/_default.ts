@@ -835,11 +835,11 @@ export const en = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: 'An agent that works your computer',
+        title: 'An agent for your computer',
         subtitle: 'End-to-end encrypted and your account is stored only on your device.',
+        restoreWithSecretKey: 'Restore with Secret Key',
         createAccount: 'Create account',
         linkOrRestoreAccount: 'Link or restore account',
-        loginWithMobileApp: 'Use another computer',
     },
 
     review: {

@@ -814,11 +814,11 @@ export const ru: TranslationStructure = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: 'Агент, который работает за вашим компьютером',
+        title: 'Агент для вашего компьютера',
         subtitle: 'Сквозное шифрование, аккаунт хранится только на вашем устройстве.',
+        restoreWithSecretKey: 'Восстановить секретным ключом',
         createAccount: 'Создать аккаунт',
         linkOrRestoreAccount: 'Связать или восстановить аккаунт',
-        loginWithMobileApp: 'С другого компьютера',
     },
 
     review: {

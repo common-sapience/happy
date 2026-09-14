@@ -808,11 +808,11 @@ export const es: TranslationStructure = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: 'Un agente que maneja tu ordenador',
+        title: 'Un agente para tu ordenador',
         subtitle: 'Cifrado de extremo a extremo y tu cuenta se guarda solo en tu dispositivo.',
+        restoreWithSecretKey: 'Restaurar con clave secreta',
         createAccount: 'Crear cuenta',
         linkOrRestoreAccount: 'Vincular o restaurar cuenta',
-        loginWithMobileApp: 'Desde otro ordenador',
     },
 
     review: {

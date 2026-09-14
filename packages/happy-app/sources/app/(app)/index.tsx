@@ -14,6 +14,8 @@ import { HomeHeaderNotAuth } from "@/components/HomeHeader";
 import { MainView } from "@/components/MainView";
 import { RelayAddressEntry } from "@/components/RelayAddressEntry";
 import { isRelayConfigured } from "@/sync/serverConfig";
+import { PrimaryButton, SecondaryButton } from "@/components/kit";
+import { resolveWelcomeActions, resolveWelcomePlatform, type WelcomeAction } from "@/auth/welcomeActions";
 import { t } from '@/text';
 
 export default function Home() {
@@ -37,8 +39,15 @@ function NotAuthenticated() {
     const isLandscape = useIsLandscape();
     const insets = useSafeAreaInsets();
     const [relayConfigured, setRelayConfigured] = React.useState(isRelayConfigured);
+    const [creatingAccount, setCreatingAccount] = React.useState(false);
+    const platform = resolveWelcomePlatform(Platform.OS);
+    const welcomeActions = resolveWelcomeActions(platform);
 
     const createAccount = async () => {
+        if (creatingAccount) {
+            return;
+        }
+        setCreatingAccount(true);
         try {
             const secret = await getRandomBytesAsync(32);
             const token = await authGetToken(secret);
@@ -47,8 +56,54 @@ function NotAuthenticated() {
             }
         } catch (error) {
             console.error('Error creating account', error);
+        } finally {
+            setCreatingAccount(false);
         }
     }
+
+    const runAction = (action: WelcomeAction) => {
+        if (action.route === null) {
+            void createAccount();
+            return;
+        }
+        router.push(action.route);
+    };
+
+    // Phones keep the buttons they shipped with (MOB is deferred); the desktop
+    // and web welcome is on the kit, where one filled button marks the only
+    // primary action of the screen.
+    const renderAction = (action: WelcomeAction, style: object) => {
+        const isPrimary = action.emphasis === 'primary';
+        const title = t(action.labelKey);
+        if (platform === 'mobile') {
+            return (
+                <View key={action.id} style={style}>
+                    <RoundButton
+                        size={isPrimary ? 'large' : 'normal'}
+                        title={title}
+                        display={isPrimary ? 'default' : 'inverted'}
+                        {...(action.route === null
+                            ? { action: createAccount }
+                            : { onPress: () => router.push(action.route!) })}
+                    />
+                </View>
+            );
+        }
+        const Button = isPrimary ? PrimaryButton : SecondaryButton;
+        return (
+            <View key={action.id} style={style}>
+                <Button
+                    title={title}
+                    onPress={() => runAction(action)}
+                    loading={action.route === null && creatingAccount}
+                    disabled={creatingAccount}
+                />
+            </View>
+        );
+    };
+
+    const renderActions = (primaryStyle: object, secondaryStyle: object) =>
+        welcomeActions.map((action) => renderAction(action, action.emphasis === 'primary' ? primaryStyle : secondaryStyle));
 
     const portraitLayout = (
         <View style={styles.portraitContainer}>
@@ -63,45 +118,7 @@ function NotAuthenticated() {
             <Text style={styles.subtitle}>
                 {t('welcome.subtitle')}
             </Text>
-            {Platform.OS !== 'android' && Platform.OS !== 'ios' ? (
-                <>
-                    <View style={styles.buttonContainer}>
-                        <RoundButton
-                            title={t('welcome.loginWithMobileApp')}
-                            onPress={() => {
-                                router.push('/restore');
-                            }}
-                        />
-                    </View>
-                    <View style={styles.buttonContainerSecondary}>
-                        <RoundButton
-                            size="normal"
-                            title={t('welcome.createAccount')}
-                            action={createAccount}
-                            display="inverted"
-                        />
-                    </View>
-                </>
-            ) : (
-                <>
-                    <View style={styles.buttonContainer}>
-                        <RoundButton
-                            title={t('welcome.createAccount')}
-                            action={createAccount}
-                        />
-                    </View>
-                    <View style={styles.buttonContainerSecondary}>
-                        <RoundButton
-                            size="normal"
-                            title={t('welcome.linkOrRestoreAccount')}
-                            onPress={() => {
-                                router.push('/restore');
-                            }}
-                            display="inverted"
-                        />
-                    </View>
-                </>
-            )}
+            {renderActions(styles.buttonContainer, styles.buttonContainerSecondary)}
         </View>
     );
 
@@ -122,44 +139,7 @@ function NotAuthenticated() {
                     <Text style={styles.landscapeSubtitle}>
                         {t('welcome.subtitle')}
                     </Text>
-                    {Platform.OS !== 'android' && Platform.OS !== 'ios'
-                        ? (<>
-                            <View style={styles.landscapeButtonContainer}>
-                                <RoundButton
-                                    title={t('welcome.loginWithMobileApp')}
-                                    onPress={() => {
-                                        router.push('/restore');
-                                    }}
-                                />
-                            </View>
-                            <View style={styles.landscapeButtonContainerSecondary}>
-                                <RoundButton
-                                    size="normal"
-                                    title={t('welcome.createAccount')}
-                                    action={createAccount}
-                                    display="inverted"
-                                />
-                            </View>
-                        </>)
-                        : (<>
-                            <View style={styles.landscapeButtonContainer}>
-                                <RoundButton
-                                    title={t('welcome.createAccount')}
-                                    action={createAccount}
-                                />
-                            </View>
-                            <View style={styles.landscapeButtonContainerSecondary}>
-                                <RoundButton
-                                    size="normal"
-                                    title={t('welcome.linkOrRestoreAccount')}
-                                    onPress={() => {
-                                        router.push('/restore');
-                                    }}
-                                    display="inverted"
-                                />
-                            </View>
-                        </>)
-                    }
+                    {renderActions(styles.landscapeButtonContainer, styles.landscapeButtonContainerSecondary)}
                 </View>
             </View>
         </View>

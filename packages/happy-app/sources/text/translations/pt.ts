@@ -807,11 +807,11 @@ export const pt: TranslationStructure = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: 'Um agente que opera o seu computador',
+        title: 'Um agente para o seu computador',
         subtitle: 'Criptografado ponta a ponta e sua conta é armazenada apenas no seu dispositivo.',
+        restoreWithSecretKey: 'Restaurar com chave secreta',
         createAccount: 'Criar conta',
         linkOrRestoreAccount: 'Vincular ou restaurar conta',
-        loginWithMobileApp: 'De outro computador',
     },
 
     review: {

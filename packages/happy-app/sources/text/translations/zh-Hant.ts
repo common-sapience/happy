@@ -808,11 +808,11 @@ export const zhHant: TranslationStructure = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: '能操作你電腦的 agent',
+        title: '你電腦的 agent',
         subtitle: '端對端加密，您的帳戶僅儲存在您的裝置上。',
+        restoreWithSecretKey: '透過金鑰恢復',
         createAccount: '建立帳戶',
         linkOrRestoreAccount: '連結或恢復帳戶',
-        loginWithMobileApp: '用另一台電腦登入',
     },
 
     review: {

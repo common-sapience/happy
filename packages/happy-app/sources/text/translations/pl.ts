@@ -824,11 +824,11 @@ export const pl: TranslationStructure = {
 
     welcome: {
         // Main welcome screen for unauthenticated users
-        title: 'Agent, który obsługuje twój komputer',
+        title: 'Agent dla twojego komputera',
         subtitle: 'Szyfrowanie end-to-end, a Twoje konto jest przechowywane tylko na Twoim urządzeniu.',
+        restoreWithSecretKey: 'Przywróć kluczem tajnym',
         createAccount: 'Utwórz konto',
         linkOrRestoreAccount: 'Połącz lub przywróć konto',
-        loginWithMobileApp: 'Z innego komputera',
     },
 
     review: {
