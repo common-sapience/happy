@@ -642,6 +642,7 @@ export const zhHans: TranslationStructure = {
         searching: '正在搜索文件...',
         noFilesFound: '未找到文件',
         noFilesInProject: '项目中没有文件',
+        listUnavailable: '无法列出文件',
         tryDifferentTerm: '尝试不同的搜索词',
         searchResults: ({ count }: { count: number }) => `搜索结果 (${count})`,
         projectRoot: '项目根目录',

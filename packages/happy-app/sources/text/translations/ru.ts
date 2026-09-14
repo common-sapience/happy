@@ -657,6 +657,7 @@ export const ru: TranslationStructure = {
         searching: 'Поиск файлов...',
         noFilesFound: 'Файлы не найдены',
         noFilesInProject: 'Файлов в проекте нет',
+        listUnavailable: 'Не удалось получить список файлов',
         tryDifferentTerm: 'Попробуйте другой поисковый запрос',
         searchResults: ({ count }: { count: number }) => `Результаты поиска (${count})`,
         projectRoot: 'Корень проекта',
